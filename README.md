@@ -4,7 +4,8 @@
 
 LELE is a desktop workbench for visualizing and editing molecular and periodic
 structures, inspecting calculation outputs, and exploring atomic environments.
-Version **1.0.0** displays the author contact below the welcome version and
+Version **1.0.1** uses the MIT License and displays the author contact and
+repository URL below the welcome version. It
 includes the four-frame parrot gait, electron parity without a total electron
 count, and standing-parrot application/Windows EXE icon. Commands remain grouped into menus, with X/Y/Z views and on-demand
 plane fitting. LELE continues the features of ChemView Studio 0.9.0.
@@ -20,7 +21,8 @@ Contact: [sjzhang0905@hotmail.com](mailto:sjzhang0905@hotmail.com)
 - A white startup page with the application name, version, shortcut reference
   and 乐乐 walking across the canvas; poses change every 0.8 seconds.
   The contact email appears immediately below the version and can be copied
-  or clicked to open an email application.
+  or clicked to open an email application. A selectable GitHub link below the
+  email opens the project repository in a browser.
 
 - Structure import and conversion through the bundled ChemStructConverter
   backend and ASE, including XYZ, Gaussian inputs, CIF and POSCAR.
@@ -60,7 +62,7 @@ the caption “Meet 乐乐 · LELE's little explorer” remains below the animat
 The animation stops when the page is hidden.
 The shortcut columns reflow and the page scrolls on smaller windows.
 
-![Welcome header and contact](examples/welcome_preview.png)
+![Welcome header, contact and repository](examples/welcome_preview.png)
 
 ## Planned extensions
 
@@ -78,11 +80,11 @@ Use **64-bit CPython 3.12** (recommended) or **3.11**.
 2. Double-click `start_windows.bat` to create `.venv`, install dependencies and
    launch LELE.
 3. Confirm that the title displays
-   `LELE 1.0.0 - Local Environment and Lattice Explorer`.
+   `LELE 1.0.1 - Local Environment and Lattice Explorer`.
 
 To build an executable, run `build_windows.bat` after the first successful
 launch. The result is `dist/LELE/LELE.exe`. Distribute the complete `dist/LELE`
-directory, including `_internal`.
+directory, including `_internal`, `LICENSE` and `SOURCE_NOTICE.md`.
 
 Both `build_windows.bat` and the Windows GitHub Actions build embed
 `lele/assets/lele.ico` into the executable. The icon uses the first standing
@@ -145,7 +147,7 @@ workflow artifact; it does not publish a release. Test runs triggered by a push
 or pull request are listed in the repository’s Actions tab. The Windows build
 is started separately using Windows executable → Run workflow.
 
-See `docs/VALIDATION_v1.0.0.md` for the local checks and their limits.
+See `docs/VALIDATION_v1.0.1.md` for the local checks and their limits.
 
 ## Appearance settings
 
@@ -160,10 +162,10 @@ Earlier release notes and validation records are kept in `docs/history` under
 their original project name. The bundled conversion backend retains its
 ChemStructConverter name and attribution.
 
-LELE's original source code, documentation and assets are **proprietary, with
-all rights reserved**. This is not an open-source release. Use, modification
-and redistribution require the author's written permission; see [LICENSE](LICENSE).
+LELE's original source code, documentation, assets and author-distributed
+binaries use the **MIT License** from version 1.0.1. See [LICENSE](LICENSE).
+Third-party components retain their own licences and copyright notices;
+see [SOURCE_NOTICE.md](SOURCE_NOTICE.md).
 
-The existing binary-only terms in `licenses/BINARY_ONLY_LICENSE` apply to
-separately distributed executables. Third-party components and dependencies
-retain their own licences. See [SOURCE_NOTICE.md](SOURCE_NOTICE.md).
+The earlier binary-only licence is archived under `docs/history` as historical
+text and does not apply to version 1.0.1 or later.

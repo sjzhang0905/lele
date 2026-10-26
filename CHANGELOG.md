@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.1 — 2026-10-26
+
+- Switch original LELE source, documentation, assets and author-distributed
+  binaries to the MIT License. Update package metadata and distribution
+  notices, and archive the superseded binary-only terms as historical text.
+- Add a selectable, clickable GitHub repository URL below the contact email
+  on the welcome page.
+- Set the application, package and Windows launcher version to 1.0.1.
+- Include the MIT license and source/distribution notice in Windows build outputs.
+
 ## 1.0.0 — 2026-10-26
 
 - Display sjzhang0905@hotmail.com immediately below the welcome version;

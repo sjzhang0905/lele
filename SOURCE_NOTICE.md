@@ -1,16 +1,20 @@
 # Source and distribution notice
 
-Copyright (c) 2026 sjzhang0905. All rights reserved.
+Copyright (c) 2026 sjzhang0905.
 
-The original LELE source code, documentation and assets are governed by the
-proprietary, all-rights-reserved terms in the root LICENSE file. Repository
-access does not grant an open-source licence. The source repository is
-https://github.com/sjzhang0905/lele.
+From LELE 1.0.1, the original LELE source code, documentation, assets and
+binaries distributed by the author use the MIT License in the root LICENSE
+file. Include that copyright and permission notice when redistributing copies
+or substantial portions of the original project material.
 
-The existing `Binary-Only Freeware License` is retained verbatim in
-`licenses/BINARY_ONLY_LICENSE` for the author's executable distributions. Its
-own text states that it does not provide or license source code.
+Repository: https://github.com/sjzhang0905/lele
+Contact: sjzhang0905@hotmail.com
 
 Third-party packages, including ASE, NumPy, SciPy, PySide6, VTK and Matplotlib,
-retain their respective licences. The bundled ChemStructConverter backend
-retains its original identity.
+retain their respective licences and copyright notices. The MIT License for
+LELE does not replace those third-party terms. The bundled ChemStructConverter
+backend retains its original identity and any applicable third-party notices.
+
+The superseded binary-only terms are archived in
+`docs/history/BINARY_ONLY_LICENSE_pre_v1.0.1.txt` for historical reference.
+They do not apply to LELE 1.0.1 or later.

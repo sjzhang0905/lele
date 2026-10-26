@@ -14,7 +14,7 @@ from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QLabel, QWidget
 from vtkmodules.vtkRenderingCore import vtkRenderWindow, vtkRenderWindowInteractor
 
-from lele import APP_CONTACT_EMAIL, APP_FULL_NAME, APP_NAME, __version__
+from lele import APP_CONTACT_EMAIL, APP_FULL_NAME, APP_NAME, APP_REPOSITORY_URL, __version__
 from lele.app import LELEWindow
 from lele.welcome import WelcomePage, WALK_STEP_COUNT
 
@@ -84,7 +84,11 @@ class WelcomeTests(unittest.TestCase):
         self.assertIn('mailto:' + APP_CONTACT_EMAIL, page.contact_label.text())
         self.assertTrue(page.contact_label.openExternalLinks())
         self.assertGreaterEqual(page.contact_label.geometry().top(), page.version_label.geometry().bottom())
-        self.assertLess(page.contact_label.geometry().bottom(), page.open_button.geometry().top())
+        self.assertIn(APP_REPOSITORY_URL, page.repository_label.text())
+        self.assertIn('href="' + APP_REPOSITORY_URL + '"', page.repository_label.text())
+        self.assertTrue(page.repository_label.openExternalLinks())
+        self.assertLess(page.contact_label.geometry().bottom(), page.repository_label.geometry().top())
+        self.assertLess(page.repository_label.geometry().bottom(), page.open_button.geometry().top())
         self.assertFalse(window.windowIcon().isNull())
         self.assertFalse(window.windowIcon().pixmap(32, 32).isNull())
         self.assertEqual(page.parrot_walk.findChildren(QLabel), [])
