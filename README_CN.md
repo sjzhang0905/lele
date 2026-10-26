@@ -2,7 +2,7 @@
 
 **Local Environment and Lattice Explorer — 局域环境与晶格探索工具**
 
-当前版本：**1.0.0**。欢迎页版本号下显示可复制、可点击的联系邮箱 `sjzhang0905@hotmail.com`；采用四帧步态循环，底部保留电子奇偶性但不显示电子总数，Windows EXE 与窗口使用站立鹦鹉图标。顶部分类菜单、X/Y/Z 视角和手动拟合平面继续保留。Python 包名为 `lele`，Windows 程序名为 `LELE.exe`。
+当前版本：**1.0.1**。项目采用 **MIT 协议**。欢迎页版本号下显示可复制、可点击的联系邮箱 `sjzhang0905@hotmail.com` 及仓库地址；采用四帧步态循环，底部保留电子奇偶性但不显示电子总数，Windows EXE 与窗口使用站立鹦鹉图标。顶部分类菜单、X/Y/Z 视角和手动拟合平面继续保留。Python 包名为 `lele`，Windows 程序名为 `LELE.exe`。
 
 ## 当前功能
 
@@ -23,7 +23,7 @@
 
 欢迎页从上到下分为三部分：
 
-1. **LELE / Local Environment and Lattice Explorer / Version 1.0.0**，版本号正下方显示 **sjzhang0905@hotmail.com**。邮箱可选择复制，点击可打开系统邮件客户端。
+1. **LELE / Local Environment and Lattice Explorer / Version 1.0.1**，版本号正下方显示 **sjzhang0905@hotmail.com**。邮箱可选择复制，点击可打开系统邮件客户端；邮箱下方显示可点击、可复制的仓库地址 **https://github.com/sjzhang0905/lele**。
 2. **鹦鹉“乐乐”**：从原始帧图中使用前四帧，以“**站立→左腿→站立→右腿**”重复，不再使用末尾多余的站立帧。每 **0.8 秒**姿态与横向位置同步瞬间切换，帧间保持不动；四帧步态周期为 **3.2 秒**，每 **25.6 秒**完成八个完整步态周期、横穿画布并重新从左侧开始。
 3. **目前已支持的快捷键**，按文件编辑、原子与片段、鼠标与导航分组。
 
@@ -31,7 +31,7 @@
 
 小窗口自动减少快捷键列数，并允许纵向滚动；欢迎页隐藏后停止动画。原始帧图随源码、wheel 和 Windows 打包一起包含，无需额外下载或安装 GIF 组件。
 
-![欢迎页标题与联系邮箱](examples/welcome_preview.png)
+![欢迎页标题、联系邮箱与仓库地址](examples/welcome_preview.png)
 
 ## 后续规划
 
@@ -41,8 +41,8 @@
 
 1. 使用 64 位 Python 3.12，或 3.11，解压完整源码目录。
 2. 双击 `start_windows.bat`，自动建立环境、安装依赖并启动。
-3. 窗口标题应为 `LELE 1.0.0 - Local Environment and Lattice Explorer`。
-4. 首次成功启动后，可运行 `build_windows.bat`。新程序位于 `dist\LELE\LELE.exe`，分发时保留整个 `dist\LELE` 文件夹及其 `_internal` 内容。
+3. 窗口标题应为 `LELE 1.0.1 - Local Environment and Lattice Explorer`。
+4. 首次成功启动后，可运行 `build_windows.bat`。新程序位于 `dist\LELE\LELE.exe`，分发时保留整个 `dist\LELE` 文件夹及其 `_internal`、`LICENSE` 和 `SOURCE_NOTICE.md` 内容。
 
 从已配置好的开发环境也可执行：
 
@@ -88,7 +88,7 @@ python -m pytest tests -q
 
 只选中原子不会生成最佳平面。改变选区、参与拟合的坐标、晶胞或周期镜像选项后，旧平面会清除；再次点击 `Fit selected plane` 才重新生成。`Show fitted plane` 仅控制已经生成的平面是否可见，不会自动启动拟合。随后点击 `Align fitted plane to XY` 可将完整结构、晶胞和网格一同旋转，支持 Ctrl+Z 撤销。
 
-本次检查结果与环境限制见 [v1.0.0 验证记录](docs/VALIDATION_v1.0.0.md)。
+本次检查结果与环境限制见 [v1.0.1 验证记录](docs/VALIDATION_v1.0.1.md)。
 
 ## 配置与版本历史
 
@@ -102,6 +102,6 @@ LELE 使用独立、固定的 Qt 应用配置目录。首次运行时会尝试�
 
 ## 许可
 
-LELE 原创源码、文档和素材采用**专有许可，保留所有权利**，不是 MIT/GPL 等开源发布。使用、修改或再分发需要作者书面许可，详见 [LICENSE](LICENSE)。
+从 **1.0.1** 起，LELE 原创源码、文档、素材和作者分发的可执行程序采用 **MIT 协议**，见 [LICENSE](LICENSE)。第三方组件和依赖保留各自许可及版权声明，见 `SOURCE_NOTICE.md`。
 
-`licenses/BINARY_ONLY_LICENSE` 适用于单独发布的可执行文件。第三方组件和依赖保留各自的许可，见 `SOURCE_NOTICE.md`。
+旧的 binary-only 协议已归档至 `docs/history/BINARY_ONLY_LICENSE_pre_v1.0.1.txt`，仅供历史参考，不适用于 1.0.1 及以后版本。

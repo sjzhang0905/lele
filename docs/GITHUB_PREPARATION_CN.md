@@ -1,6 +1,6 @@
 # LELE 开发与发布
 
-当前版本：**1.0.0**。欢迎页版本号下显示联系邮箱 **sjzhang0905@hotmail.com**。
+当前版本：**1.0.1**。欢迎页版本号下显示联系邮箱 **sjzhang0905@hotmail.com**，其下方显示可点击的仓库地址。项目采用 **MIT 协议**。
 
 源码仓库：[sjzhang0905/lele](https://github.com/sjzhang0905/lele)。
 
@@ -39,8 +39,6 @@ git push origin main
 
 ## 源码与可执行文件
 
-本仓库用于 LELE 源码开发。原创源码、文档和素材采用根目录 `LICENSE` 中的专有许可，保留所有权利。第三方组件和依赖保留其各自许可。
+从 1.0.1 起，本仓库的 LELE 原创源码、文档、素材和作者分发的可执行程序采用根目录 `LICENSE` 中的 MIT 协议。分发时保留所需版权和许可声明；第三方组件和依赖继续适用其各自许可。
 
-单独发布的可执行文件适用 `licenses/BINARY_ONLY_LICENSE`。原来的 `standalone_Windows_executable` 仓库可继续作为可执行文件的发布入口；源码和程序包分别维护。
-
-后续若决定采用 MIT、GPL 或其他开放源码许可，应由作者明确修改许可文件和相关说明。
+旧 binary-only 协议保留在 `docs/history/BINARY_ONLY_LICENSE_pre_v1.0.1.txt`，仅供历史参考，不适用于 1.0.1 及以后版本。原来的 `standalone_Windows_executable` 仓库可继续用于可执行文件发布。

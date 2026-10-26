@@ -9,7 +9,7 @@ from PySide6.QtGui import QColor, QPainter, QPalette, QPixmap, QTransform
 from PySide6.QtWidgets import (QGridLayout, QHBoxLayout, QLabel, QPushButton,
                                QScrollArea, QSizePolicy, QVBoxLayout, QWidget)
 
-from . import APP_CONTACT_EMAIL, APP_FULL_NAME, APP_NAME, __version__
+from . import APP_CONTACT_EMAIL, APP_FULL_NAME, APP_NAME, APP_REPOSITORY_URL, __version__
 
 
 POSE_INTERVAL_MS = 800
@@ -144,7 +144,7 @@ class WelcomePage(QScrollArea):
             QLabel#appName { color: #373145; font-size: 52px; font-weight: 700; }
             QLabel#appFullName { font-size: 17px; }
             QLabel#version { color: #85818D; font-size: 12px; }
-            QLabel#contactEmail { font-size: 12px; }
+            QLabel#contactEmail, QLabel#repositoryUrl { font-size: 12px; }
             QLabel#parrotCaption { color: #8B819B; font-size: 12px; }
             QLabel#sectionTitle { font-size: 17px; font-weight: 600; }
             QLabel#groupTitle { color: #77678F; font-size: 13px; font-weight: 600; }
@@ -181,6 +181,15 @@ class WelcomePage(QScrollArea):
         self.contact_label.setOpenExternalLinks(True)
         self.contact_label.setAccessibleName('Contact email: ' + APP_CONTACT_EMAIL)
         outer.addWidget(self.contact_label)
+        self.repository_label = QLabel(
+            f'<a style="color: #77678F;" href="{APP_REPOSITORY_URL}">{APP_REPOSITORY_URL}</a>')
+        self.repository_label.setObjectName('repositoryUrl')
+        self.repository_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.repository_label.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextBrowserInteraction | Qt.TextInteractionFlag.TextSelectableByKeyboard)
+        self.repository_label.setOpenExternalLinks(True)
+        self.repository_label.setAccessibleName('Source repository: ' + APP_REPOSITORY_URL)
+        outer.addWidget(self.repository_label)
         start_row = QHBoxLayout()
         start_row.addStretch()
         self.open_button = QPushButton('Open a file…  Ctrl+O')

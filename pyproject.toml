@@ -9,8 +9,8 @@ description = "LELE - Local Environment and Lattice Explorer"
 readme = "README.md"
 requires-python = ">=3.11,<3.13"
 authors = [{name = "sjzhang0905", email = "sjzhang0905@hotmail.com"}]
-license = "LicenseRef-Proprietary"
-license-files = ["LICENSE", "licenses/BINARY_ONLY_LICENSE"]
+license = "MIT"
+license-files = ["LICENSE"]
 
 [project.urls]
 Repository = "https://github.com/sjzhang0905/lele"

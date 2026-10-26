@@ -1,3 +1,11 @@
+Archived binary-only terms (superseded in LELE 1.0.1)
+
+This file records the earlier binary-only licence for historical reference.
+It does not govern LELE 1.0.1 or later, which uses the MIT License in the root
+LICENSE file. The earlier text follows unchanged.
+
+------------------------------------------------------------------------
+
 # Binary-Only Freeware License
 
 Copyright (c) 2026 sjzhang0905. All rights reserved.
