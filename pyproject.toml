@@ -8,7 +8,7 @@ dynamic = ["version", "dependencies"]
 description = "LELE - Local Environment and Lattice Explorer"
 readme = "README.md"
 requires-python = ">=3.11,<3.13"
-authors = [{name = "sjzhang0905"}]
+authors = [{name = "sjzhang0905", email = "sjzhang0905@hotmail.com"}]
 license = "LicenseRef-Proprietary"
 license-files = ["LICENSE", "licenses/BINARY_ONLY_LICENSE"]
 
@@ -29,6 +29,9 @@ dependencies = {file = ["requirements.txt"]}
 
 [tool.setuptools.packages.find]
 include = ["lele", "lele.*"]
+
+[tool.setuptools.package-data]
+lele = ["assets/*.png", "assets/*.ico"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

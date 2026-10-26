@@ -48,8 +48,8 @@ def electron_parity(frame: Frame):
     if assumed_neutral:
         charge = 0
     electrons = sum(ATOMIC_NUMBERS[s] for s in frame.symbols) - charge
-    note = '; assumed charge 0' if assumed_neutral else f'; charge {charge:+d}'
-    return f'{"Odd" if electrons % 2 else "Even"} ({electrons} electrons{note})'
+    note = 'assumed charge 0' if assumed_neutral else f'charge {charge:+d}'
+    return f'{"Odd" if electrons % 2 else "Even"} ({note})'
 
 
 def short_contact_summary(frame: Frame):

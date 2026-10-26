@@ -7,4 +7,6 @@
 *.bat text eol=crlf
 *.svg text eol=lf
 *.png binary
+*.ico binary
+*.gif binary
 *.zip binary

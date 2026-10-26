@@ -11,11 +11,11 @@ from lele.periodic_geometry import periodic_fragment, periodic_bonds, short_cont
 class ChemicalPresentationTests(unittest.TestCase):
     def test_electron_parity_uses_net_charge(self):
         frame = Frame(['O', 'H'], [[0, 0, 0], [1, 0, 0]])
-        self.assertIn('Odd (9 electrons', electron_parity(frame))
+        self.assertEqual('Odd (assumed charge 0)', electron_parity(frame))
         frame.info['charge_override'] = 1
-        self.assertIn('Even (8 electrons', electron_parity(frame))
+        self.assertEqual('Even (charge +1)', electron_parity(frame))
         frame.info['charge_override'] = -1
-        self.assertIn('Even (10 electrons', electron_parity(frame))
+        self.assertEqual('Even (charge -1)', electron_parity(frame))
 
     def test_neutral_charge_assumption(self):
         frame = Frame(['H'], [[0, 0, 0]])
