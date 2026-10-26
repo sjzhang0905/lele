@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reliable local Windows installer/launcher for LELE v0.9.1.
+"""Reliable local Windows installer/launcher for LELE.
 
 Uses *only* a validated 64-bit CPython 3.11/3.12. Never silently reuses an
 incompatible .venv created by an older start_windows.bat script.

@@ -10,6 +10,7 @@ import sys
 import traceback
 import json
 from pathlib import Path
+import numpy as np
 
 from . import APP_NAME, APP_FULL_NAME, APP_TITLE, __version__
 from .settings import read_style_presets
@@ -17,13 +18,13 @@ from .settings import read_style_presets
 from PySide6.QtCore import Qt, QTimer, QSignalBlocker, QStandardPaths
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QSplitter, QTreeWidget, QTreeWidgetItem, QLabel, QToolBar, QFileDialog,
+    QSplitter, QTreeWidget, QTreeWidgetItem, QLabel, QFileDialog,
     QComboBox, QSlider, QCheckBox, QDoubleSpinBox, QPushButton, QSpinBox,
     QGroupBox, QFormLayout, QTabWidget, QTableWidget, QTableWidgetItem,
     QMessageBox, QScrollArea, QPlainTextEdit, QAbstractItemView, QColorDialog,
-    QInputDialog, QDialog, QLineEdit, QTextEdit, QAbstractSpinBox,
+    QInputDialog, QDialog, QLineEdit, QTextEdit, QAbstractSpinBox, QStackedWidget,
 )
-from PySide6.QtGui import QAction, QKeySequence, QColor
+from PySide6.QtGui import QAction, QActionGroup, QKeySequence, QColor, QIcon
 
 # Pin the chosen Qt binding before importing VTK's Qt adapter.
 import vtkmodules.qt
@@ -37,7 +38,7 @@ from .core import (Document, Frame, measure, colour,
                    toggle_selected_bonds, move_atom_to_origin, align_pair_to_axis)
 from .formats import load_document, export_frame
 from .structure_summary import molecular_formula
-from .chemical_analysis import electron_parity, short_contact_summary
+from .chemical_analysis import electron_parity, known_net_charge, short_contact_summary
 from .periodic_geometry import periodic_fragment, periodic_basis
 from .renderer import MoleculeRenderer, set_isometric_view
 from .style_presets import (BUILTIN_PRESETS, CUSTOM_KEY, STYLE_KEYS,
@@ -48,12 +49,16 @@ from .fragment import (selected_fragments, apply_fragment_rotation, apply_fragme
                        screen_rotation, screen_translation)
 from .selection_geometry import (fit_selection_plane, align_plane_to_xy,
                                  delete_selected_atoms as remove_atoms)
+from .welcome import WelcomePage
+
+ICON_PATH = Path(__file__).with_name('assets') / 'lele.ico'
 
 
 class LELEWindow(QMainWindow):
     def __init__(self, initial_files=()):
         super().__init__()
         self.setWindowTitle(APP_TITLE)
+        self.setWindowIcon(QIcon(str(ICON_PATH)))
         self.resize(1380, 850)
         self.setAcceptDrops(True)
         self.documents: list[Document] = []
@@ -69,54 +74,73 @@ class LELEWindow(QMainWindow):
         self.playback = QTimer(self)
         self.playback.timeout.connect(self._step_next)
         self.statusBar().showMessage('Open a calculation input/output file or a structure.')
-        self.vtk.Initialize()
         self.axes_widget = vtkOrientationMarkerWidget()
         self.axes_widget.SetInteractor(self.vtk.GetRenderWindow().GetInteractor())
         self.axes_widget.SetViewport(0.015, 0.015, 0.225, 0.225)
-        self.vtk.GetRenderWindow().Render()
         for filename in initial_files:
             self.open_path(filename)
 
-    def _action(self, toolbar, title, handler, shortcut=None):
+    def _action(self, menu, title, handler, shortcut=None):
         act = QAction(title, self)
         act.triggered.connect(handler)
         if shortcut:
             act.setShortcut(QKeySequence(shortcut))
-        toolbar.addAction(act)
+        menu.addAction(act)
         return act
 
     def _build_ui(self):
-        toolbar = QToolBar('File and view')
-        toolbar.setMovable(False)
-        self.addToolBar(toolbar)
-        self._action(toolbar, 'Open…', self.open_dialog, 'Ctrl+O')
-        self._action(toolbar, 'Export structure…', self.export_dialog, 'Ctrl+Shift+S')
-        self._action(toolbar, 'Save PNG…', self.save_png, 'Ctrl+S')
-        self._action(toolbar, 'Undo edit', self.undo_edit, 'Ctrl+Z')
-        self.invert_action = QAction('Invert atom selection', self)
-        self.invert_action.setShortcut(QKeySequence('Ctrl+I'))
-        self.invert_action.triggered.connect(self.invert_selection)
-        self.addAction(self.invert_action)
-        self.delete_action = QAction('Delete selected atoms', self)
-        self.delete_action.setShortcut(QKeySequence('Delete'))
-        self.delete_action.triggered.connect(self._delete_shortcut)
-        self.addAction(self.delete_action)
-        self._action(toolbar, 'Toggle selected bonds', self.toggle_bonds, 'Ctrl+B')
-        self._action(toolbar, 'Select fragment', self.select_connected_fragment, 'Ctrl+G')
-        self._action(toolbar, 'Energy curve', self.show_energy_curve)
-        toolbar.addSeparator()
-        self._action(toolbar, 'Fit', lambda: self.reset_camera())
-        self._action(toolbar, 'Isometry', self.isometric_view)
-        self.projection_combo = QComboBox()
-        self.projection_combo.addItems(['Isometry', 'Perspective'])
-        self.projection_combo.setToolTip('Isometry: orthographic XYZ isometric view; Perspective: perspective projection')
-        self.projection_combo.currentTextChanged.connect(self.set_projection)
-        toolbar.addWidget(self.projection_combo)
-        self._action(toolbar, 'Front', lambda: self.align_camera('front'))
-        self._action(toolbar, 'Top', lambda: self.align_camera('top'))
-        self._action(toolbar, 'Side', lambda: self.align_camera('side'))
-        toolbar.addSeparator()
-        self._action(toolbar, 'Help', self.help_dialog)
+        self._plane_fit = None
+        self._plane_context = None
+        self.file_menu = self.menuBar().addMenu('&File')
+        self._action(self.file_menu, 'Open…', self.open_dialog, 'Ctrl+O')
+        self._action(self.file_menu, 'Export structure…', self.export_dialog, 'Ctrl+Shift+S')
+        self._action(self.file_menu, 'Save PNG…', self.save_png, 'Ctrl+S')
+
+        self.edit_menu = self.menuBar().addMenu('&Edit')
+        self._action(self.edit_menu, 'Undo edit', self.undo_edit, 'Ctrl+Z')
+        self.edit_menu.addSeparator()
+        self._action(self.edit_menu, 'Select connected fragment(s)', self.select_connected_fragment, 'Ctrl+G')
+        self.invert_action = self._action(
+            self.edit_menu, 'Invert atom selection', self.invert_selection, 'Ctrl+I')
+        self._action(self.edit_menu, 'Clear selection', self.clear_selection)
+        self.delete_action = self._action(
+            self.edit_menu, 'Delete selected atoms', self._delete_shortcut, 'Delete')
+        self.edit_menu.addSeparator()
+        self._action(self.edit_menu, 'Toggle selected bonds', self.toggle_bonds, 'Ctrl+B')
+        self.edit_menu.addSeparator()
+        self.fit_plane_action = self._action(
+            self.edit_menu, 'Fit selected plane', self.fit_selected_plane)
+        self.fit_plane_action.setEnabled(False)
+        self.align_plane_action = self._action(
+            self.edit_menu, 'Align fitted plane to XY', self.align_selected_plane)
+        self.align_plane_action.setEnabled(False)
+
+        self.view_menu = self.menuBar().addMenu('&View')
+        self._action(self.view_menu, 'Fit to window', lambda: self.reset_camera())
+        self._action(self.view_menu, 'Isometry', self.isometric_view)
+        self.view_menu.addSeparator()
+        self.axis_actions = {}
+        for axis in ('X', 'Y', 'Z'):
+            action = self._action(
+                self.view_menu, axis, lambda _checked=False, axis=axis: self.align_camera(axis))
+            action.setStatusTip(f'View from +{axis} toward the structure along the {axis} axis')
+            self.axis_actions[axis] = action
+        self.view_menu.addSeparator()
+        projection_menu = self.view_menu.addMenu('Projection')
+        self.projection_group = QActionGroup(self)
+        self.projection_actions = {}
+        for mode in ('Orthographic', 'Perspective'):
+            action = self._action(
+                projection_menu, mode, lambda _checked=False, mode=mode: self.set_projection(mode))
+            action.setCheckable(True)
+            self.projection_group.addAction(action)
+            self.projection_actions[mode] = action
+        self.projection_actions['Orthographic'].setChecked(True)
+
+        self.analysis_menu = self.menuBar().addMenu('&Analysis')
+        self._action(self.analysis_menu, 'Energy curve', self.show_energy_curve)
+        self.help_menu = self.menuBar().addMenu('&Help')
+        self._action(self.help_menu, 'Help and shortcuts…', self.help_dialog)
 
         root = QSplitter(Qt.Orientation.Horizontal)
         self.setCentralWidget(root)
@@ -167,10 +191,18 @@ class LELEWindow(QMainWindow):
         sidebar_tabs.addTab(files_page, 'Files')
         root.addWidget(sidebar_tabs)
 
-        # Centre: embedded native 3D VTK canvas + data inspector.
-        centre = QSplitter(Qt.Orientation.Vertical)
+        # Centre: a white startup canvas, then the 3D canvas + data inspector.
+        centre = QStackedWidget()
+        self.canvas_stack = centre
+        self.welcome_page = WelcomePage()
+        self.welcome_page.openRequested.connect(self.open_dialog)
+        centre.addWidget(self.welcome_page)
+        self.structure_page = QSplitter(Qt.Orientation.Vertical)
+        centre.addWidget(self.structure_page)
+        self._vtk_initialized = False
         self.vtk = InteractiveVTKView()
         self.scene = vtkRenderer()
+        self.scene.SetBackground(1.0, 1.0, 1.0)
         self.vtk.GetRenderWindow().AddRenderer(self.scene)
         self.renderer = MoleculeRenderer(self.scene)
         self.vtk.GetRenderWindow().GetInteractor().SetInteractorStyle(vtkInteractorStyleTrackballCamera())
@@ -180,7 +212,7 @@ class LELEWindow(QMainWindow):
         self.vtk.fragmentGestureBegin.connect(self._fragment_begin)
         self.vtk.fragmentGestureMove.connect(self._fragment_move)
         self.vtk.fragmentGestureEnd.connect(self._fragment_end)
-        centre.addWidget(self.vtk)
+        self.structure_page.addWidget(self.vtk)
 
         self.tabs = QTabWidget()
         self.atom_table = QTableWidget(0, 4)
@@ -202,14 +234,16 @@ class LELEWindow(QMainWindow):
         lower_layout.setContentsMargins(0, 0, 0, 0)
         lower_layout.setSpacing(4)
         lower_layout.addWidget(self.tabs, 1)
-        self.summary_label = QLabel('Formula: - | Electrons: - | Short contacts: -')
+        self.summary_label = QLabel('Atoms: 0 | Formula: - | Electron parity: - | Short contacts: -')
         self.summary_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         self.summary_label.setWordWrap(True)
         self.summary_label.setContentsMargins(8, 4, 8, 5)
-        self.summary_label.setToolTip('Electron count uses total charge when known; otherwise assumes neutral. Short contacts use the periodic minimum image.')
+        self.summary_label.setToolTip(
+            'Total atoms and composition in the active frame. Electron parity uses the net charge; '
+            'neutral is assumed when charge is unknown. Short contacts use the periodic minimum image.')
         lower_layout.addWidget(self.summary_label)
-        centre.addWidget(lower_panel)
-        centre.setSizes([630, 220])
+        self.structure_page.addWidget(lower_panel)
+        self.structure_page.setSizes([630, 220])
         root.addWidget(centre)
 
         def control_page(title):
@@ -393,13 +427,15 @@ class LELEWindow(QMainWindow):
         edit_outer = control_page('Edit')
         measurements = QGroupBox('Geometry / atom selection')
         m_layout = QVBoxLayout(measurements)
-        m_layout.addWidget(QLabel('Click atoms to select; right-click clears.\n'
-                                  'Ctrl+B toggles selected bonds.\n'
-                                  'Ctrl+G selects complete connected fragment(s).\n'
-                                  'Alt+left drag: rotate fragment in 3D.\n'
-                                  'Alt+right drag: roll fragment.\n'
-                                  'Alt+middle drag: move fragment in screen plane.\n'
-                                  'Without Alt, mouse gestures control the camera.'))
+        selection_help = QLabel('Click atoms to select; right-click clears.\n'
+                                'Ctrl+B toggles selected bonds.\n'
+                                'Ctrl+G selects complete connected fragment(s).\n'
+                                'Alt+left drag: rotate fragment in 3D.\n'
+                                'Alt+right drag: roll fragment.\n'
+                                'Alt+middle drag: move fragment in screen plane.\n'
+                                'Without Alt, mouse gestures control the camera.')
+        selection_help.setWordWrap(True)
+        m_layout.addWidget(selection_help)
         self.selected_label = QLabel('No atoms selected')
         self.selected_label.setWordWrap(True)
         m_layout.addWidget(self.selected_label)
@@ -419,13 +455,17 @@ class LELEWindow(QMainWindow):
         charge_row.addWidget(QLabel('Net charge (electron parity)'))
         self.charge_spin = QSpinBox()
         self.charge_spin.setRange(-999, 999)
-        self.charge_spin.setToolTip('Used to count total electrons. Defaults to file charge, or neutral when unknown.')
+        self.charge_spin.setEnabled(False)
+        self.charge_spin.setToolTip(
+            'Used for electron parity. Defaults to the file charge; otherwise assumes neutral.')
         self.charge_spin.valueChanged.connect(self._set_net_charge)
         charge_row.addWidget(self.charge_spin)
         m_layout.addLayout(charge_row)
-        m_layout.addWidget(QLabel('Periodic fragments are unwrapped into adjacent-cell replicas.\n'
-                                  'Infinite crystal networks cannot be fully selected.\n'
-                                  'Preview changes only the display; source coordinates stay fixed.'))
+        fragment_help = QLabel('Periodic fragments are unwrapped into adjacent-cell replicas.\n'
+                               'Infinite crystal networks cannot be fully selected.\n'
+                               'Preview changes only the display; source coordinates stay fixed.')
+        fragment_help.setWordWrap(True)
+        m_layout.addWidget(fragment_help)
         self.toggle_bonds_btn = QPushButton('Toggle bonds within selection  (Ctrl+B)')
         self.toggle_bonds_btn.clicked.connect(self.toggle_bonds)
         m_layout.addWidget(self.toggle_bonds_btn)
@@ -441,15 +481,22 @@ class LELEWindow(QMainWindow):
         alignment_row.addWidget(self.align_combo)
         alignment_row.addWidget(self.align_btn)
         m_layout.addLayout(alignment_row)
-        m_layout.addWidget(QLabel('All axes (XYZ/abc): rotate atomic coordinates only.\n'
-                                  'The lattice and camera remain unchanged.\n'
-                                  'The first selected atom remains fixed.'))
+        alignment_help = QLabel('All axes (XYZ/abc): rotate atomic coordinates only.\n'
+                                'The lattice and camera remain unchanged.\n'
+                                'The first selected atom remains fixed.')
+        alignment_help.setWordWrap(True)
+        m_layout.addWidget(alignment_help)
         edit_outer.addWidget(measurements)
         plane_group = QGroupBox('Best-fit selection plane')
         plane_layout = QVBoxLayout(plane_group)
-        self.show_plane_check = QCheckBox('Show plane for 3+ selected atoms')
+        self.fit_plane_btn = QPushButton('Fit selected plane')
+        self.fit_plane_btn.setEnabled(False)
+        self.fit_plane_btn.clicked.connect(self.fit_selected_plane)
+        plane_layout.addWidget(self.fit_plane_btn)
+        self.show_plane_check = QCheckBox('Show fitted plane')
         self.show_plane_check.setChecked(True)
         self.show_plane_check.toggled.connect(lambda _checked: self.refresh_scene())
+        self.show_plane_check.setEnabled(False)
         plane_layout.addWidget(self.show_plane_check)
         self.plane_images_check = QCheckBox('Use nearest periodic images')
         self.plane_images_check.setChecked(True)
@@ -468,9 +515,11 @@ class LELEWindow(QMainWindow):
         self.plane_align_btn.setEnabled(False)
         self.plane_align_btn.clicked.connect(self.align_selected_plane)
         plane_layout.addWidget(self.plane_align_btn)
-        plane_layout.addWidget(QLabel(
+        plane_help = QLabel(
             'Rotate the complete structure, cell and attached grid.\n'
-            'Atomic deviations from the plane are preserved. Ctrl+Z to undo.'))
+            'Atomic deviations from the plane are preserved. Ctrl+Z to undo.')
+        plane_help.setWordWrap(True)
+        plane_layout.addWidget(plane_help)
         edit_outer.addWidget(plane_group)
         edit_outer.addStretch(1)
 
@@ -562,6 +611,10 @@ class LELEWindow(QMainWindow):
         doc = self.doc
         if doc is None:
             return
+        self.canvas_stack.setCurrentWidget(self.structure_page)
+        if not self._vtk_initialized:
+            self.vtk.Initialize()
+            self._vtk_initialized = True
         self.frame_index = max(0, min(int(index), len(doc.frames) - 1))
         self.renderer.periodic_preview = None
         # Keep keyboard navigation, playback, spinbox and mouse clicks in sync.
@@ -575,10 +628,9 @@ class LELEWindow(QMainWindow):
                 finally:
                     self._ignore_tree = False
         frame = self.frame
-        self.charge_spin.blockSignals(True)
-        from .chemical_analysis import known_net_charge
-        self.charge_spin.setValue(known_net_charge(frame) or 0)
-        self.charge_spin.blockSignals(False)
+        with QSignalBlocker(self.charge_spin):
+            self.charge_spin.setValue(known_net_charge(frame) or 0)
+        self.charge_spin.setEnabled(True)
         self.selection = [i for i in self.selection if i < len(frame.symbols)]
         self.frame_spin.blockSignals(True)
         self.frame_spin.setRange(1, len(doc.frames))
@@ -650,7 +702,7 @@ class LELEWindow(QMainWindow):
         self._refresh_info()
 
     def _set_net_charge(self, new_charge):
-        """Update frame-level total charge used by electron parity diagnostics."""
+        """Update the active frame's net charge for electron parity reporting."""
         if self.frame is None:
             return
         self.frame.info['charge_override'] = int(new_charge)
@@ -684,8 +736,9 @@ class LELEWindow(QMainWindow):
         self.info_view.setPlainText('\n'.join(lines))
         system = 'Cell composition' if any(frame.pbc) else 'Formula'
         self.summary_label.setText(
+            f'Atoms: {len(frame.symbols)}    |    '
             f'{system}: {molecular_formula(frame.symbols)}    |    '
-            f'Electrons: {electron_parity(frame)}    |    {short_contact_summary(frame)}')
+            f'Electron parity: {electron_parity(frame)}    |    {short_contact_summary(frame)}')
 
     def refresh_scene(self, reset_camera=False):
         self._update_fitted_plane()
@@ -701,26 +754,58 @@ class LELEWindow(QMainWindow):
         self._refresh_measurement()
 
     def _update_fitted_plane(self):
-        """Refit after every selection or geometry change, without editing atoms."""
-        self._plane_fit = None
+        """Keep an explicitly fitted plane only while its input remains current."""
         frame = self.frame
         self.plane_images_check.setEnabled(frame is not None and periodic_basis(frame) is not None)
+        can_fit = frame is not None and len(self.selection) >= 3
+        self.fit_plane_btn.setEnabled(can_fit)
+        self.fit_plane_action.setEnabled(can_fit)
+        if self._plane_fit is not None:
+            old_frame, positions, cell, nearest_images = self._plane_context
+            if (frame is not old_frame or tuple(self.selection) != self._plane_fit.indices
+                    or nearest_images != self.plane_images_check.isChecked()
+                    or not np.array_equal(frame.positions[self.selection], positions)
+                    or not np.array_equal(frame.cell, cell)):
+                self._plane_fit = None
+                self._plane_context = None
         text = 'Select at least three non-collinear atoms.'
-        if frame is not None and len(self.selection) >= 3:
-            try:
-                self._plane_fit = fit_selection_plane(
-                    frame, self.selection, nearest_images=self.plane_images_check.isChecked())
-                plane = self._plane_fit
-                nx, ny, nz = plane.normal
-                offset = -float(plane.normal @ plane.center)
-                text = (f'{len(plane.indices)} atoms; least-squares plane\n'
-                        f'{nx:+.5f} x {ny:+.5f} y {nz:+.5f} z {offset:+.5f} = 0\n'
-                        f'RMS distance: {plane.rms:.5f} Å; max: {plane.max_distance:.5f} Å')
-            except ValueError as exc:
-                text = str(exc)
+        if can_fit:
+            text = 'Click Fit selected plane to create a plane.'
+        if self._plane_fit is not None:
+            plane = self._plane_fit
+            nx, ny, nz = plane.normal
+            offset = -float(plane.normal @ plane.center)
+            text = (f'{len(plane.indices)} atoms; least-squares plane\n'
+                    f'{nx:+.5f} x {ny:+.5f} y {nz:+.5f} z {offset:+.5f} = 0\n'
+                    f'RMS distance: {plane.rms:.5f} Å; max: {plane.max_distance:.5f} Å')
         self.plane_label.setText(text)
         self.plane_align_btn.setEnabled(self._plane_fit is not None)
+        self.align_plane_action.setEnabled(self._plane_fit is not None)
+        self.show_plane_check.setEnabled(self._plane_fit is not None)
         self.renderer.fitted_plane = self._plane_fit if self.show_plane_check.isChecked() else None
+
+    def _fit_selected_plane(self):
+        """Calculate a plane only as part of an explicit fit/alignment command."""
+        frame = self.frame
+        self._plane_fit = fit_selection_plane(
+            frame, self.selection, nearest_images=self.plane_images_check.isChecked())
+        self._plane_context = (frame, frame.positions[self.selection].copy(),
+                               frame.cell.copy(), self.plane_images_check.isChecked())
+
+    def fit_selected_plane(self):
+        if self.frame is None or len(self.selection) < 3:
+            return
+        self._plane_fit = None
+        self._plane_context = None
+        try:
+            self._fit_selected_plane()
+        except ValueError as exc:
+            self.refresh_scene()
+            self.plane_label.setText(str(exc))
+            return
+        with QSignalBlocker(self.show_plane_check):
+            self.show_plane_check.setChecked(True)
+        self.refresh_scene()
 
     def align_selected_plane(self):
         self._update_fitted_plane()
@@ -729,6 +814,7 @@ class LELEWindow(QMainWindow):
         self._record_undo()
         align_plane_to_xy(self.frame, self._plane_fit,
                           place_at_zero=self.plane_zero_check.isChecked(), volume=self.doc.volume)
+        self._fit_selected_plane()
         self._fragment_gesture = None
         self.doc.modified = True
         self._refresh_after_geometry_edit()
@@ -1194,12 +1280,12 @@ class LELEWindow(QMainWindow):
             set_isometric_view(self.scene)
         else:
             cam = self.scene.GetActiveCamera()
-            cam.SetParallelProjection(False)
+            cam.SetParallelProjection(mode == 'Orthographic')
             self.scene.ResetCamera()
             self.scene.ResetCameraClippingRange()
-        self.projection_combo.blockSignals(True)
-        self.projection_combo.setCurrentText(mode)
-        self.projection_combo.blockSignals(False)
+        projection = ('Orthographic' if self.scene.GetActiveCamera().GetParallelProjection()
+                      else 'Perspective')
+        self.projection_actions[projection].setChecked(True)
 
     def set_projection(self, mode):
         self._set_projection_mode(mode)
@@ -1217,22 +1303,23 @@ class LELEWindow(QMainWindow):
         self.scene.ResetCameraClippingRange()
         self.vtk.GetRenderWindow().Render()
 
-    def align_camera(self, name):
+    def align_camera(self, axis):
         if self.frame is None or not self.frame.symbols:
             return
+        directions = {
+            'X': ((1, 0, 0), (0, 0, 1)),
+            'Y': ((0, 1, 0), (0, 0, 1)),
+            'Z': ((0, 0, 1), (0, 1, 0)),
+        }
+        direction, up = directions[axis]
         camera = self.scene.GetActiveCamera()
         centre = self.frame.positions.mean(axis=0)
-        spread = max(2.0, float(__import__('numpy').ptp(self.frame.positions, axis=0).max()) * 3)
-        if name == 'front':
-            direction, up = (0, 0, 1), (0, 1, 0)
-        elif name == 'top':
-            direction, up = (0, -1, 0), (0, 0, 1)
-        else:
-            direction, up = (1, 0, 0), (0, 0, 1)
+        spread = max(2.0, float(np.ptp(self.frame.positions, axis=0).max()) * 3)
         camera.SetFocalPoint(*[float(x) for x in centre])
         camera.SetPosition(*[float(centre[i] + direction[i] * spread) for i in range(3)])
         camera.SetViewUp(*up)
         camera.SetParallelProjection(True)
+        self.projection_actions['Orthographic'].setChecked(True)
         self.reset_camera()
 
     def show_energy_curve(self):
@@ -1319,7 +1406,8 @@ class LELEWindow(QMainWindow):
             'One atom -> Move to origin; two ordered atoms -> Align to XYZ or lattice abc.\n'
             'Use Up/Down in frame tree to change frames.\n'
             'Select 2/3/4 atoms to measure distance/angle/dihedral.\n'
-            'Select 3+ atoms to show a least-squares plane in Edit.\n'
+            'View > X/Y/Z looks from the positive coordinate axis toward the structure.\n'
+            'Select 3+ atoms, then click Fit selected plane in Edit to show a plane.\n'
             'Align plane to XY rotates all atoms and the cell; optional Z translation.\n'
             'Ctrl+I inverts selection; Delete removes selected atoms; Ctrl+Z restores them.\n'
             'Choose hidden/corner/world-origin axes and XYZ or periodic abc.\n'
@@ -1351,10 +1439,14 @@ class LELEWindow(QMainWindow):
 
 def main(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
+    if sys.platform == 'win32':
+        import ctypes
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('LELE.Explorer')
     app = QApplication([sys.argv[0], *argv])
     app.setApplicationName(APP_NAME)
     app.setApplicationDisplayName(APP_FULL_NAME)
     app.setApplicationVersion(__version__)
+    app.setWindowIcon(QIcon(str(ICON_PATH)))
     app.setStyle('Fusion')
     window = LELEWindow(argv)
     window.show()

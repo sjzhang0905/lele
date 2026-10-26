@@ -1,5 +1,7 @@
 # LELE 开发与发布
 
+当前版本：**1.0.0**。欢迎页版本号下显示联系邮箱 **sjzhang0905@hotmail.com**。
+
 源码仓库：[sjzhang0905/lele](https://github.com/sjzhang0905/lele)。
 
 ## 本地开发
@@ -30,6 +32,8 @@ git push origin main
 推送或 PR 会触发 Tests 工作流；实际运行状态在 Actions 页面查看。
 
 在 **Actions → Windows executable → Run workflow** 手动启动 Windows 构建。成功后下载 `LELE-windows-x64` 产物，其中应包含 `LELE.exe`、`VERSION.txt` 和 `_internal`。
+
+本地和 GitHub Windows 构建均使用站立鹦鹉图标。文件图标可能受 Windows 缓存影响；可用改名副本确认图标是否已更新。
 
 该工作流只保存构建产物，不自动创建 Release。分发时保留完整程序目录，先完成 Windows 原生界面和导出功能验收。
 
