@@ -1,0 +1,14 @@
+Welcome to SIESTA
+Species number: 1 Atomic number: 1 Label: H
+Species number: 2 Atomic number: 8 Label: O
+SpinPolarized F
+outcell: Unit cell vectors (Ang):
+outcell: 8.0 0.0 0.0
+outcell: 0.0 8.0 0.0
+outcell: 0.0 0.0 8.0
+siesta: Etot = -100.12345
+outcoor: Atomic coordinates (Ang):
+outcoor: 0.000 0.000 0.000 1 1 H
+outcoor: 0.000 0.000 1.100 2 8 O
+
+siesta: Final energy

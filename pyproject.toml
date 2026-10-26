@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lele-explorer"
+dynamic = ["version", "dependencies"]
+description = "LELE - Local Environment and Lattice Explorer"
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+authors = [{name = "sjzhang0905"}]
+license = "LicenseRef-Proprietary"
+license-files = ["LICENSE", "licenses/BINARY_ONLY_LICENSE"]
+
+[project.urls]
+Repository = "https://github.com/sjzhang0905/lele"
+Issues = "https://github.com/sjzhang0905/lele/issues"
+
+[project.optional-dependencies]
+test = ["pytest>=8,<10"]
+build = ["pyinstaller>=6.10,<7"]
+
+[project.gui-scripts]
+lele = "lele.app:main"
+
+[tool.setuptools.dynamic]
+version = {attr = "lele.__version__"}
+dependencies = {file = ["requirements.txt"]}
+
+[tool.setuptools.packages.find]
+include = ["lele", "lele.*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

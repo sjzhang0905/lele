@@ -1,0 +1,189 @@
+Linux acceptance run; QT_QPA_PLATFORM=offscreen; VTK_DEFAULT_OPENGL_WINDOW=vtkEGLRenderWindow
+Command: python -m pytest tests -q -rA
+.................................................................. [ 56%]
+..................................................                                        [100%]
+==================================== PASSES ====================================
+__ CoordinateFrameContractTests.test_every_axis_preserves_skew_periodic_cell ___
+----------------------------- Captured stdout call -----------------------------
+uuuuuu
+_______ PlaneGeometryTests.test_collinear_selection_has_no_unique_plane ________
+----------------------------- Captured stdout call -----------------------------
+uuu
+_ SelectionWorkflowTests.test_real_delete_key_does_not_delete_atoms_while_editing_a_coordinate _
+----------------------------- Captured stderr call -----------------------------
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+_______ StyleStateTests.test_invalid_saved_element_colours_are_rejected ________
+----------------------------- Captured stdout call -----------------------------
+uuuu
+_ RendererStyleFixTests.test_display_bonds_controls_normal_and_periodic_bonds_in_every_mode _
+----------------------------- Captured stdout call -----------------------------
+uuuuuuuu
+__ RendererStyleFixTests.test_labels_survive_all_presets_including_wireframe ___
+----------------------------- Captured stdout call -----------------------------
+uuuuuuuuu
+__________ StyleQtWorkflowTests.test_all_preset_widgets_stay_in_sync ___________
+----------------------------- Captured stdout call -----------------------------
+uuuuuuuuu
+----------------------------- Captured stderr call -----------------------------
+This plugin does not support setParent!
+This plugin does not support lower()
+This plugin does not support setParent!
+This plugin does not support lower()
+_ StyleQtWorkflowTests.test_edit_save_restart_and_custom_restore_keep_element_colour _
+----------------------------- Captured stderr call -----------------------------
+This plugin does not support setParent!
+This plugin does not support lower()
+This plugin does not support setParent!
+This plugin does not support lower()
+This plugin does not support setParent!
+This plugin does not support lower()
+This plugin does not support setParent!
+This plugin does not support lower()
+_____ StyleQtWorkflowTests.test_legacy_presets_load_alongside_new_presets ______
+----------------------------- Captured stderr call -----------------------------
+This plugin does not support setParent!
+This plugin does not support lower()
+This plugin does not support setParent!
+This plugin does not support lower()
+This plugin does not support setParent!
+This plugin does not support lower()
+This plugin does not support setParent!
+This plugin does not support lower()
+__ StyleQtWorkflowTests.test_switching_saved_styles_keeps_colours_independent __
+----------------------------- Captured stderr call -----------------------------
+This plugin does not support setParent!
+This plugin does not support lower()
+This plugin does not support setParent!
+This plugin does not support lower()
+______________ PresetTests.test_pastel_and_invalid_saved_settings ______________
+----------------------------- Captured stdout call -----------------------------
+uuuu
+_________________ PresetTests.test_presets_complete_and_valid __________________
+----------------------------- Captured stdout call -----------------------------
+u [ 87%]
+uuuuuuuu
+___________________ PresetTests.test_scene_for_every_preset ____________________
+----------------------------- Captured stdout call -----------------------------
+uuuuuuuuu
+=========================== short test summary info ============================
+PASSED tests/test_axes_labels_picking.py::AxisAndLabelTests::test_atom_numbering_modes
+PASSED tests/test_axes_labels_picking.py::AxisAndLabelTests::test_xyz_and_true_nonorthogonal_abc
+PASSED tests/test_axes_labels_picking.py::InteractiveRendererTests::test_click_atoms_at_projected_centres_and_edges
+PASSED tests/test_axes_labels_picking.py::InteractiveRendererTests::test_overlap_picks_frontmost_atom
+PASSED tests/test_axes_labels_picking.py::InteractiveRendererTests::test_world_axes_bonded_labels_and_corner_widget
+PASSED tests/test_coordinate_frame_contract.py::CoordinateFrameContractTests::test_alignment_blocks_volume_grids_in_all_six_modes
+PASSED tests/test_coordinate_frame_contract.py::CoordinateFrameContractTests::test_every_axis_preserves_skew_periodic_cell
+PASSED tests/test_coordinate_frame_contract.py::CoordinateFrameContractTests::test_fragment_transform_changes_only_fragment_positions
+PASSED tests/test_coordinate_frame_contract.py::CoordinateFrameContractTests::test_origin_only_translates_atoms_and_preserves_cell
+PASSED tests/test_coordinate_frame_contract.py::CoordinateFrameContractTests::test_view_methods_do_not_modify_frame_geometry
+PASSED tests/test_coordinate_table_ui.py::CoordinateUIRegressionTests::test_axis_alignment_updates_both_xyz_rows
+PASSED tests/test_coordinate_table_ui.py::CoordinateUIRegressionTests::test_edit_handlers_use_same_table_refresh
+PASSED tests/test_coordinate_table_ui.py::CoordinateUIRegressionTests::test_layout_has_one_sidebar_with_six_tabs_and_no_right_panel
+PASSED tests/test_coordinate_table_ui.py::CoordinateUIRegressionTests::test_nonorthogonal_lattice_alignment_updates_table
+PASSED tests/test_coordinate_table_ui.py::CoordinateUIRegressionTests::test_translation_updates_coordinate_cells_and_keeps_selection
+PASSED tests/test_core.py::GeometryTests::test_cell_edges
+PASSED tests/test_core.py::GeometryTests::test_dihedral
+PASSED tests/test_core.py::GeometryTests::test_errors
+PASSED tests/test_core.py::GeometryTests::test_geometry
+PASSED tests/test_edit_actions.py::EditorTests::test_abc_alignment_uses_nonorthogonal_lattice_direction_and_keeps_cell
+PASSED tests/test_edit_actions.py::EditorTests::test_antiparallel_rotation_is_proper
+PASSED tests/test_edit_actions.py::EditorTests::test_clone_isolates_bonds_and_positions_for_undo
+PASSED tests/test_edit_actions.py::EditorTests::test_invalid_cases_and_no_external_bond_changes
+PASSED tests/test_edit_actions.py::EditorTests::test_multi_toggle_removes_all_internal_and_restores_distances_only
+PASSED tests/test_edit_actions.py::EditorTests::test_origin_translation_and_distances
+PASSED tests/test_edit_actions.py::EditorTests::test_pair_bond_toggle_without_distance_limit
+PASSED tests/test_edit_actions.py::EditorTests::test_xyz_alignment_preserves_distances_and_keeps_lattice
+PASSED tests/test_formats.py::ParserIntegration::test_cube
+PASSED tests/test_formats.py::ParserIntegration::test_gaussian_input
+PASSED tests/test_formats.py::ParserIntegration::test_poscar
+PASSED tests/test_formats.py::ParserIntegration::test_xyz_trajectory
+PASSED tests/test_fragment.py::FragmentTests::test_alt_pan_world_scale_uses_parallel_camera
+PASSED tests/test_fragment.py::FragmentTests::test_alt_roll_clockwise_and_orbit_orthogonal
+PASSED tests/test_fragment.py::FragmentTests::test_camera_isometric_projection
+PASSED tests/test_fragment.py::FragmentTests::test_fragment_pan_alters_only_target_atoms
+PASSED tests/test_fragment.py::FragmentTests::test_fragment_rotation_preserves_other_atoms_and_geometry
+PASSED tests/test_fragment.py::FragmentTests::test_isolated_atom_and_invalid_selection
+PASSED tests/test_fragment.py::FragmentTests::test_manual_bond_is_respected_even_when_far
+PASSED tests/test_fragment.py::FragmentTests::test_manual_bond_removal_changes_components
+PASSED tests/test_fragment.py::FragmentTests::test_periodic_cell_does_not_infer_image_bonds
+PASSED tests/test_fragment.py::FragmentTests::test_two_water_molecules_are_separate
+PASSED tests/test_fragment_gui_contract.py::GestureApplicationTests::test_alt_rotation_changes_only_one_molecule_and_undo_once
+PASSED tests/test_fragment_gui_contract.py::GestureApplicationTests::test_ctrl_g_expands_bond_components
+PASSED tests/test_fragment_gui_contract.py::GestureApplicationTests::test_middle_pan_preserves_other_molecule
+PASSED tests/test_fragment_gui_contract.py::GestureApplicationTests::test_right_roll_and_no_drag_creates_no_undo
+PASSED tests/test_isometry_v07.py::IsometricTests::test_projection_and_direction
+PASSED tests/test_isometry_v07.py::IsometricTests::test_repeat_isometric_is_stable
+PASSED tests/test_native_interaction.py::NativeInteractionTests::test_left_click_emits_after_vtk_release
+PASSED tests/test_native_interaction.py::NativeInteractionTests::test_left_drag_does_not_pick_and_preserves_trackball
+PASSED tests/test_native_interaction.py::NativeInteractionTests::test_no_duplicate_label_option_or_old_vtk_pick_observers
+PASSED tests/test_native_interaction.py::NativeInteractionTests::test_right_click_clears_but_right_drag_does_not
+PASSED tests/test_native_interaction.py::NativeInteractionTests::test_right_drag_rolls_without_vtk_dolly
+PASSED tests/test_native_interaction.py::NativeInteractionTests::test_screen_coordinates_with_125_percent_windows_scaling
+PASSED tests/test_native_interaction.py::FragmentGestureNativeTests::test_alt_click_without_drag_not_edit_or_clear
+PASSED tests/test_native_interaction.py::FragmentGestureNativeTests::test_alt_left_drag_does_not_change_camera
+PASSED tests/test_native_interaction.py::FragmentGestureNativeTests::test_alt_middle_pan_and_ordinary_right_click
+PASSED tests/test_native_interaction.py::FragmentGestureNativeTests::test_alt_right_drag_is_not_camera_roll_or_selection_clear
+PASSED tests/test_native_interaction.py::FragmentGestureNativeTests::test_left_click_emits_after_vtk_release
+PASSED tests/test_native_interaction.py::FragmentGestureNativeTests::test_left_drag_does_not_pick_and_preserves_trackball
+PASSED tests/test_native_interaction.py::FragmentGestureNativeTests::test_no_duplicate_label_option_or_old_vtk_pick_observers
+PASSED tests/test_native_interaction.py::FragmentGestureNativeTests::test_right_click_clears_but_right_drag_does_not
+PASSED tests/test_native_interaction.py::FragmentGestureNativeTests::test_right_drag_rolls_without_vtk_dolly
+PASSED tests/test_native_interaction.py::FragmentGestureNativeTests::test_screen_coordinates_with_125_percent_windows_scaling
+PASSED tests/test_poscar_groups.py::PoscarBlockTests::test_no_invented_crystal_sites_without_metadata
+PASSED tests/test_poscar_groups.py::PoscarBlockTests::test_read_user_example_poscar_header
+PASSED tests/test_poscar_groups.py::PoscarBlockTests::test_repeated_identical_symbols_reset_at_group_boundary
+PASSED tests/test_renderer.py::VTKRenderTests::test_atoms_bonds_and_signed_volume_offscreen
+PASSED tests/test_selection_geometry_v090.py::PlaneGeometryTests::test_alignment_rotates_periodic_cell_and_volume_and_preserves_geometry
+PASSED tests/test_selection_geometry_v090.py::PlaneGeometryTests::test_alignment_without_translation_uses_only_rotation
+PASSED tests/test_selection_geometry_v090.py::PlaneGeometryTests::test_collinear_selection_has_no_unique_plane
+PASSED tests/test_selection_geometry_v090.py::PlaneGeometryTests::test_nonplanar_fit_minimizes_orthogonal_residual_and_does_not_flatten
+PASSED tests/test_selection_geometry_v090.py::PlaneGeometryTests::test_periodic_boundary_fit_uses_nearest_images
+PASSED tests/test_selection_geometry_v090.py::PlaneGeometryTests::test_three_atoms_define_plane_without_changing_input
+PASSED tests/test_selection_geometry_v090.py::AtomDeletionTests::test_delete_all_and_empty_selection
+PASSED tests/test_selection_geometry_v090.py::AtomDeletionTests::test_deletion_remaps_manual_bonds_and_preserves_poscar_block_numbering
+PASSED tests/test_selection_ui_v090.py::SelectionWorkflowTests::test_delete_all_leaves_an_empty_editable_frame_and_undo_restores
+PASSED tests/test_selection_ui_v090.py::SelectionWorkflowTests::test_delete_is_frame_local_and_undo_restores_bonds_and_field
+PASSED tests/test_selection_ui_v090.py::SelectionWorkflowTests::test_invert_complements_selection_and_updates_coordinate_table
+PASSED tests/test_selection_ui_v090.py::SelectionWorkflowTests::test_plane_alignment_and_undo_restore_cell_volume_and_selection
+PASSED tests/test_selection_ui_v090.py::SelectionWorkflowTests::test_plane_appears_updates_and_hides_with_selection
+PASSED tests/test_selection_ui_v090.py::SelectionWorkflowTests::test_real_delete_key_does_not_delete_atoms_while_editing_a_coordinate
+PASSED tests/test_siesta_trajectory_v07.py::SiestaHistory::test_ani_fallback_when_out_has_one_frame
+PASSED tests/test_siesta_trajectory_v07.py::SiestaHistory::test_ani_multiple_structures
+PASSED tests/test_siesta_trajectory_v07.py::SiestaHistory::test_bad_energy_count_not_fabricated
+PASSED tests/test_siesta_trajectory_v07.py::SiestaHistory::test_mde_energy_fallback
+PASSED tests/test_siesta_trajectory_v07.py::SiestaHistory::test_mde_requires_explicit_columns
+PASSED tests/test_siesta_trajectory_v07.py::SiestaHistory::test_molecular_formula_and_spin
+PASSED tests/test_siesta_trajectory_v07.py::SiestaHistory::test_out_geometry_energy_and_cell
+PASSED tests/test_siesta_trajectory_v07.py::SiestaHistory::test_single_unrelated_ani_is_not_assumed_when_many_choices
+PASSED tests/test_style_fixes_v081.py::StyleStateTests::test_colours_are_independent_across_snapshots_and_presets
+PASSED tests/test_style_fixes_v081.py::StyleStateTests::test_invalid_saved_element_colours_are_rejected
+PASSED tests/test_style_fixes_v081.py::StyleStateTests::test_v080_saved_presets_remain_readable
+PASSED tests/test_style_fixes_v081.py::RendererStyleFixTests::test_custom_colours_reach_atom_and_bond_actors
+PASSED tests/test_style_fixes_v081.py::RendererStyleFixTests::test_display_bonds_controls_normal_and_periodic_bonds_in_every_mode
+PASSED tests/test_style_fixes_v081.py::RendererStyleFixTests::test_labels_survive_all_presets_including_wireframe
+PASSED tests/test_style_fixes_v081.py::StyleQtWorkflowTests::test_all_preset_widgets_stay_in_sync
+PASSED tests/test_style_fixes_v081.py::StyleQtWorkflowTests::test_edit_save_restart_and_custom_restore_keep_element_colour
+PASSED tests/test_style_fixes_v081.py::StyleQtWorkflowTests::test_legacy_presets_load_alongside_new_presets
+PASSED tests/test_style_fixes_v081.py::StyleQtWorkflowTests::test_switching_saved_styles_keeps_colours_independent
+PASSED tests/test_style_presets_v080.py::PresetTests::test_pastel_and_invalid_saved_settings
+PASSED tests/test_style_presets_v080.py::PresetTests::test_presets_complete_and_valid
+PASSED tests/test_style_presets_v080.py::PresetTests::test_presets_do_not_modify_geometry_or_chemical_bond_settings
+PASSED tests/test_style_presets_v080.py::PresetTests::test_scene_for_every_preset
+PASSED tests/test_v071_periodic_hbond.py::ChemicalPresentationTests::test_bent_non_hbond
+PASSED tests/test_v071_periodic_hbond.py::ChemicalPresentationTests::test_close_contacts_do_not_count_atom_own_images
+PASSED tests/test_v071_periodic_hbond.py::ChemicalPresentationTests::test_electron_parity_uses_net_charge
+PASSED tests/test_v071_periodic_hbond.py::ChemicalPresentationTests::test_hbond_cross_boundary
+PASSED tests/test_v071_periodic_hbond.py::ChemicalPresentationTests::test_hbond_linear_three_atoms
+PASSED tests/test_v071_periodic_hbond.py::ChemicalPresentationTests::test_neutral_charge_assumption
+PASSED tests/test_v071_periodic_hbond.py::ChemicalPresentationTests::test_short_contact_periodic
+PASSED tests/test_v071_periodic_hbond.py::PeriodicFragmentTests::test_detects_infinite_periodic_network
+PASSED tests/test_v071_periodic_hbond.py::PeriodicFragmentTests::test_manual_bond_removal_disconnects_periodic_fragment
+PASSED tests/test_v071_periodic_hbond.py::PeriodicFragmentTests::test_nonperiodic_selection
+PASSED tests/test_v071_periodic_hbond.py::PeriodicFragmentTests::test_unwraps_water_crossing_boundary_without_changing_coordinates
+PASSED tests/test_v071_periodic_hbond.py::PeriodicBondEditingTests::test_ctrl_b_respects_periodic_bond_then_removes_it
+PASSED tests/test_v071_periodic_hbond.py::PeriodicBondEditingTests::test_multi_atom_restore_periodic_bonds
+116 passed, 61 subtests passed in 1.62s
+
+Supplementary checks: actual VTK fitted-plane rendering; tilted periodic demo alignment, O deletion, POSCAR export and reread.
+Windows native GUI and EXE packaging have not been tested.

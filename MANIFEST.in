@@ -1,0 +1,9 @@
+include README.md README_CN.md CHANGELOG.md SOURCE_NOTICE.md LICENSE
+include requirements.txt launch_app.py windows_bootstrap.py
+include *.bat .gitignore .gitattributes
+recursive-include examples *
+recursive-include tests *.py
+recursive-include docs *.md *.txt *.patch
+recursive-include licenses *
+recursive-include .github *.yml
+global-exclude __pycache__ *.py[cod]

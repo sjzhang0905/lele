@@ -1,0 +1,5 @@
+Linux acceptance run; QT_QPA_PLATFORM=offscreen; VTK_DEFAULT_OPENGL_WINDOW=vtkEGLRenderWindow
+Command: python -m pytest tests -q
+.................................................................. [ 64%]
+....................................                                                         [100%]
+102 passed, 58 subtests passed in 1.60s
