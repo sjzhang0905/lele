@@ -24,7 +24,7 @@ if not errorlevel 1 (
 
 echo.
 echo [ERROR] Compatible Python not detected.
-echo LELE v1.0.1 needs 64-bit CPython 3.12 ^(preferred^) or 3.11.
+echo LELE needs 64-bit CPython 3.12 ^(preferred^) or 3.11.
 echo Install Python 3.12 x64 from https://www.python.org/downloads/
 echo Verify with: py -0p
 echo Then double-click start_windows.bat again.

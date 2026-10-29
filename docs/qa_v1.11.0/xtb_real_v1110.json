@@ -1,0 +1,36 @@
+{
+  "passed": true,
+  "trajectory_records": 37,
+  "opt1_atoms": 329,
+  "opt1_geometry_frames": 37,
+  "opt1_cycles": 37,
+  "opt1_final_energy_Eh": -445.876152027688,
+  "opt1_homo": 416,
+  "opt1_lumo": 417,
+  "opt1_gap_eV": 0.388346320974,
+  "opt2_atoms": 123,
+  "opt2_geometry_frames": 1,
+  "opt2_cycles": 175,
+  "opt2_missing_cycle_geometries": 174,
+  "opt2_final_energy_Eh": -5345.88250489793,
+  "opt2_alpha_frontiers": [
+    209,
+    210
+  ],
+  "opt2_beta_frontiers": [
+    206,
+    207
+  ],
+  "opt2_channel_gaps_eV": [
+    7.0657,
+    6.1802
+  ],
+  "opt2_reported_gap_eV": 7.065672459737,
+  "independent_geometry_check": "ASE plain XYZ, all 37 frames",
+  "gui_navigation_verified": true,
+  "input_hashes": {
+    "xtbopt.log": "6b2faf61768a639c88663b06c5d7cc2d33e49cf28e208f73ed60ad981ad5d359",
+    "opt1.log": "e9302a3fcb9170d4351953a2ad87ab41fe8e4507d41c1498e10de43637f82717",
+    "opt2.log": "03cb858fe92080b7a3db42244aa102471b05e5b1551cc08b0d187094076b78e6"
+  }
+}

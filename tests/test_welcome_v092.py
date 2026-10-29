@@ -3,12 +3,13 @@
 import os
 from pathlib import Path
 import tempfile
+import time
 import unittest
 from unittest.mock import patch
 
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
-from PySide6.QtCore import QMimeData, QPointF, Qt, QUrl, Signal
+from PySide6.QtCore import QMimeData, QPointF, Qt, QUrl, Signal, QObject, QTimer
 from PySide6.QtGui import QDropEvent
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QLabel, QWidget
@@ -39,6 +40,27 @@ class HeadlessCanvas(QWidget):
     def TerminateApp(self): pass
 
 
+class ControlledLoader(QObject):
+    finished = Signal()
+
+    def __init__(self, *, auto_finish=True):
+        super().__init__()
+        self.loaded = False
+        self.error = ''
+        self.start_count = 0
+        self.auto_finish = auto_finish
+
+    def ensure_started(self):
+        self.start_count += 1
+        if self.auto_finish:
+            QTimer.singleShot(0, self.complete)
+
+    def complete(self, error=''):
+        self.error = error
+        self.loaded = not error
+        self.finished.emit()
+
+
 class WelcomeTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -50,16 +72,28 @@ class WelcomeTests(unittest.TestCase):
         self.path = Path(self.temp.name) / 'water.xyz'
         self.path.write_text('3\nwater\nO 0 0 0\nH .76 .59 0\nH -.76 .59 0\n')
 
-    def window(self, initial_files=()):
-        with patch('lele.app.InteractiveVTKView', HeadlessCanvas), \
-                patch.object(LELEWindow, '_read_user_style_presets', return_value={}), \
+    def wait_for(self, predicate):
+        deadline = time.monotonic() + 5
+        while not predicate() and time.monotonic() < deadline:
+            QTest.qWait(5)
+        self.assertTrue(predicate())
+
+    def window(self, initial_files=(), *, loader=None, wait_ready=True):
+        loader = loader or ControlledLoader()
+        self.enterContext(patch('lele.app.get_backend_loader', return_value=loader))
+        self.enterContext(patch('lele.interaction.InteractiveVTKView', HeadlessCanvas))
+        with patch.object(LELEWindow, '_read_user_style_presets', return_value={}), \
                 patch.object(LELEWindow, '_sync_corner_axes'):
             window = LELEWindow(initial_files)
         window._sync_corner_axes = lambda: None
+        self.assertIsNone(window.vtk)
+        self.assertEqual(loader.start_count, 0)
         window.show()
         window.activateWindow()
         self.app.processEvents()
         self.addCleanup(window.close)
+        if wait_ready:
+            self.wait_for(lambda: window._backend_state == 'ready')
         return window
 
     def assert_loaded(self, window):
@@ -76,6 +110,7 @@ class WelcomeTests(unittest.TestCase):
         self.assertIs(window.canvas_stack.currentWidget(), page)
         self.assertEqual(window.files_tree.topLevelItemCount(), 0)
         self.assertIsNone(window.doc)
+        self.assertEqual(window._backend_state, 'ready')
         self.assertEqual(window.vtk.initialize_count, 0)
         self.assertEqual(page.title_label.text(), APP_NAME)
         self.assertEqual(page.full_name_label.text(), APP_FULL_NAME)
@@ -132,6 +167,66 @@ class WelcomeTests(unittest.TestCase):
         self.assertIsNone(empty.doc)
         self.assertIs(empty.canvas_stack.currentWidget(), empty.welcome_page)
         self.assertEqual(empty.vtk.initialize_count, 0)
+
+    def test_style_edits_before_first_file_are_kept_and_backend_is_reused(self):
+        loader = ControlledLoader(auto_finish=False)
+        window = self.window(loader=loader, wait_ready=False)
+        self.wait_for(lambda: loader.start_count == 1)
+        window.preset_combo.setCurrentIndex(window.preset_combo.findData('Soft pastel'))
+        window._set_option('background', '#eeeeee')
+        window._set_option('bond_cutoff', 1.3)
+        self.assertIsNone(window.renderer)
+        loader.complete()
+        self.wait_for(lambda: window._backend_state == 'ready')
+        window.open_path(self.path)
+        self.assert_loaded(window)
+        canvas, renderer = window.vtk, window.renderer
+        self.assertIs(renderer.options, window.render_options)
+        self.assertEqual(renderer.options.atom_palette, 'Pastel')
+        self.assertEqual(renderer.options.background, '#eeeeee')
+        self.assertEqual(renderer.options.bond_cutoff, 1.3)
+        window.open_path(self.path)
+        self.assertIs(window.vtk, canvas)
+        self.assertIs(window.renderer, renderer)
+        self.assertEqual(canvas.initialize_count, 1)
+
+    def test_file_requested_while_loading_opens_automatically_when_ready(self):
+        loader = ControlledLoader(auto_finish=False)
+        window = self.window(loader=loader, wait_ready=False)
+        self.wait_for(lambda: loader.start_count == 1)
+        window.open_path(self.path)
+        self.assertIsNone(window.doc)
+        self.assertEqual(window._pending_open_paths, [self.path])
+        self.assertTrue(window.welcome_page.parrot_walk.pose_timer.isActive())
+        loader.complete()
+        self.wait_for(lambda: window.doc is not None)
+        self.assert_loaded(window)
+        self.assertEqual(loader.start_count, 1)
+
+    def test_closing_during_preload_does_not_create_canvas_or_open_queued_files(self):
+        loader = ControlledLoader(auto_finish=False)
+        window = self.window(loader=loader, wait_ready=False)
+        self.wait_for(lambda: loader.start_count == 1)
+        window.open_path(self.path)
+        window.close()
+        loader.complete()
+        self.app.processEvents()
+        self.assertIsNone(window.vtk)
+        self.assertIsNone(window.doc)
+        self.assertEqual(window._pending_open_paths, [])
+
+    def test_preload_failure_keeps_welcome_and_file_open_can_retry(self):
+        loader = ControlledLoader(auto_finish=False)
+        window = self.window(loader=loader, wait_ready=False)
+        self.wait_for(lambda: loader.start_count == 1)
+        loader.complete('Test import failure')
+        self.wait_for(lambda: window._backend_state == 'failed')
+        self.assertIs(window.canvas_stack.currentWidget(), window.welcome_page)
+        window.open_path(self.path)
+        self.assertEqual(loader.start_count, 2)
+        loader.complete()
+        self.wait_for(lambda: window.doc is not None)
+        self.assert_loaded(window)
 
     def test_pose_timer_holds_first_pose_for_800ms_and_pauses_when_hidden(self):
         page = WelcomePage()

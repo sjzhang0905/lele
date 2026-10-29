@@ -1,0 +1,93 @@
+[
+  {
+    "repository": "cclib/cclib-data",
+    "path": "ORCA/ORCA4.2/dvb_raman.out",
+    "blob_sha": "483b3c513b0cf22b193d8c463fd51ae856644426",
+    "url": "https://github.com/cclib/cclib-data/blob/master/ORCA/ORCA4.2/dvb_raman.out",
+    "local_filename": "ORCA_ORCA4.2_dvb_raman.out"
+  },
+  {
+    "repository": "cclib/cclib-data",
+    "path": "ORCA/ORCA4.2/dvb_td.out",
+    "blob_sha": "a12f3cee5ef2660a4a2c4b5160b4a80242a98575",
+    "url": "https://github.com/cclib/cclib-data/blob/master/ORCA/ORCA4.2/dvb_td.out",
+    "local_filename": "ORCA_ORCA4.2_dvb_td.out"
+  },
+  {
+    "repository": "cclib/cclib-data",
+    "path": "ORCA/ORCA4.2/dvb_gopt.out",
+    "blob_sha": "971b868cc24b3cfe7d25de676a4eb0edacf4a04a",
+    "url": "https://github.com/cclib/cclib-data/blob/master/ORCA/ORCA4.2/dvb_gopt.out",
+    "local_filename": "ORCA_ORCA4.2_dvb_gopt.out"
+  },
+  {
+    "repository": "cclib/cclib-data",
+    "path": "ORCA/ORCA4.2/dvb_scan_unrelaxed.out",
+    "blob_sha": "de9039c18d919c8b3f1bf4422ef37ba1095b457b",
+    "url": "https://github.com/cclib/cclib-data/blob/master/ORCA/ORCA4.2/dvb_scan_unrelaxed.out",
+    "local_filename": "ORCA_ORCA4.2_dvb_scan_unrelaxed.out"
+  },
+  {
+    "repository": "cclib/cclib-data",
+    "path": "ORCA/ORCA5.0/ADBNA_Me_Mes_MesCz.log",
+    "blob_sha": "4d1a12d4369595e7194a82718500ec23b0d67a7d",
+    "url": "https://github.com/cclib/cclib-data/blob/master/ORCA/ORCA5.0/ADBNA_Me_Mes_MesCz.log",
+    "local_filename": "ORCA_ORCA5.0_ADBNA_Me_Mes_MesCz.log"
+  },
+  {
+    "repository": "cclib/cclib-data",
+    "path": "ORCA/ORCA6.0/1618.out",
+    "blob_sha": "5826f4e4867adbc536eb64e26f348984434bf6f6",
+    "url": "https://github.com/cclib/cclib-data/blob/master/ORCA/ORCA6.0/1618.out",
+    "local_filename": "ORCA_ORCA6.0_1618.out"
+  },
+  {
+    "repository": "cclib/cclib-data",
+    "path": "ORCA/ORCA6.1/1509.out",
+    "blob_sha": "dd48be7aa832720ee8cd041252177313ce6e1275",
+    "url": "https://github.com/cclib/cclib-data/blob/master/ORCA/ORCA6.1/1509.out",
+    "local_filename": "ORCA_ORCA6.1_1509.out"
+  },
+  {
+    "repository": "cclib/cclib",
+    "path": "data/ORCA/basicORCA5.0/dvb_raman.out",
+    "blob_sha": "f909808903ee32edecb00faf2c1bd6ba6a2ab2db",
+    "url": "https://github.com/cclib/cclib/blob/master/data/ORCA/basicORCA5.0/dvb_raman.out",
+    "local_filename": "data_ORCA_basicORCA5.0_dvb_raman.out"
+  },
+  {
+    "repository": "cclib/cclib",
+    "path": "data/ORCA/basicORCA6.0/dvb_raman.out",
+    "blob_sha": "5bf1b615f602f679bec5e8f8c9ad63154b538396",
+    "url": "https://github.com/cclib/cclib/blob/master/data/ORCA/basicORCA6.0/dvb_raman.out",
+    "local_filename": "data_ORCA_basicORCA6.0_dvb_raman.out"
+  },
+  {
+    "repository": "cclib/cclib",
+    "path": "data/ORCA/basicORCA6.0/dvb_td.out",
+    "blob_sha": "058237fb64f362b3ea3c369f1269ad53d90f7bf3",
+    "url": "https://github.com/cclib/cclib/blob/master/data/ORCA/basicORCA6.0/dvb_td.out",
+    "local_filename": "data_ORCA_basicORCA6.0_dvb_td.out"
+  },
+  {
+    "repository": "cclib/cclib",
+    "path": "data/ORCA/basicORCA6.0/water_hf_solvent_smd.log",
+    "blob_sha": "ce7930449d47f7831dda21aacafeb8238fb34a92",
+    "url": "https://github.com/cclib/cclib/blob/master/data/ORCA/basicORCA6.0/water_hf_solvent_smd.log",
+    "local_filename": "data_ORCA_basicORCA6.0_water_hf_solvent_smd.log"
+  },
+  {
+    "repository": "cclib/cclib",
+    "path": "data/ORCA/basicORCA6.0/dvb_sp_un_dft.out",
+    "blob_sha": "25b22a8dff3e4b9d003acbbeaa338e5c54cb2a7c",
+    "url": "https://github.com/cclib/cclib/blob/master/data/ORCA/basicORCA6.0/dvb_sp_un_dft.out",
+    "local_filename": "data_ORCA_basicORCA6.0_dvb_sp_un_dft.out"
+  },
+  {
+    "repository": "cclib/cclib-data",
+    "path": "ORCA/ORCA5.0/dvb_soc.log",
+    "blob_sha": "20dd7028702f7e2626fa096352f8328aa1845e9e",
+    "url": "https://github.com/cclib/cclib-data/blob/master/ORCA/ORCA5.0/dvb_soc.log",
+    "local_filename": "ORCA_ORCA5.0_dvb_soc.log"
+  }
+]

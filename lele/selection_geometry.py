@@ -99,6 +99,12 @@ def delete_selected_atoms(frame: Frame, selection) -> int:
         return 0
     kept = [i for i in range(len(frame.symbols)) if i not in removed]
     new_index = {old: new for new, old in enumerate(kept)}
+    if frame.bond_snapshot is not None:
+        frame.bond_snapshot = frozenset((new_index[i], new_index[j]) for i, j in frame.bond_snapshot
+                                        if i in new_index and j in new_index)
+    if frame.periodic_bond_snapshot is not None:
+        frame.periodic_bond_snapshot = tuple((new_index[i], new_index[j], shift)
+            for i, j, shift in frame.periodic_bond_snapshot if i in new_index and j in new_index)
     groups = frame.info.get('poscar_groups')
     if groups is not None:
         updated = []
@@ -115,6 +121,12 @@ def delete_selected_atoms(frame: Frame, selection) -> int:
     for name in ('bond_added', 'bond_removed'):
         setattr(frame, name, {(new_index[i], new_index[j]) for i, j in getattr(frame, name)
                               if i in new_index and j in new_index})
+    frame.atom_appearance = {new_index[i]: style for i, style in frame.atom_appearance.items()
+                             if i in new_index}
+    frame.hbond_added = {(new_index[i], new_index[j]): shift for (i, j), shift in frame.hbond_added.items()
+                         if i in new_index and j in new_index}
+    frame.hbond_removed = {(new_index[i], new_index[j]) for i, j in frame.hbond_removed
+                           if i in new_index and j in new_index}
     # The input energy and the previous plane's atom indices no longer apply.
     frame.energy_ev = None
     frame.info.pop('energy_source', None)

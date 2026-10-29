@@ -6,7 +6,7 @@ if not exist ".venv\Scripts\python.exe" (
   pause
   exit /b 1
 )
-".venv\Scripts\python.exe" -m pip install "pyinstaller>=6.10,<7"
+".venv\Scripts\python.exe" -m pip install -r requirements.txt "pyinstaller>=6.10,<7"
 if errorlevel 1 goto :failed
 ".venv\Scripts\python.exe" -m PyInstaller --noconfirm --clean --onedir --windowed --name LELE --icon "lele\assets\lele.ico" --collect-all vtkmodules --collect-all ase --collect-data lele --hidden-import vtkmodules.qt.QVTKRenderWindowInteractor launch_app.py
 if errorlevel 1 goto :failed

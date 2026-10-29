@@ -13,6 +13,8 @@ axis (no VTK zoom). Wheel: VTK zoom.
 from __future__ import annotations
 
 from PySide6.QtCore import Qt, Signal
+import vtkmodules.qt
+vtkmodules.qt.PyQtImpl = 'PySide6'
 from vtkmodules.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 
 
@@ -37,6 +39,7 @@ class InteractiveVTKView(QVTKRenderWindowInteractor):
     fragmentGestureBegin = Signal(str, float, float)
     fragmentGestureMove = Signal(str, float, float)
     fragmentGestureEnd = Signal(str)
+    rectangleSelected = Signal(float,float,float,float,bool)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -49,9 +52,20 @@ class InteractiveVTKView(QVTKRenderWindowInteractor):
         self._fragment_last = None
         self._fragment_dragged = False
         self.scene_renderer = None
+        self._box_enabled=False
+        self._box_start=None
+        self._rubber_band=None
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
     def mousePressEvent(self, event):
+        if getattr(self,'_box_enabled',False) and event.button()==Qt.MouseButton.LeftButton:
+            from PySide6.QtCore import QRect,QPoint
+            from .selection_outline import SelectionOutline
+            self._box_start=event.position()
+            if self._rubber_band is None:self._rubber_band=SelectionOutline(self)
+            start=QPoint(round(event.position().x()),round(event.position().y()))
+            self._rubber_band.setGeometry(QRect(start,start));self._rubber_band.show()
+            self.setFocus(Qt.FocusReason.MouseFocusReason);event.accept();return
         alt = bool(event.modifiers() & Qt.KeyboardModifier.AltModifier)
         if alt and event.button() in (Qt.MouseButton.LeftButton,
                                        Qt.MouseButton.RightButton,
@@ -82,6 +96,11 @@ class InteractiveVTKView(QVTKRenderWindowInteractor):
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
+        if getattr(self,'_box_start',None) is not None:
+            from PySide6.QtCore import QRect,QPoint
+            a=self._box_start;b=event.position()
+            self._rubber_band.setGeometry(QRect(QPoint(round(a.x()),round(a.y())),QPoint(round(b.x()),round(b.y()))).normalized())
+            event.accept();return
         if self._fragment_mode is not None:
             now = event.position()
             if not self._fragment_dragged:
@@ -122,6 +141,11 @@ class InteractiveVTKView(QVTKRenderWindowInteractor):
         super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
+        if getattr(self,'_box_start',None) is not None and event.button()==Qt.MouseButton.LeftButton:
+            start=self._box_start;self._box_start=None;self._rubber_band.hide()
+            append=bool(event.modifiers() & (Qt.KeyboardModifier.ControlModifier|Qt.KeyboardModifier.ShiftModifier))
+            self.rectangleSelected.emit(start.x(),start.y(),event.position().x(),event.position().y(),append)
+            event.accept();return
         if self._fragment_mode is not None:
             mode = self._fragment_mode
             self._fragment_mode = None
@@ -153,6 +177,8 @@ class InteractiveVTKView(QVTKRenderWindowInteractor):
         super().mouseReleaseEvent(event)
 
     def focusOutEvent(self, event):
+        if getattr(self,'_box_start',None) is not None:
+            self._box_start=None;self._rubber_band.hide()
         # Never leave the widget in rolling mode if focus was lost mid-drag.
         self._right_last = None
         self._right_start = None
@@ -166,3 +192,8 @@ class InteractiveVTKView(QVTKRenderWindowInteractor):
             self._fragment_dragged = False
             self.fragmentGestureEnd.emit(mode)
         super().focusOutEvent(event)
+
+    def set_box_selection(self,enabled):
+        self._box_enabled=bool(enabled)
+        if not enabled and self._box_start is not None:
+            self._box_start=None;self._rubber_band.hide()

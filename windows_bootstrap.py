@@ -22,7 +22,9 @@ CHECK_CMD = (
     "import sys,struct; "
     "print(f'{sys.version_info.major}.{sys.version_info.minor}|{struct.calcsize(\"P\")*8}')"
 )
-IMPORT_CMD = "import ase, numpy, scipy, PySide6, vtkmodules, matplotlib"
+IMPORT_CMD = ("import ase, numpy, scipy, PySide6, vtkmodules, matplotlib, PIL; "
+              "from PIL import Image, GifImagePlugin; "
+              "assert 10 <= int(PIL.__version__.split('.')[0]) < 13")
 
 
 def describe_python(executable: Path | str) -> tuple[int, int, int] | None:

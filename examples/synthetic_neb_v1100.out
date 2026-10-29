@@ -1,0 +1,63 @@
+ O   R   C   A
+ ORCA VERSION 6.1
+ Synthetic NEB format fixture. NOT a real calculation.
+ NAME = synthetic_neb_v1100.inp
+| 1> ! HF def2-SVP NEB-TS
+| 2> * xyz 0 1
+ Nudged Elastic Band Calculation
+ Number of images (incl. end points) .... 4
+ REACTANT OPTIMIZATION
+ GEOMETRY OPTIMIZATION CYCLE 1
+ CARTESIAN COORDINATES (ANGSTROEM)
+ --------------------------------
+ O 0.0 0.0 0.0
+ H 1.0 0.0 0.0
+ H 0.0 1.0 0.0
+
+ FINAL SINGLE POINT ENERGY -10.0
+ THE OPTIMIZATION HAS CONVERGED
+ PRODUCT OPTIMIZATION
+ GEOMETRY OPTIMIZATION CYCLE 1
+ CARTESIAN COORDINATES (ANGSTROEM)
+ --------------------------------
+ O 0.0 0.0 0.0
+ H 1.0 0.0 0.0
+ H 0.0 1.0 0.0
+
+ FINAL SINGLE POINT ENERGY -9.99
+ The optimization did not converge but reached the maximum number of cycles
+ NEB OPTIMIZATION
+ Optim. Iteration CI E(CI)-E(0) max(|Fp|) RMS(Fp) dS max(|FCI|) RMS(FCI)
+ LBFGS 0 1 0.04 0.01 0.004 3.0 0.003 0.001
+ LBFGS 1 1 0.03 0.002 0.001 3.0 0.001 0.0004
+ THE NEB OPTIMIZATION HAS CONVERGED
+ PATH SUMMARY
+ Image Dist.(Ang.) E(Eh) dE(kcal/mol) max(|Fp|) RMS(Fp)
+ 0 0.0 -10.0000 0.0 0.0 0.0
+ 1 0.5 -9.9700 18.83 0.001 0.0004 <= CI
+ 2 1.0 -9.9800 12.55 0.001 0.0004
+ 3 1.5 -9.9900 6.28 0.0 0.0
+
+ SADDLE POINT (ANGSTROEM)
+ --------------------------
+ O 0.0 0.0 0.0
+ H 1.0 0.0 0.0
+ H 0.0 1.0 0.0
+
+ Next a TS optimization is performed on the CI from the NEB run.
+ TS OPTIMIZATION
+ Initial Hessian InHess .... Read
+ GEOMETRY OPTIMIZATION CYCLE 1
+ FINAL SINGLE POINT ENERGY -9.9701
+ Updating the Hessian (Bofill) .... done
+ GEOMETRY OPTIMIZATION CYCLE 2
+ CARTESIAN COORDINATES (ANGSTROEM)
+ --------------------------------
+ O 0.0 0.0 0.0
+ H 1.0 0.0 0.0
+ H 0.0 1.0 0.0
+
+ FINAL SINGLE POINT ENERGY -9.9702
+ THE OPTIMIZATION HAS CONVERGED
+ THE TS OPTIMIZATION HAS CONVERGED
+ ORCA TERMINATED NORMALLY

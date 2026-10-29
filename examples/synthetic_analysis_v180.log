@@ -1,0 +1,77 @@
+ Entering Gaussian System
+ Synthetic LELE 1.8.0 example. NOT a real electronic-structure calculation.
+ #p opt=modredundant b3lyp/6-31g(d) scrf=(smd,solvent=water)
+ Charge = 0 Multiplicity = 1
+ Standard orientation:
+ ---------------------------------------------------------------------
+ Center     Atomic      Atomic             Coordinates (Angstroms)
+ Number     Number       Type             X           Y           Z
+ ---------------------------------------------------------------------
+ 1 8 0 0.000000 0.000000 0.000000
+ 2 1 0 1.100000 0.000000 0.000000
+ 3 1 0 -0.240000 0.920000 0.000000
+ ---------------------------------------------------------------------
+ SCF Done: E(RB3LYP) = -75.0000000000 A.U. after 12 cycles
+ Maximum Force 0.020000 0.000450 NO
+ RMS Force 0.010000 0.000300 NO
+ Maximum Displacement 0.040000 0.001800 YES
+ RMS Displacement 0.020000 0.001200 YES
+ Standard orientation:
+ ---------------------------------------------------------------------
+ Center     Atomic      Atomic             Coordinates (Angstroms)
+ Number     Number       Type             X           Y           Z
+ ---------------------------------------------------------------------
+ 1 8 0 0.000000 0.000000 0.000000
+ 2 1 0 0.960000 0.000000 0.000000
+ 3 1 0 -0.240000 0.920000 0.000000
+ ---------------------------------------------------------------------
+ SCF Done: E(RB3LYP) = -75.1000000000 A.U. after 12 cycles
+ Maximum Force 0.000200 0.000450 YES
+ RMS Force 0.000100 0.000300 YES
+ Maximum Displacement 0.000400 0.001800 YES
+ RMS Displacement 0.000200 0.001200 YES
+ Optimization completed.
+ Standard orientation:
+ ---------------------------------------------------------------------
+ Center     Atomic      Atomic             Coordinates (Angstroms)
+ Number     Number       Type             X           Y           Z
+ ---------------------------------------------------------------------
+ 1 8 0 0.000000 0.000000 0.000000
+ 2 1 0 0.950000 0.000000 0.000000
+ 3 1 0 -0.240000 0.920000 0.000000
+ ---------------------------------------------------------------------
+ SCF Done: E(RB3LYP) = -75.0500000000 A.U. after 12 cycles
+ Maximum Force 0.000100 0.000450 YES
+ RMS Force 0.000050 0.000300 YES
+ Maximum Displacement 0.000200 0.001800 YES
+ RMS Displacement 0.000100 0.001200 YES
+ Optimization completed.
+ Alpha  occ. eigenvalues -- -20.50000 -1.20000 -.70000 -.50000 -.30000
+ Alpha virt. eigenvalues -- .10000 .20000
+ Summary of Optimized Potential Surface Scan
+ Normal termination of Gaussian 16
+ --Link1--
+ #p UPBE0/def2-SVP TD(NStates=2)
+ Charge = 1 Multiplicity = 2
+ Standard orientation:
+ ---------------------------------------------------------------------
+ Center     Atomic      Atomic             Coordinates (Angstroms)
+ Number     Number       Type             X           Y           Z
+ ---------------------------------------------------------------------
+ 1 8 0 0.000000 0.000000 0.000000
+ 2 1 0 0.950000 0.000000 0.000000
+ 3 1 0 -0.240000 0.920000 0.000000
+ ---------------------------------------------------------------------
+ SCF Done: E(UPBE0) = -74.8000000000 A.U. after 15 cycles
+ S**2 before annihilation     .7600, after     .7500
+ Alpha  occ. eigenvalues -- -20.50000 -1.10000 -.60000 -.40000 -.20000
+ Alpha virt. eigenvalues -- .05000 .12000
+ Beta  occ. eigenvalues -- -20.40000 -1.00000 -.55000 -.15000
+ Beta virt. eigenvalues -- .06000 .15000
+ Excited State   1: Doublet-?Sym 3.0000 eV 413.2807 nm f=0.5000
+ 5A -> 6A 0.680000
+ 4B -> 5B -0.200000
+ 5A <- 6A 0.080000
+ Excited State   2: Doublet-A 4.0000 eV 309.9605 nm f=0.1000
+ 4A -> 6A 0.650000
+ Normal termination of Gaussian 16

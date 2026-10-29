@@ -1,0 +1,44 @@
+ O   R   C   A
+ ORCA VERSION 6.1
+ Synthetic SOC format fixture; not a real calculation.
+ ! B3LYP def2-SVP
+ * xyz 0 1
+ CARTESIAN COORDINATES (ANGSTROEM)
+ --------------------------------
+ O 0.0 0.0 0.0
+ H 1.0 0.0 0.0
+ H 0.0 1.0 0.0
+
+ FINAL SINGLE POINT ENERGY -75.0
+ TD-DFT/TDA EXCITED STATES (SINGLETS)
+ STATE 1: E= 0.1 au 2.721 eV Mult 1
+ 4a -> 5a : 0.81 (c= -0.9)
+ CALCULATED SOCME BETWEEN TRIPLETS AND SINGLETS
+ Root <T|HSO|S> (Re, Im) cm-1
+ T S Z X Y
+ 1 0 (1.0, 2.0) (3.0, 4.0) (5.0, 6.0)
+ 1 1 (0.0, -2.0) (0.0, 0.0) (0.0, 0.0)
+ 2 0 (0.0, 0.0) (0.0, 0.0) (0.0, 7.0)
+ SOC stabilization of the ground state: -0.001 cm-1
+ Eigenvalues of the SOC matrix:
+ State: cm-1 eV
+ 0: 0.00 0.0000
+ 1: 2016.39 0.2500
+ Eigenvectors of the SOC matrix:
+ E(cm-1) Weight Real Imag : Root Spin Ms
+ STATE 0: 0.00
+ 0.8 0.8 0.4 : 0 0 0
+ 0.2 -0.2 0.4 : 1 1 0
+ STATE 1: 2016.39
+ 1.0 0.6 -0.8 : 1 1 1
+ SOC CORRECTED TD-DFT/TDA-EXCITATION SPECTRA
+ SPIN ORBIT CORRECTED ABSORPTION SPECTRUM VIA TRANSITION ELECTRIC DIPOLE MOMENTS
+ States Energy Wavelength fosc T2 TX TY TZ
+ (cm-1) (nm) (au**2) (au) (au) (au)
+ 0 1 2016.39 4959.4 0.1 0.05 0.1 0.2 0.0
+
+ SOC CORRECTED ABSORPTION SPECTRUM VIA TRANSITION ELECTRIC DIPOLE MOMENTS*
+ States Energy Wavelength fosc T2 TX TY TZ
+ (cm-1) (nm) (au**2) (au) (au) (au)
+ 0 1 2016.39 4959.4 0.1 0.05 (0.1, -0.2) (0.2, 0.3) (0.0, 0.0)
+ ORCA TERMINATED NORMALLY

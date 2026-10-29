@@ -20,6 +20,9 @@ class Camera:
 
 
 class Dummy:
+    def _alignment_enabled(self):
+        return False
+
     def __init__(self):
         self.frame = Frame(['O','H','H','O','H','H'],
                            [[0,0,0],[.96,0,0],[-.24,.92,0],
@@ -30,6 +33,7 @@ class Dummy:
         self.scene = SimpleNamespace(GetActiveCamera=lambda: Camera())
         self.vtk = SimpleNamespace(height=lambda: 500)
         self._fragment_gesture = None
+        self._active_vibration = None
         self.undo_count = 0
         self.scene_count = 0
         self.table_count = 0
@@ -47,7 +51,8 @@ def handlers():
     tree = ast.parse(app.read_text())
     cls = next(node for node in tree.body if isinstance(node, ast.ClassDef)
                and node.name == 'LELEWindow')
-    names = {'_fragment_begin','_fragment_move','_fragment_end','select_connected_fragment'}
+    names = {'_fragment_begin','_fragment_move','_fragment_end','select_connected_fragment',
+             '_geometry_edit_allowed'}
     methods = [node for node in cls.body if isinstance(node, ast.FunctionDef) and node.name in names]
     space = {'selected_fragments': selected_fragments,
              'apply_fragment_rotation': apply_fragment_rotation,
@@ -63,7 +68,8 @@ class GestureApplicationTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         for name, method in handlers().items():
-            if name in ('_fragment_begin','_fragment_move','_fragment_end','select_connected_fragment'):
+            if name in ('_fragment_begin','_fragment_move','_fragment_end','select_connected_fragment',
+                        '_geometry_edit_allowed'):
                 setattr(Dummy, name, method)
 
     def test_alt_rotation_changes_only_one_molecule_and_undo_once(self):

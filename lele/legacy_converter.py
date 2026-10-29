@@ -115,8 +115,14 @@ def read_probe(path: Path, head_bytes: int = 256_000, tail_bytes: int = 768_000)
                 tail = b""
         else:
             tail = b""
-    data = head + b"\n" + tail
-    return data.decode("utf-8", errors="replace")
+    encoding = 'utf-8-sig'
+    if head.startswith(b'\xff\xfe'):
+        encoding = 'utf-16-le'
+    elif head.startswith(b'\xfe\xff'):
+        encoding = 'utf-16-be'
+    elif head[:4096].count(b'\0') > len(head[:4096]) // 5:
+        encoding = 'utf-16-le' if head[1:4096:2].count(0) >= head[:4096:2].count(0) else 'utf-16-be'
+    return '\n'.join(part.decode(encoding, errors='replace').lstrip('\ufeff') for part in (head, tail))
 
 
 def looks_like_vasp_structure(text: str) -> bool:
@@ -149,6 +155,9 @@ def detect_format(path: Path) -> Detection:
     if suffix == ".ani":
         return Detection("siesta_ani", "SIESTA ANI trajectory")
     if suffix == ".xyz":
+        probe=read_probe(path)
+        if looks_like_xtb_trajectory(probe,name):
+            return Detection("xtb_trj", "xTB optimization trajectory")
         return Detection("xyz", "XYZ / XYZ trajectory")
     if suffix == ".cif":
         return Detection("cif", "CIF")
@@ -172,6 +181,11 @@ def detect_format(path: Path) -> Detection:
 
     text = read_probe(path)
     upper = text.upper()
+
+    if looks_like_xtb_trajectory(text,name):
+        return Detection("xtb_trj", "xTB optimization trajectory")
+    if re.search(r"(?mi)^\s*\*?\s*xtb version\s+\d",text):
+        return Detection("xtb_out", "xTB output")
 
     if "PROGRAM PWSCF" in upper or "QUANTUM ESPRESSO" in upper and "JOB DONE" in upper:
         return Detection("qe_out", "Quantum ESPRESSO output")
@@ -208,6 +222,15 @@ def detect_format(path: Path) -> Detection:
     if suffix in {".inp", ".in", ".pwi"}:
         raise ConversionError("Unable to identify input format from file contents")
     raise ConversionError("Unsupported or unrecognized file format")
+
+
+def looks_like_xtb_trajectory(text,name=''):
+    lines=text.splitlines()
+    if len(lines)<2 or not lines[0].strip().isdigit():return False
+    comment=lines[1].lower()
+    return (bool(re.search(r'\bxtb\s*:',comment)) or
+            (name.lower() in ('xtbopt.xyz','xtblast.xyz') and
+             bool(re.search(r'\bscf\s+done\b|\benergy\s*:',comment))))
 
 
 def normalize_element(label: str, fallback_z: Optional[int] = None) -> str:
@@ -1033,6 +1056,12 @@ def read_structure(path: Path, detection: Optional[Detection] = None) -> tuple[A
             atoms = parse_orca_input(path)
         elif kind == "orca_out":
             atoms = ase_read(str(path), index=-1, format="orca-output")
+        elif kind in ("xtb_out","xtb_trj"):
+            from .xtb_results import read_xtb_results
+            result=read_xtb_results(path,trajectory=kind=="xtb_trj")
+            frame=next((s.geometry for s in reversed(result.steps) if s.geometry is not None),None)
+            if frame is None:raise ConversionError('No complete xTB geometry found')
+            atoms=Atoms(frame.symbols,positions=frame.positions,info=dict(frame.info))
         elif kind == "nwchem_in":
             atoms = ase_read(str(path), index=-1, format="nwchem-in")
         elif kind == "nwchem_out":

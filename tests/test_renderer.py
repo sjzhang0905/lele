@@ -6,6 +6,38 @@ from lele.core import Frame, Volume
 from lele.renderer import MoleculeRenderer
 
 class VTKRenderTests(unittest.TestCase):
+    def test_vibration_connectivity_keeps_reference_bond_without_inventing_new_one(self):
+        draw = MoleculeRenderer(vtkRenderer())
+        # The preview has moved atom 1 far from its bonded partner, while
+        # atom 2 is now close; only the reference bond 0--1 should be drawn.
+        frame = Frame(['C'] * 3, [[0, 0, 0], [10, 0, 0], [1.2, 0, 0]])
+        draw.fixed_bonds = [(0, 1)]
+        draw.set_scene(frame)
+        tubes = [item for item in draw._keepalive if isinstance(item, tuple) and len(item) == 6
+                 and item[3].IsA('vtkTubeFilter')]
+        self.assertEqual(len(tubes), 1)
+        points = tubes[0][0]
+        self.assertEqual(points.GetNumberOfPoints(), 4)
+        np.testing.assert_allclose([points.GetPoint(i) for i in range(4)],
+                                   [[0, 0, 0], [5, 0, 0], [5, 0, 0], [10, 0, 0]])
+        draw.fixed_bonds = None
+        draw.set_scene(frame)
+        tubes = [item for item in draw._keepalive if isinstance(item, tuple) and len(item) == 6
+                 and item[3].IsA('vtkTubeFilter')]
+        self.assertAlmostEqual(tubes[0][0].GetPoint(3)[0], 1.2, places=5)
+
+    def test_small_exact_isovalue_reaches_both_contour_filters(self):
+        draw = MoleculeRenderer(vtkRenderer())
+        draw.options.volume_iso = 1.25e-9
+        grid = Volume(np.linspace(-1e-8, 1e-8, 64).reshape(4, 4, 4),
+                      [0, 0, 0], np.eye(3))
+        draw.set_scene(Frame(['C'], [[0, 0, 0]]), grid)
+        contours = [item[0] for item in draw._keepalive if isinstance(item, tuple)
+                    and item[0].IsA('vtkContourFilter')]
+        self.assertEqual(len(contours), 2)
+        np.testing.assert_allclose(sorted(c.GetValue(0) for c in contours),
+                                   [-1.25e-9, 1.25e-9], rtol=0, atol=1e-18)
+
     def test_atoms_bonds_and_signed_volume_offscreen(self):
         r = vtkRenderer()
         window = vtkRenderWindow()

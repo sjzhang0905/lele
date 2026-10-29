@@ -1,0 +1,14 @@
+ * xtb version 6.7.0 (synthetic)
+ Synthetic LELE format fixture. NOT a real calculation.
+ program call : xtb input.xyz --gfn 2 --opt
+ :: total energy -10.000000000000 Eh ::
+ .............................. CYCLE 1 ..............................
+ * total energy : -10.0000000 Eh change 0.0 Eh
+ .............................. CYCLE 2 ..............................
+ * total energy : -10.0500000 Eh change -0.05 Eh
+ .............................. CYCLE 3 ..............................
+ * total energy : -10.1000000 Eh change -0.05 Eh
+ *** GEOMETRY OPTIMIZATION CONVERGED AFTER 3 ITERATIONS ***
+ | TOTAL ENERGY -10.100000000123 Eh |
+ * finished run on 2026/10/28
+ normal termination of xtb

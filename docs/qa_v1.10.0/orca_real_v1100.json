@@ -1,0 +1,181 @@
+{
+  "passed": 13,
+  "records": [
+    {
+      "file": "ORCA_ORCA4.2_dvb_gopt.out",
+      "sha256": "dc3617cacb55024ce33267b137c1a7723ab08f389f053591535b77ddda1de1f8",
+      "atoms": 20,
+      "frames": 5,
+      "jobs": 1,
+      "orbitals": 2,
+      "vibrations": [],
+      "dipoles": 1,
+      "states": [],
+      "independent_comparison": "ASE final geometry/energy"
+    },
+    {
+      "file": "ORCA_ORCA4.2_dvb_raman.out",
+      "sha256": "4e59733c518b012884e911938a02f2c2200b73c286941ee9c092fcb4c5b4c938",
+      "atoms": 20,
+      "frames": 1,
+      "jobs": 1,
+      "orbitals": 1,
+      "vibrations": [
+        54
+      ],
+      "dipoles": 1,
+      "states": [],
+      "independent_comparison": "ASE final geometry/energy"
+    },
+    {
+      "file": "ORCA_ORCA4.2_dvb_scan_unrelaxed.out",
+      "sha256": "0659d7e5baa4496a8e89dd036d36f6bb8e32a8b01f8f1fcab5e7778c9d2dfab7",
+      "atoms": 20,
+      "frames": 12,
+      "jobs": 1,
+      "orbitals": 1,
+      "vibrations": [],
+      "dipoles": 12,
+      "states": [],
+      "independent_comparison": "direct final source table (ASE unsupported: ParseError)"
+    },
+    {
+      "file": "ORCA_ORCA4.2_dvb_td.out",
+      "sha256": "3ee24e0554b9d0c0ed21401caceaced65eb2b195f49ebdb783377c4467b885f5",
+      "atoms": 20,
+      "frames": 1,
+      "jobs": 1,
+      "orbitals": 1,
+      "vibrations": [],
+      "dipoles": 1,
+      "states": [
+        5,
+        5
+      ],
+      "independent_comparison": "direct final source table (ASE unsupported: ParseError)"
+    },
+    {
+      "file": "ORCA_ORCA5.0_ADBNA_Me_Mes_MesCz.log",
+      "sha256": "e7bed930a4f248e3ad621b76fe536f71574464ac804ae7a879f6b2d7bc3926a3",
+      "atoms": 98,
+      "frames": 1,
+      "jobs": 1,
+      "orbitals": 1,
+      "vibrations": [],
+      "dipoles": 1,
+      "states": [
+        10,
+        10
+      ],
+      "independent_comparison": "ASE final geometry/energy"
+    },
+    {
+      "file": "ORCA_ORCA5.0_dvb_soc.log",
+      "sha256": "84fd96c04e2d1ffdb64c825095721c6e834d3f111e91a5927f19eae32f812870",
+      "atoms": 20,
+      "frames": 1,
+      "jobs": 1,
+      "orbitals": 1,
+      "vibrations": [],
+      "dipoles": 1,
+      "states": [
+        10,
+        10
+      ],
+      "independent_comparison": "ASE final geometry/energy"
+    },
+    {
+      "file": "ORCA_ORCA6.0_1618.out",
+      "sha256": "61ec63b44b09d3561ccc01c469bd7fb92843e9e0fd868889c0a6dc124e16ef0b",
+      "atoms": 4,
+      "frames": 6,
+      "jobs": 2,
+      "orbitals": 3,
+      "vibrations": [],
+      "dipoles": 2,
+      "states": [],
+      "independent_comparison": "ASE final geometry/energy"
+    },
+    {
+      "file": "ORCA_ORCA6.1_1509.out",
+      "sha256": "12873a94bf34d6fbd7eb975876f0d95ba9a396ba26cadf355d05e2ee627198d8",
+      "atoms": 817,
+      "frames": 1,
+      "jobs": 1,
+      "orbitals": 1,
+      "vibrations": [],
+      "dipoles": 1,
+      "states": [
+        50
+      ],
+      "independent_comparison": "ASE final geometry/energy"
+    },
+    {
+      "file": "data_ORCA_basicORCA5.0_dvb_raman.out",
+      "sha256": "956e9a7989c8fc917ef358f57423286d7228f59fff18f159e25c19e71e3181e8",
+      "atoms": 20,
+      "frames": 1,
+      "jobs": 1,
+      "orbitals": 1,
+      "vibrations": [
+        54
+      ],
+      "dipoles": 1,
+      "states": [],
+      "independent_comparison": "ASE final geometry/energy"
+    },
+    {
+      "file": "data_ORCA_basicORCA6.0_dvb_raman.out",
+      "sha256": "3fe60a75fc691c43cbfed85583d505597fc62505adceaefcc910f3f064ba1a04",
+      "atoms": 20,
+      "frames": 1,
+      "jobs": 1,
+      "orbitals": 1,
+      "vibrations": [
+        54
+      ],
+      "dipoles": 1,
+      "states": [],
+      "independent_comparison": "ASE final geometry/energy"
+    },
+    {
+      "file": "data_ORCA_basicORCA6.0_dvb_sp_un_dft.out",
+      "sha256": "05da3eb11c7030fb788f3b92398f432fb5b08a61f365137b7f9cc54088748b68",
+      "atoms": 20,
+      "frames": 1,
+      "jobs": 1,
+      "orbitals": 1,
+      "vibrations": [],
+      "dipoles": 1,
+      "states": [],
+      "independent_comparison": "ASE final geometry/energy"
+    },
+    {
+      "file": "data_ORCA_basicORCA6.0_dvb_td.out",
+      "sha256": "83f7efb587c941ea6a5ce2b9edc63eb1df5feeaf8ec4f527c70331a1fd95154a",
+      "atoms": 20,
+      "frames": 1,
+      "jobs": 1,
+      "orbitals": 1,
+      "vibrations": [],
+      "dipoles": 1,
+      "states": [
+        5,
+        5
+      ],
+      "independent_comparison": "ASE final geometry/energy"
+    },
+    {
+      "file": "data_ORCA_basicORCA6.0_water_hf_solvent_smd.log",
+      "sha256": "ce7d8362643b3d3bee93b0458dcdc55fabf4b82c22b45311ef346922c2eb30d5",
+      "atoms": 3,
+      "frames": 1,
+      "jobs": 1,
+      "orbitals": 1,
+      "vibrations": [],
+      "dipoles": 1,
+      "states": [],
+      "independent_comparison": "ASE final geometry/energy"
+    }
+  ]
+}

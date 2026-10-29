@@ -1,0 +1,22 @@
+Iteration: 0
+Images: Distance (Bohr), Energy (Eh)
+0.0000 0.0000 0.0000000
+0.3333 1.0000 0.0400000
+0.6667 2.0000 0.0250000
+1.0000 3.0000 0.0100000
+
+Interp.: Distance (Bohr), Energy (Eh)
+0 0 0
+1 3 0.01
+
+Iteration: 1
+Images: Distance (Bohr), Energy (Eh)
+0.0000 0.0000 0.0000000
+0.3333 1.0000 0.0300000
+0.6667 2.0000 0.0200000
+1.0000 3.0000 0.0100000
+
+Interp.: Distance (Bohr), Energy (Eh)
+0 0 0
+1 3 0.01
+

@@ -1,0 +1,61 @@
+ * xtb version 6.7.0 (synthetic)
+ Synthetic LELE format fixture. NOT a real calculation.
+ program call : xtb input.xyz --gfn 2 --opt --chrg 0 --etemp 1000
+ Hamiltonian                  GFN2-xTB
+ # Occupation Energy/Eh Energy/eV
+ -----------------------------------
+ 1 2.0000 -0.5000000 -13.6057
+ 2 1.7500 -0.2000000 -5.4423 (HOMO)
+ 3 0.2000 -0.1500000 -4.0817 (LUMO)
+ 4 0.0500 -0.1000000 -2.7211
+ 5         0.2000000 5.4423
+ -----------------------------------
+ HL-Gap 0.0500000 Eh 1.3606 eV
+ :: total energy -10.000000000000 Eh ::
+ :: HOMO-LUMO gap 1.360569301 eV ::
+ .............................. CYCLE 1 ..............................
+ 1 -99.5000000 0.5 0.3
+ * total energy : -10.0000000 Eh change 0.0 Eh
+ gradient norm : 0.1000 Eh/α
+ .............................. CYCLE 2 ..............................
+ 1 -99.8000000 0.2 0.1
+ * total energy : -10.0500000 Eh change -0.05 Eh
+ gradient norm : 0.0100 Eh/α
+ .............................. CYCLE 3 ..............................
+ * total energy : -10.1000000 Eh change -0.05 Eh
+ gradient norm : 0.0001 Eh/α
+ *** GEOMETRY OPTIMIZATION CONVERGED AFTER 3 ITERATIONS ***
+ ================
+ final structure:
+ ================
+3
+ xtb: 6.7.0 (synthetic)
+O 0.0 0.0 0.0
+H 0.96 0.0 0.0
+H -0.20 0.82 0.0
+ # Occupation Energy/Eh Energy/eV
+ -----------------------------------
+ 1 2.0000 -0.6000000 -16.3268
+ ... ... ... ...
+ 2 1.8000 -0.3000000 -8.1634 (HOMO)
+ 3 0.1800 -0.2400000 -6.5307 (LUMO)
+ 4 0.0200 -0.1000000 -2.7211
+ 5         0.2000000 5.4423
+ -----------------------------------
+ HL-Gap 0.0600000 Eh 1.6327 eV
+ :: total energy -10.100000000123 Eh ::
+ :: HOMO-LUMO gap 1.632683161 eV ::
+ * Orbital Energies and Occupations
+ # Occupation Energy/Eh Energy/eV
+ -----------------------------------
+ 1 2.0000 -0.6000000 -16.3268
+ 2 1.8000 -0.3000000 -8.1634 (HOMO)
+ 3 0.1800 -0.2400000 -6.5307 (LUMO)
+ 4 0.0200 -0.1000000 -2.7211
+ 5         0.2000000 5.4423
+ -----------------------------------
+ HL-Gap 0.0600000 Eh 1.6327 eV
+ | TOTAL ENERGY -10.100000000123 Eh |
+ | HOMO-LUMO GAP 1.632683161 eV |
+ * finished run on 2026/10/28
+ normal termination of xtb

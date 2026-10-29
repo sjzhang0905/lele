@@ -1,0 +1,14 @@
+iteration : 0
+nim : 4
+energy : -10 -9.96 -9.975 -9.99
+distance : 0 1 2 3
+max(|Fr_perp|) : 0 0.001 0.002 0
+max(|Force|) : 0.0001 0.001 0.002 0.0002
+>
+iteration : 1
+nim : 4
+energy : -10 -9.97 -9.98 -9.99
+distance : 0 1 2 3
+max(|Fr_perp|) : 0 0.001 0.002 0
+max(|Force|) : 0.0001 0.001 0.002 0.0002
+>

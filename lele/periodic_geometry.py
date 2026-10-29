@@ -9,6 +9,7 @@ from __future__ import annotations
 from collections import deque
 from dataclasses import dataclass
 from itertools import product
+from functools import lru_cache
 import numpy as np
 from scipy.spatial import cKDTree
 
@@ -26,59 +27,108 @@ def translations(frame: Frame):
     return [tuple(v) for v in product(*dimensions)]
 
 
+@lru_cache(maxsize=64)
+def _reduced_cell(cell_values, pbc):
+    """Unimodular reduction preserves the lattice and original shift mapping."""
+    from ase.geometry import minkowski_reduce
+    cell = np.asarray(cell_values, dtype=float).reshape(3, 3)
+    reduced, operation = minkowski_reduce(cell, pbc=pbc)
+    return np.asarray(reduced), np.asarray(operation, dtype=int)
+
+
+def periodic_neighbors(frame, cutoff, positions=None):
+    """Complete cutoff search in a reduced basis, shifts in the source basis.
+
+    The ASE neighbor list derives its search from reciprocal face distances;
+    no fixed image stencil is imposed on a non-reduced input lattice.
+    """
+    from ase.neighborlist import primitive_neighbor_list
+    cell = periodic_basis(frame)
+    if cell is None:
+        cell = frame.cell
+        pbc = (False, False, False)
+        reduced, operation = cell, np.eye(3, dtype=int)
+    else:
+        pbc = frame.pbc
+        reduced, operation = _reduced_cell(tuple(cell.ravel()), pbc)
+    xyz = frame.positions if positions is None else positions
+    i, j, vectors, shifts = primitive_neighbor_list('ijDS', pbc, reduced, xyz, float(cutoff))
+    return i, j, vectors, shifts @ operation
+
+
 def minimum_image(delta, frame: Frame):
     """Return shortest Cartesian delta + shift @ cell and its lattice shift.
 
-    Search around the nearest fractional image, including skewed-cell neighbours.
+    Reduce the periodic lattice before the nearest-image search; return the
+    integer translation in the original basis, including partial periodicity.
     """
     delta = np.asarray(delta, dtype=float)
     lattice = periodic_basis(frame)
     if lattice is None:
         return delta.copy(), (0, 0, 0)
-    frac = delta @ np.linalg.inv(lattice)
-    base = np.array([-int(np.rint(frac[k])) if frame.pbc[k] else 0 for k in range(3)])
-    best = (float('inf'), None, None)
-    for nearby in translations(frame):
-        shift = base + np.asarray(nearby, dtype=int)
-        vector = delta + shift @ lattice
-        sq = float(vector @ vector)
-        if sq < best[0] - 1e-12:
-            best = (sq, vector, tuple(int(x) for x in shift))
-    return best[1], best[2]
+    from ase.geometry import find_mic
+    reduced, operation = _reduced_cell(tuple(lattice.ravel()), frame.pbc)
+    search_delta = delta
+    if not all(frame.pbc):
+        # Nonperiodic skew rows must not change the periodic projection or
+        # hide a distant image behind a fractional-coordinate wrap.
+        periodic = reduced[np.asarray(frame.pbc, dtype=bool)]
+        search_delta = (delta @ np.linalg.pinv(periodic)) @ periodic
+    vector, _ = find_mic(search_delta, reduced, pbc=frame.pbc)
+    reduced_shift = np.rint(np.linalg.solve(reduced.T, vector - search_delta)).astype(int)
+    reduced_shift[~np.asarray(frame.pbc, dtype=bool)] = 0
+    shift = reduced_shift @ operation
+    return delta + shift @ lattice, tuple(int(x) for x in shift)
 
 
-def short_contacts(frame: Frame, threshold=0.6):
-    """Count distinct atomic pairs shorter than threshold, including PBC images."""
+@dataclass(frozen=True)
+class ShortContact:
+    first: int
+    second: int
+    distance: float
+    # Translation of the second atom relative to its source coordinates.
+    image_shift: tuple[int, int, int] = (0, 0, 0)
+
+
+def short_contact_details(frame: Frame, threshold=0.6):
+    """One shortest contact per distinct source pair, with its periodic image.
+
+    Atom indices are canonical (first < second); image_shift translates the
+    original second atom, not its wrapped representation. Display-only cell
+    copies do not multiply contacts.
+    """
     n = len(frame.symbols)
     if n < 2:
-        return 0, None
+        return []
     cell = periodic_basis(frame)
     if cell is None:
         tree = cKDTree(frame.positions)
         pairs = tree.query_pairs(float(threshold), output_type='ndarray')
         if not len(pairs):
-            return 0, None
+            return []
         d = np.linalg.norm(frame.positions[pairs[:, 0]] - frame.positions[pairs[:, 1]], axis=1)
-        index = int(d.argmin())
-        return len(pairs), (int(pairs[index, 0]), int(pairs[index, 1]), float(d[index]))
-    normalized, _ = normalized_positions(frame)
-    tree = cKDTree(normalized)
+        rows = [ShortContact(int(i), int(j), float(distance))
+                for (i, j), distance in zip(pairs, d) if distance < threshold]
+        return sorted(rows, key=lambda r: (r.distance, r.first, r.second))
     results = {}
-    for shift in translations(frame):
-        translated = normalized + np.asarray(shift) @ cell
-        targets = cKDTree(translated)
-        for i, neighbours in enumerate(tree.query_ball_tree(targets, r=threshold)):
-            for j in neighbours:
-                if i == j:
-                    continue
-                pair = canonical_pair(i, j)
-                dist = float(np.linalg.norm(normalized[i] - translated[j]))
-                if dist < threshold and dist < results.get(pair, float('inf')):
-                    results[pair] = dist
-    if not results:
-        return 0, None
-    (i, j), d = min(results.items(), key=lambda item: item[1])
-    return len(results), (i, j, d)
+    first, second, vectors, shifts = periodic_neighbors(frame, threshold)
+    for i, j, vector, shift in zip(first, second, vectors, shifts):
+        if i == j: continue
+        pair = canonical_pair(i, j)
+        dist = float(np.linalg.norm(vector))
+        if dist < threshold and dist < results.get(pair, (float('inf'), None))[0]:
+            raw_shift = shift if i < j else -shift
+            results[pair] = (dist, tuple(int(x) for x in raw_shift))
+    rows = [ShortContact(i, j, distance, shift) for (i, j), (distance, shift) in results.items()]
+    return sorted(rows, key=lambda r: (r.distance, r.first, r.second))
+
+
+def short_contacts(frame: Frame, threshold=0.6):
+    """Count distinct atomic pairs shorter than threshold, including PBC images."""
+    rows = short_contact_details(frame, threshold)
+    if not rows: return 0, None
+    first = rows[0]
+    return len(rows), (first.first, first.second, first.distance)
 
 
 def normalized_positions(frame: Frame):
@@ -103,36 +153,43 @@ def periodic_bonds(frame: Frame, cutoff=1.18, *, max_bonds=150000):
     if not len(xyz):
         return []
     cell = periodic_basis(frame)
+    if frame.periodic_bond_snapshot is not None:
+        _, floors = normalized_positions(frame)
+        edges = set()
+        for i, j, shift in frame.periodic_bond_snapshot:
+            if (i, j) in frame.bond_removed: continue
+            current = np.asarray(shift) - floors[i] + floors[j]
+            edges.add((i, j, tuple(int(x) for x in current)))
+        captured = {(i, j) for i, j, _ in frame.periodic_bond_snapshot}
+        for i, j in frame.bond_added - frame.bond_removed:
+            if (i, j) not in captured:
+                _, shift = minimum_image(xyz[j] - xyz[i], frame)
+                edges.add((i, j, shift))
+        return sorted(edges)
     radii = np.array([radius(s) for s in frame.symbols])
     search_range = min(6.5, float(2 * radii.max() * cutoff))
-    tree = cKDTree(xyz)
     edges = set()
-    for shift in translations(frame):
-        offset = np.asarray(shift, float) @ cell if cell is not None else np.zeros(3)
-        if shift == (0, 0, 0):
-            neighbours = tree.query_pairs(search_range, output_type='ndarray')
-            candidates = ((int(i), int(j)) for i, j in neighbours)
-        else:
-            other = cKDTree(xyz + offset)
-            neighbours = tree.query_ball_tree(other, r=search_range)
-            candidates = ((i, j) for i, js in enumerate(neighbours) for j in js)
-        for i, j in candidates:
-            if i == j and shift == (0, 0, 0):
-                continue
-            pair = (i, j) if i == j else canonical_pair(i, j)
-            if pair in frame.bond_removed:
-                continue
-            vec = xyz[j] + offset - xyz[i]
-            d = float(np.linalg.norm(vec))
-            if not .2 < d <= min(6.5, (radii[i] + radii[j]) * cutoff):
-                continue
-            oriented_shift = tuple(int(v) for v in (shift if i <= j else tuple(-x for x in shift)))
-            if i == j and oriented_shift < tuple(-v for v in oriented_shift):
-                oriented_shift = tuple(-v for v in oriented_shift)
-            edges.add((pair[0], pair[1], oriented_shift))
-            if len(edges) > max_bonds:
-                raise ValueError('Periodic graph is too large for interactive fragment expansion')
+    first, second, vectors, shifts = periodic_neighbors(frame, search_range, xyz)
+    for i, j, vector, shift_array in zip(first, second, vectors, shifts):
+        i, j = int(i), int(j)
+        shift = tuple(int(x) for x in shift_array)
+        if i == j and shift == (0, 0, 0):
+            continue
+        pair = (i, j) if i == j else canonical_pair(i, j)
+        if pair in frame.bond_removed:
+            continue
+        d = float(np.linalg.norm(vector))
+        if not .2 < d <= min(6.5, (radii[i] + radii[j]) * cutoff):
+            continue
+        oriented_shift = tuple(int(v) for v in (shift if i <= j else tuple(-x for x in shift)))
+        if i == j and oriented_shift < tuple(-v for v in oriented_shift):
+            oriented_shift = tuple(-v for v in oriented_shift)
+        edges.add((pair[0], pair[1], oriented_shift))
+        if len(edges) > max_bonds:
+            raise ValueError('Periodic graph is too large for interactive fragment expansion')
     # A manual link overrides the normal distance rule with the nearest image.
+    from .bond_filter import prune_occluded
+    edges = set(prune_occluded(xyz, edges, cell))
     for pair in frame.bond_added:
         if pair in frame.bond_removed:
             continue

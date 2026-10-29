@@ -1,0 +1,42 @@
+{
+  "passed": true,
+  "main_frames": 437,
+  "stages": [
+    {
+      "name": "Reactant preoptimization",
+      "status": "Converged"
+    },
+    {
+      "name": "Product preoptimization",
+      "status": "Not converged (cycle limit)"
+    },
+    {
+      "name": "NEB path optimization",
+      "status": "Converged"
+    },
+    {
+      "name": "Transition-state optimization",
+      "status": "Converged"
+    }
+  ],
+  "linked_neb_snapshots": 20,
+  "images": 16,
+  "linked_image_geometries": 320,
+  "interpolation_snapshots": 21,
+  "last_interpolation_has_geometry": false,
+  "main_neb_iterations": 21,
+  "hessian_analysis_imaginary_counts": [
+    2,
+    1
+  ],
+  "main_charge": 0,
+  "hessian_sample_charge": 1,
+  "input_hashes": {
+    "TS1_MEP_ALL_trj.xyz": "915aedf32d020cf37a3dc3aceef9df39076f64d445969ae7d3bcc452038cdc2d",
+    "TS1_MEP_trj.xyz": "185e883d57a48e38166e1834f1a2e3954c898908966b9362ea0266aba0383139",
+    "TS1.NEB.log": "cf94d98362ce16599677a56b90bf74cfaf639b334582655cdab272ddfb7fa2df",
+    "TS1(1).log": "1ba91def67286f1fd1eddd58516629f89f9b2962fb2378c4bf31dcae9a904c03",
+    "TS1.interp": "930f51d67f6a884c7c3cddfbf4a873d34afa45626d9b9afa58fa8b3a7bc8ecf6",
+    "TS1_Hess.log": "eca135be3215934461fd89e1b7a5512a4599635f7a1562ddcc40917f82d96a3e"
+  }
+}

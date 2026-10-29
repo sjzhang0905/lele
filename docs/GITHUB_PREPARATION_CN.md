@@ -1,6 +1,6 @@
 # LELE 开发与发布
 
-当前版本：**1.0.1**。欢迎页版本号下显示联系邮箱 **sjzhang0905@hotmail.com**，其下方显示可点击的仓库地址。项目采用 **MIT 协议**。
+当前版本：**1.7.0**。已在保留真实扩胞的基础上重新实现 v1.4.0/v1.5.0 功能，包含光谱、偶极与跃迁表导出、Boundary、能量单位、改进 GIF、复制粘贴和框选。恢复入口见 `docs/RESTORED_FEATURES_v1.7.0_CN.md`。欢迎页保留邮箱与仓库地址。项目采用 **MIT 协议**。
 
 源码仓库：[sjzhang0905/lele](https://github.com/sjzhang0905/lele)。
 

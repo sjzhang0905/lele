@@ -1,0 +1,25 @@
+ O   R   C   A
+ ORCA VERSION 6.1
+ Synthetic format fixture; not a real calculation.
+ NAME = synthetic_goat_v1100.inp
+| 1> ! XTB GOAT
+| 2> * xyz 0 1
+ CARTESIAN COORDINATES (ANGSTROEM)
+ --------------------------------
+C 0 0 0
+C 1.4 0 0
+H -0.7 1 0
+H 2.1 -1 0.2
+
+ Ensemble temperature ... 298.15 K
+ # Final ensemble info #
+ Conformer Energy Degen. % total % cumul.
+ (kcal/mol)
+ -------------------------------------------------
+ 0 0.000 1 53.89 53.89
+ 1 0.628 2 37.38 91.27
+ 2 1.255 1 6.48 97.75
+ 3 1.883 1 2.25 100.00
+
+ Writing final ensemble to synthetic_goat_v1100.finalensemble.xyz
+ ORCA TERMINATED NORMALLY
