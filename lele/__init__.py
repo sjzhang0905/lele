@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Local Environment and Lattice Explorer."""
-__version__ = "1.0.1"
+__version__ = "2.0.3"
 APP_NAME = "LELE"
 APP_FULL_NAME = "Local Environment and Lattice Explorer"
 APP_CONTACT_EMAIL = "sjzhang0905@hotmail.com"

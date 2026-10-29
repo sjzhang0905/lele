@@ -32,10 +32,13 @@ SHORTCUT_GROUPS = (
         ('Ctrl+Z', 'Undo edit'),
     )),
     ('Atoms & fragments', (
+        ('Ctrl+A', 'Select all atoms'),
         ('Ctrl+I', 'Invert atom selection'),
         ('Delete', 'Delete selected atoms'),
         ('Ctrl+G', 'Select connected fragments'),
         ('Ctrl+B', 'Toggle selected bonds'),
+        ('Ctrl+H', 'Toggle selected hydrogen bond (dashed)'),
+        ('Ctrl+Shift+B', 'Toggle box selection (Esc to exit)'),
         ('Alt + drag', 'Left: rotate fragment; right: roll; middle: move'),
     )),
     ('Mouse & navigation', (

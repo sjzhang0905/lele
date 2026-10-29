@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="2" skipped="0" tests="2" time="3.113" timestamp="2026-10-28T11:55:29.598665+09:00" hostname="c794c3c4f086"><testcase classname="tests.test_periodic_fragment_ui_v171" name="test_ctrl_g_populates_expanded_coordinate_rows_and_independent_ids" time="2.537"><failure message="assert 4 == 8&#10; +  where 4 = &lt;built-in method rowCount of PySide6.QtWidgets.QTableWidget object at 0x7f06af4c8740&gt;()&#10; +    where &lt;built-in method rowCount of PySide6.QtWidgets.QTableWidget object at 0x7f06af4c8740&gt; = &lt;PySide6.QtWidgets.QTableWidget(0x2ccd5d10) at 0x7f06af4c8740&gt;.rowCount&#10; +      where &lt;PySide6.QtWidgets.QTableWidget(0x2ccd5d10) at 0x7f06af4c8740&gt; = &lt;lele.app.LELEWindow(0x2ca107b0) at 0x7f06afaaf600&gt;.atom_table">tests/test_periodic_fragment_ui_v171.py:54: in test_ctrl_g_populates_expanded_coordinate_rows_and_independent_ids
+    assert w.atom_table.rowCount() == 8
+E   assert 4 == 8
+E    +  where 4 = &lt;built-in method rowCount of PySide6.QtWidgets.QTableWidget object at 0x7f06af4c8740&gt;()
+E    +    where &lt;built-in method rowCount of PySide6.QtWidgets.QTableWidget object at 0x7f06af4c8740&gt; = &lt;PySide6.QtWidgets.QTableWidget(0x2ccd5d10) at 0x7f06af4c8740&gt;.rowCount
+E    +      where &lt;PySide6.QtWidgets.QTableWidget(0x2ccd5d10) at 0x7f06af4c8740&gt; = &lt;lele.app.LELEWindow(0x2ca107b0) at 0x7f06afaaf600&gt;.atom_table</failure></testcase><testcase classname="tests.test_periodic_fragment_ui_v171" name="test_ctrl_i_after_auto_expansion_complements_every_new_atom" time="0.198"><failure message="assert {3} == {3, 4, 5, 6, 7}&#10;  &#10;  Extra items in the right set:&#10;  4&#10;  5&#10;  6&#10;  7&#10;  Use -v to get more diff">tests/test_periodic_fragment_ui_v171.py:78: in test_ctrl_i_after_auto_expansion_complements_every_new_atom
+    assert set(w.selection) == set(range(8)) - before
+E   assert {3} == {3, 4, 5, 6, 7}
+E     
+E     Extra items in the right set:
+E     4
+E     5
+E     6
+E     7
+E     Use -v to get more diff</failure></testcase></testsuite></testsuites>

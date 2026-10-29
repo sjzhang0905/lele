@@ -13,6 +13,8 @@ dist/
 reports/
 artifacts/
 *.log
+!examples/synthetic_opt_freq.log
+!examples/synthetic_properties.log
 lele.png
 .idea/
 .vscode/

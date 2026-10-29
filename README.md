@@ -2,13 +2,82 @@
 
 **Local Environment and Lattice Explorer**
 
+Version **2.0.3** adds **Ctrl+H** to draw/remove a dashed hydrogen bond between
+two selected atoms, independently of ordinary **Ctrl+B** bonds, with undo.
+Each open file now retains its camera, colours and complete display settings
+when switching files, including frequency and energy-only tree entries.
+See the [2.0.3 guide](docs/FEATURES_v2.0.3_CN.md) and
+[validation record](docs/VALIDATION_v2.0.3.md).
+
+Version **2.0.2** fixes periodic-image searches for non-reduced skew cells,
+translates aligned cell outlines together with atoms (including Boundary), and
+removes an obsolete version from the Windows startup error. Geometry edits now
+preserve existing bonds. Use **Ctrl+B** for explicit bond changes or
+**Edit → Rebuild bonds from distances** to request a fresh distance-based graph.
+See the [2.0.2 guide](docs/FEATURES_v2.0.2_CN.md) and
+[validation record](docs/VALIDATION_v2.0.2.md).
+
+Version **2.0.1** simplifies the footer, adds clickable short-contact counts
+with atom-pair/distance and periodic-image details, and shows periodic cell
+volume in Results / info. See the [2.0.1 guide](docs/FEATURES_v2.0.1_CN.md).
+
+Version **2.0.0** adds selection-driven normal-mode analysis, multi-parameter
+geometry curves with frame navigation, and reversible trajectory display
+alignment, including aligned GIF export. Energy-only xTB records now appear
+individually in the Files tree; selecting one shows its energy without inventing
+a structure. Use **Find vibrations…**, **Geometry curves…** and **Align trajectory
+for display** in Files or Analysis. See the [2.0.0 guide](docs/FEATURES_v2.0.0_CN.md).
+
+Version 1.11.1 loads geometry and calculation results independently. Energy-only
+xTB files show results and curves without a 3D view or placeholder frame;
+geometry-only files retain navigation with energy/curve controls unavailable.
+Companion files are optional. See the [1.11.1 guide](docs/FEATURES_v1.11.1_CN.md).
+
+Version 1.11.0 added xTB/g-xTB geometry optimization, verified trajectory
+companions, energy curves/CSV and on-demand HOMO/LUMO. Printed frontier labels
+take precedence for fractional occupations; alpha/beta results remain separate.
+See the [1.11.0 guide](docs/FEATURES_v1.11.0_CN.md).
+
+Version 1.10.0 added ORCA NEB/NEB-TS path snapshots and image histories,
+stage-specific optimization and Hessian results, GOAT ensemble populations and
+aligned RMSD, and complex SOC couplings, mixed states and corrected absorption.
+Use the **NEB / GOAT / SOC…** button in Files or the Analysis menu.
+See the [1.10.0 guide](docs/FEATURES_v1.10.0_CN.md) for companion files and scope.
+
+The 1.9.0 on-demand HOMO/LUMO button, selection measurements beside Short
+contacts, and common ORCA 4/5/6 summaries, orbitals, spectra, dipoles and
+printed orbital contributions remain available.
+
 LELE is a desktop workbench for visualizing and editing molecular and periodic
 structures, inspecting calculation outputs, and exploring atomic environments.
-Version **1.0.1** uses the MIT License and displays the author contact and
-repository URL below the welcome version. It
-includes the four-frame parrot gait, electron parity without a total electron
-count, and standing-parrot application/Windows EXE icon. Commands remain grouped into menus, with X/Y/Z views and on-demand
-plane fitting. LELE continues the features of ChemView Studio 0.9.0.
+Version **2.0.3** retains the restored 1.4/1.5 feature set on top of the real periodic
+supercell feature from 1.6.0: improved GIF quality, file-relative save paths,
+camera-facing axis letters, molecular/periodic energy display units, Gaussian/ORCA
+IR/Raman/UV-Vis spectra, typed dipole arrows and CSV exports, bond filtering,
+cross-file atom copy/paste, rectangle selection and Boundary display ranges.
+It retains Gaussian Opt+Freq results and precise scientific isovalue entry.
+It includes an element-grouped Atoms sidebar with individual colour,
+visibility, transparency and label controls, and a compact two-column lower
+inspector. The welcome window appears first and automatically preloads the
+scientific backend. The project uses the MIT License and retains the parrot
+animation, X/Y/Z views, grouped menus and on-demand plane fitting.
+
+The original 1.4/1.5 source files were unavailable; their features have been
+reimplemented and verified in this version. See the
+[restored feature guide](docs/RESTORED_FEATURES_v1.7.0_CN.md) and
+[supercell guide](docs/SUPERCELL_CN.md).
+
+In 1.7.1, **Ctrl+G** automatically builds an undoable real supercell when a
+finite fragment crosses cell boundaries. Coordinates and atom IDs include every
+new atom, and **Ctrl+I** inverts selection across the expanded structure.
+**Ctrl+Z** restores the original frame and attached field. See the
+[fragment-selection fix](docs/FIX_PERIODIC_FRAGMENT_v1.7.1_CN.md).
+
+Version 1.7.2 fixes bottom-left axis letters, fixed-width arrows, editable
+dipole scales and excited-state labels. **Ctrl+Shift+B** toggles transparent,
+dashed box selection; **Esc** exits. Boundary now repeats complete unit cells:
+0–2, 0–2, 0–1 shows four original-sized cells with all atoms and internal edges.
+See the [display-controls guide](docs/DISPLAY_UPDATES_v1.7.2_CN.md).
 
 [中文说明](README_CN.md) · [Changes](CHANGELOG.md) · [License](LICENSE) · [Development and releases](docs/GITHUB_PREPARATION_CN.md)
 
@@ -28,26 +97,63 @@ Contact: [sjzhang0905@hotmail.com](mailto:sjzhang0905@hotmail.com)
   backend and ASE, including XYZ, Gaussian inputs, CIF and POSCAR.
 - Native VTK rendering with nine appearance presets, editable element colours,
   saved custom styles, atom labels, unit cells and XYZ/abc axes.
+- An element-grouped Atoms sidebar with individual or batch visibility,
+  colour, transparency and label/index/custom-text controls, including undo.
+- A compact editable coordinate table in the left half of a resizable lower
+  inspector, with a blank right half reserved for future content.
 - Atom selection, fragment selection, inversion, deletion and undo.
 - Coordinate editing, distances, angles, dihedrals and fragment transforms.
+- Preserve connectivity while moving/editing atoms; undo restores both geometry
+  and bonds. Copy/paste and supercell construction retain the source graph.
+- Ctrl+H toggles a manually drawn dashed hydrogen bond between two atoms;
+  manual links remain separate from covalent fragment connectivity.
+- Per-file camera and display settings persist while switching open files
+  within the current session, including view angle, zoom, pan and projection.
 - On-demand least-squares planes from three or more selected atoms, with optional
   periodic images and rigid alignment of the structure and cell to XY.
 - Frame navigation and playback for supported trajectories, including SIESTA
   output/ANI histories, and energy curves when corresponding energies exist.
+- xTB/g-xTB optimization stdout and Xmol trajectories, source total energies,
+  clickable energy curves/CSV, and printed HOMO/LUMO including fractional and
+  separate alpha/beta tables. Unmatched energy-only cycles remain visible.
+- ORCA NEB/NEB-TS stages, path snapshots, fixed-image histories and Hessian
+  provenance, with geometry matching and sequence-specific playback/GIF export.
+- GOAT conformer energies, printed/recalculated populations, temperature controls,
+  same-order aligned RMSD, conformer selection and CSV export.
+- SOC complex components and heatmaps, mixed-state compositions and printed
+  SOC-corrected absorption, kept separate from spin-free excitation results.
+- Gaussian geometry/optimization and frequency groups in the same Files tree,
+  including imaginary modes, IR intensities and vibration animation controls.
 - Total atom count, cell composition/formula, charge-aware electron parity, geometric hydrogen-bond
   candidates and short-contact diagnostics.
 - Signed CUBE isosurfaces, PNG screenshots and structure export.
+- GIF export for trajectories or the selected vibration mode, including frame
+  range, FPS, resolution, amplitude and cycle duration controls.
 
 Trajectory and energy availability depend on the input format and reader.
-Distance-based bonds and hydrogen-bond candidates are geometric display aids.
+Initial distance-based bonds and hydrogen-bond candidates are geometric display aids.
+After a geometry edit, bonds remain fixed until an explicit bond command.
 Edits affect the active frame; use structure export to save edited coordinates.
+
+See the [Atoms sidebar and lower-panel guide](docs/ATOM_CONTROLS_CN.md) for the
+per-atom controls, frame scope and a UI preview. Display overrides are session
+settings and are not written to exported XYZ/POSCAR/CIF files.
 
 ## Welcome canvas
 
 Starting without files shows the welcome page and an empty Files tree. Use
 **Open a file**, **Ctrl+O**, or drop files into the window. A successfully
 loaded file switches to the 3D view and data inspector; a failed or cancelled
-open leaves the welcome page visible. Command-line file arguments open directly.
+open leaves the welcome page visible. Command-line file arguments open
+automatically after the window appears and preloading finishes.
+
+The welcome window and its settings load without NumPy, SciPy, ASE or VTK.
+Immediately after the welcome header is painted, a background thread preloads
+the scientific libraries and readers automatically. The GUI thread then prepares
+the hidden 3D canvas and the status bar shows Ready. The welcome animation and
+menus remain active during imports. Files chosen while loading are queued and
+open when ready; display settings carry over. Rebuild the Windows executable
+with `build_windows.bat` to apply this startup optimization.
 
 The supplied artwork is kept in `lele/assets/lele_walk.png`. The first four
 poses form the gait: **standing → left leg → standing → right leg**, repeated.
@@ -80,7 +186,7 @@ Use **64-bit CPython 3.12** (recommended) or **3.11**.
 2. Double-click `start_windows.bat` to create `.venv`, install dependencies and
    launch LELE.
 3. Confirm that the title displays
-   `LELE 1.0.1 - Local Environment and Lattice Explorer`.
+   `LELE 2.0.3 - Local Environment and Lattice Explorer`.
 
 To build an executable, run `build_windows.bat` after the first successful
 launch. The result is `dist/LELE/LELE.exe`. Distribute the complete `dist/LELE`
@@ -113,14 +219,55 @@ Changes to selection, fitted coordinates, cell or periodic-image option clear
 the previous fit; click the fit button again to regenerate it. Use **Ctrl+I**
 to select the remaining O atom, **Delete** to remove it, and **Ctrl+Z** to restore it.
 
+## Gaussian optimization and frequencies
+
+Open a Gaussian `.log` or `.out` containing optimization and frequency results.
+The **Files** tree shows **Geometry / optimization** and **Frequencies** groups.
+Select a frequency to start its vibration animation; negative frequencies are
+marked **imaginary**. Use **Pause**, **Stop / reset**, **Amplitude** (maximum
+atom displacement in Å) and **Speed** (visual cycles/s) below the tree. Up/Down
+also selects modes. **Analysis → Vibrational frequencies** opens the first mode.
+
+Each frequency calculation uses its own printed reference geometry/orientation,
+including multiple Link1 jobs. The coordinate table and structure export use
+that reference; select an optimization frame to edit coordinates. Animation
+does not alter geometry history. Modes with missing or incomplete Cartesian
+displacements remain listed with animation disabled.
+
+Try `examples/synthetic_opt_freq.log`, which contains clearly labelled artificial
+test data. See the [Gaussian vibration guide](docs/GAUSSIAN_VIBRATIONS_CN.md).
+
+![Gaussian frequency selection and vibration controls](examples/gaussian_vibrations_preview.png)
+
+## Save animation GIF
+
+Choose **File → Export animation GIF…**. Export **Geometry / optimization
+trajectory**, or select a frequency first and export **Current vibration**.
+The dialog provides output width, FPS and looping. Trajectories also offer
+first/last frames, stride and forward/backward playback; vibration export
+offers amplitude and the duration of one full cycle.
+
+GIFs contain the 3D view using the current camera, colours and labels. The
+height follows the canvas aspect ratio. Export preserves source coordinates,
+the live view and playback state; cancellation leaves existing files intact.
+See the [GIF export guide](docs/GIF_EXPORT_CN.md).
+
+## Exact isovalue entry
+
+Under **Field → |Isovalue|**, select the number and type a decimal such as
+`0.01234567` or scientific notation such as `1.25e-5`. Press **Enter**, click
+**Apply**, or leave the field to update. Intermediate keystrokes do not rebuild
+the surface. Up to 12 decimal places and values from `1e-12` to `10000` are
+supported; arrows retain their `0.005` step.
+
 ## Menus and views
 
 | Menu | Commands |
 |---|---|
-| File | Open, export structure, save PNG |
+| File | Open, export structure, save PNG, export animation GIF |
 | Edit | Undo, fragment selection, invert/clear selection, delete atoms, toggle bonds, fit/align plane |
 | View | Fit to window, isometry, X/Y/Z axis views, orthographic/perspective projection |
-| Analysis | Energy curve |
+| Analysis | Calculation overview, HOMO/LUMO, energy/convergence curves, frequencies, spectra, NEB/NEB-TS, GOAT, SOC, Hessian history |
 | Help | Help and shortcuts |
 
 The X/Y/Z views look from the positive axis toward the structure. They change
@@ -147,7 +294,7 @@ workflow artifact; it does not publish a release. Test runs triggered by a push
 or pull request are listed in the repository’s Actions tab. The Windows build
 is started separately using Windows executable → Run workflow.
 
-See `docs/VALIDATION_v1.0.1.md` for the local checks and their limits.
+See `docs/VALIDATION_v1.11.1.md` for the current local checks and their limits.
 
 ## Appearance settings
 

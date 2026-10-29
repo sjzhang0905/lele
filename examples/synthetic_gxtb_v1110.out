@@ -1,0 +1,44 @@
+ * xtb version 6.7.1 (synthetic)
+ Synthetic LELE format fixture. NOT a real calculation.
+ program call : xtb input.xyz --gxtb --opt --chrg -2 --uhf 3
+ molecular charge -2.000000000000E+00 e
+ number of unpaired electrons 3.0000000000E+00 e
+ :: total energy -20.000000000000 Eh ::
+ :: HOMO-LUMO gap 7.000000000000 eV ::
+ .............................. CYCLE 1 ..............................
+ 1 -99.5000000 0.5 0.3
+ * total energy : -20.0000000 Eh change 0.0 Eh
+ .............................. CYCLE 2 ..............................
+ * total energy : -20.1000000 Eh change -0.1 Eh
+ *** GEOMETRY OPTIMIZATION CONVERGED AFTER 2 ITERATIONS ***
+ ================
+ final structure:
+ ================
+3
+ xtb: 6.7.1 (synthetic)
+N 0.0 0.0 0.0
+H 1.0 0.0 0.0
+H -0.2 0.8 0.0
+ :: total energy -20.100000000123 Eh ::
+ :: HOMO-LUMO gap 8.163415807 eV ::
+ * Orbital Energies and Occupations
+alpha # Occupation Energy/Eh Energy/eV
+ -----------------------------------
+ 1 1.0000 -0.6000000 -16.3268
+ ... ... ... ...
+ 3 1.0000 -0.2000000 -5.4423 (HOMO)
+ 4         0.1000000 2.7211 (LUMO)
+ 5         0.2000000 5.4423
+ -----------------------------------
+ HL-Gap 0.3000000 Eh 8.1634 eV
+ -----------------------------------
+ beta # Occupation Energy/Eh Energy/eV
+ -----------------------------------
+ 1 1.0000 -0.6000000 -16.3268
+ 2 1.0000 -0.1800000 -4.8980 (HOMO)
+ 3         0.0500000 1.3606 (LUMO)
+ 4         0.1000000 2.7211
+ -----------------------------------
+ HL-Gap 0.2300000 Eh 6.2586 eV
+ | TOTAL ENERGY -20.100000000123 Eh |
+ normal termination of xtb

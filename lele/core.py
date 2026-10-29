@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Optional
 import math
 import numpy as np
+from .atom_appearance import AtomAppearance
 
 # CPK-inspired colours. Unlisted species get a neutral medium grey.
 ELEMENT_COLORS = {
@@ -63,6 +64,15 @@ class Frame:
     # (min index, max index); each trajectory frame owns its own overrides.
     bond_added: set[tuple[int, int]] = field(default_factory=set)
     bond_removed: set[tuple[int, int]] = field(default_factory=set)
+    atom_appearance: dict[int, AtomAppearance] = field(default_factory=dict)
+    # Captured before the first geometry edit. None means initial inference;
+    # an empty snapshot deliberately means no bonds. Periodic shifts refer to
+    # original atom coordinates, so wrapping cannot silently change an edge.
+    bond_snapshot: Optional[frozenset[tuple[int, int]]] = None
+    periodic_bond_snapshot: Optional[tuple] = None
+    # Independent dashed annotations; shifts refer to original coordinates.
+    hbond_added: dict[tuple[int, int], tuple[int, int, int]] = field(default_factory=dict)
+    hbond_removed: set[tuple[int, int]] = field(default_factory=set)
 
     def __post_init__(self):
         self.positions = np.asarray(self.positions, dtype=float).reshape(-1, 3)
@@ -79,9 +89,33 @@ class Frame:
             raise ValueError('Contradictory bond overrides')
         if any(i < 0 or j >= len(self.symbols) for i, j in self.bond_added | self.bond_removed):
             raise ValueError('Bond override atom index out of range')
+        self.atom_appearance = dict(self.atom_appearance)
+        if any(i < 0 or i >= len(self.symbols) or not isinstance(style, AtomAppearance)
+               for i, style in self.atom_appearance.items()):
+            raise ValueError('Invalid atom display override')
+        if self.bond_snapshot is not None:
+            self.bond_snapshot = frozenset(canonical_pair(i, j) for i, j in self.bond_snapshot)
+            if any(i < 0 or j >= len(self.symbols) for i, j in self.bond_snapshot):
+                raise ValueError('Frozen bond atom index out of range')
+        if self.periodic_bond_snapshot is not None:
+            self.periodic_bond_snapshot = tuple((int(i), int(j), tuple(int(x) for x in shift))
+                                                for i, j, shift in self.periodic_bond_snapshot)
+            if any(i < 0 or i > j or j >= len(self.symbols) or len(s) != 3
+                   for i, j, s in self.periodic_bond_snapshot):
+                raise ValueError('Invalid frozen periodic bond')
+        self.hbond_added = {canonical_pair(i, j): tuple(int(x) * (1 if i < j else -1) for x in shift)
+                            for (i, j), shift in self.hbond_added.items()}
+        self.hbond_removed = {canonical_pair(i, j) for i, j in self.hbond_removed}
+        if (self.hbond_added.keys() & self.hbond_removed
+                or any(i < 0 or j >= len(self.symbols) for i, j in self.hbond_added.keys() | self.hbond_removed)
+                or any(len(s) != 3 for s in self.hbond_added.values())):
+            raise ValueError('Invalid hydrogen-bond override')
 
     def clone(self):
-        return Frame(list(self.symbols), self.positions.copy(), self.cell.copy(), tuple(self.pbc), self.energy_ev, dict(self.info), self.bond_added.copy(), self.bond_removed.copy())
+        return Frame(list(self.symbols), self.positions.copy(), self.cell.copy(), tuple(self.pbc),
+                     self.energy_ev, dict(self.info), self.bond_added.copy(), self.bond_removed.copy(),
+                     self.atom_appearance.copy(), self.bond_snapshot, self.periodic_bond_snapshot,
+                     self.hbond_added.copy(), self.hbond_removed.copy())
 
 
 @dataclass
@@ -100,6 +134,66 @@ class Volume:
 
 
 @dataclass
+class NormalMode:
+    number: int
+    frequency_cm1: float
+    displacements: Optional[np.ndarray] = None
+    ir_intensity: Optional[float] = None
+    reduced_mass: Optional[float] = None
+    force_constant: Optional[float] = None
+    symmetry: str = ''
+    raman_activity: Optional[float] = None
+    ir_intensity_unit: str = 'km/mol'
+
+    def __post_init__(self):
+        if self.number < 0 or not math.isfinite(self.frequency_cm1):
+            raise ValueError('Invalid normal mode number or frequency')
+        if self.displacements is not None:
+            self.displacements = np.asarray(self.displacements, dtype=float).reshape(-1, 3).copy()
+            if not np.isfinite(self.displacements).all():
+                raise ValueError('Normal mode contains non-finite displacements')
+
+    @property
+    def imaginary(self):
+        return self.frequency_cm1 < 0
+
+    @property
+    def can_animate(self):
+        return (self.displacements is not None and self.displacements.size > 0
+                and float(np.linalg.norm(self.displacements, axis=1).max()) > 0)
+
+    def positions_at(self, reference: Frame, phase: float, amplitude: float):
+        """A visual oscillation with maximum atom displacement in Angstrom.
+
+        Imaginary modes use the same reversible preview, not real dynamics.
+        Printed Cartesian vectors are relative; their direction and relative
+        atom motion are preserved, with one common scale for the whole mode.
+        """
+        if not self.can_animate:
+            return reference.positions.copy()
+        if self.displacements.shape != reference.positions.shape:
+            raise ValueError('Normal mode atom count differs from its reference geometry')
+        peak = float(np.linalg.norm(self.displacements, axis=1).max())
+        return reference.positions + self.displacements * (amplitude * math.sin(phase) / peak)
+
+
+@dataclass
+class VibrationalAnalysis:
+    reference: Frame
+    modes: list[NormalMode] = field(default_factory=list)
+    source_line: int = 0
+    note: str = ''
+    purpose: str = ''
+    stage_index: Optional[int] = None
+    cycle: Optional[int] = None
+
+    def __post_init__(self):
+        if any(m.displacements is not None and m.displacements.shape != self.reference.positions.shape
+               for m in self.modes):
+            raise ValueError('Normal mode atom count differs from its reference geometry')
+
+
+@dataclass
 class Document:
     path: Path
     format_name: str
@@ -107,10 +201,19 @@ class Document:
     volume: Optional[Volume] = None
     note: str = ""
     modified: bool = False
+    vibrations: list[VibrationalAnalysis] = field(default_factory=list)
+    dipoles: list = field(default_factory=list)
+    electronic_spectra: list = field(default_factory=list)
+    calculation_results: object = None
+    neb_runs: list = field(default_factory=list)
+    conformer_ensembles: list = field(default_factory=list)
+    soc_results: list = field(default_factory=list)
 
     def __post_init__(self):
         if not self.frames:
-            raise ValueError("Document contains no atoms")
+            from .result_availability import has_calculation_data
+            if not has_calculation_data(self.calculation_results):
+                raise ValueError("Document contains no atoms or calculation results")
 
 
 def canonical_pair(i: int, j: int) -> tuple[int, int]:
@@ -122,10 +225,34 @@ def canonical_pair(i: int, j: int) -> tuple[int, int]:
 
 def visible_bonds(frame: Frame, multiplier: float = 1.18) -> list[tuple[int, int]]:
     """Distance-estimated bonds with frame-local manually added/removed links."""
-    pairs = set(find_bonds(frame, multiplier))
+    pairs = set(find_bonds(frame, multiplier) if frame.bond_snapshot is None else frame.bond_snapshot)
     pairs.difference_update(frame.bond_removed)
     pairs.update(frame.bond_added)
     return sorted(pairs)
+
+
+def freeze_bonds(frame: Frame, multiplier: float = 1.18):
+    """Capture both display and periodic connectivity before changing positions."""
+    if frame.bond_snapshot is not None:
+        return
+    frame.bond_snapshot = frozenset(visible_bonds(frame, multiplier))
+    from .periodic_geometry import periodic_basis, periodic_bonds, normalized_positions
+    if periodic_basis(frame) is not None:
+        _, floors = normalized_positions(frame)
+        frame.periodic_bond_snapshot = tuple(
+            (i, j, tuple(int(x) for x in np.asarray(shift) + floors[i] - floors[j]))
+            for i, j, shift in periodic_bonds(frame, multiplier))
+
+
+def _set_manual_periodic_paths(frame, pairs):
+    if frame.periodic_bond_snapshot is None: return
+    from .periodic_geometry import minimum_image
+    pairs = set(pairs)
+    edges = [edge for edge in frame.periodic_bond_snapshot if edge[:2] not in pairs]
+    for i, j in sorted(pairs):
+        _, shift = minimum_image(frame.positions[j] - frame.positions[i], frame)
+        edges.append((i, j, shift))
+    frame.periodic_bond_snapshot = tuple(sorted(edges))
 
 
 def toggle_selected_bonds(frame: Frame, selected, multiplier: float = 1.18) -> tuple[str, int]:
@@ -156,6 +283,7 @@ def toggle_selected_bonds(frame: Frame, selected, multiplier: float = 1.18) -> t
             return 'removed', 1
         frame.bond_removed.discard(pair)
         frame.bond_added.add(pair)
+        _set_manual_periodic_paths(frame, [pair])
         return 'added', 1
     if current:
         for pair in current:
@@ -165,6 +293,7 @@ def toggle_selected_bonds(frame: Frame, selected, multiplier: float = 1.18) -> t
     # Return to automatic distance-based bonding; don't create far-away pairs.
     if periodic_basis(frame) is not None:
         probe = frame.clone()
+        probe.bond_snapshot = probe.periodic_bond_snapshot = None
         probe.bond_removed.difference_update(
             canonical_pair(a, b) for a in subset for b in subset if a < b)
         candidates = {(i, j) for i, j, _ in periodic_bonds(probe, multiplier)
@@ -173,6 +302,9 @@ def toggle_selected_bonds(frame: Frame, selected, multiplier: float = 1.18) -> t
         candidates = {pair for pair in find_bonds(frame, multiplier)
                       if pair[0] in subset and pair[1] in subset}
     frame.bond_removed.difference_update(candidates)
+    if frame.bond_snapshot is not None:
+        frame.bond_snapshot = frame.bond_snapshot | frozenset(candidates)
+    _set_manual_periodic_paths(frame, candidates)
     # Any user-added bonds within the selection are already absent when
     # reaching here (otherwise current was nonempty).
     return 'restored', len(candidates)
@@ -266,7 +398,8 @@ def find_bonds(frame: Frame, multiplier: float = 1.18, *, max_bonds: int = 60000
             result.append((int(a), int(b)))
             if len(result) >= max_bonds:
                 break
-    return sorted(result)
+    from .bond_filter import prune_occluded
+    return [(a, b) for a, b, _ in prune_occluded(xyz, [(a,b,(0,0,0)) for a,b in result])]
 
 
 def unit_cell_edges(cell: np.ndarray) -> list[tuple[np.ndarray, np.ndarray]]:

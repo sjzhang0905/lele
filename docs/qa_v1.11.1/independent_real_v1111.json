@@ -1,0 +1,23 @@
+{
+  "passed": true,
+  "energy_only": {
+    "source": "opt2.log; coordinate block removed",
+    "cycles": 175,
+    "geometry_frames": 0,
+    "curve_available": true,
+    "orbital_channels": [
+      "Alpha",
+      "Beta"
+    ]
+  },
+  "geometry_only": {
+    "source": "xtbopt.log; energy/gnorm fields removed",
+    "geometry_frames": 37,
+    "energy_values": 0,
+    "curve_available": false
+  },
+  "input_hashes": {
+    "opt2.log": "03cb858fe92080b7a3db42244aa102471b05e5b1551cc08b0d187094076b78e6",
+    "xtbopt.log": "6b2faf61768a639c88663b06c5d7cc2d33e49cf28e208f73ed60ad981ad5d359"
+  }
+}

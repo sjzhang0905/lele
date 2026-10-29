@@ -114,15 +114,17 @@ class InteractiveRendererTests(unittest.TestCase):
             mat=a.GetUserMatrix()
             np.testing.assert_allclose([mat.GetElement(j,0) for j in range(3)], f.cell[i])
         marker=self.draw.make_corner_marker(f)
-        self.assertEqual(marker.GetParts().GetNumberOfItems(),6)
+        self.assertEqual(marker.GetParts().GetNumberOfItems(),3)
         widget=vtkOrientationMarkerWidget()
         widget.SetInteractor(self.iren)
         widget.SetOrientationMarker(marker)
         widget.SetViewport(.01,.01,.22,.22)
         widget.SetEnabled(1)
+        self.draw.attach_corner_labels(widget.GetRenderer())
         widget.InteractiveOff()
         self.window.Render()
         self.assertEqual(widget.GetEnabled(), 1)
+        self.draw.detach_corner_labels()
         widget.SetEnabled(0)
 
 

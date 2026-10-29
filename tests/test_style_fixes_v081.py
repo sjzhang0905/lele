@@ -155,6 +155,11 @@ class StyleQtWorkflowTests(unittest.TestCase):
         window.element_combo.setCurrentText('O')
         return window
 
+    @staticmethod
+    def oxygen_colour(window):
+        from types import SimpleNamespace
+        return MoleculeRenderer._display_color(SimpleNamespace(options=window.render_options), 'O')
+
     def choose(self, window, name):
         window.preset_combo.setCurrentIndex(window.preset_combo.findData(name))
 
@@ -174,16 +179,16 @@ class StyleQtWorkflowTests(unittest.TestCase):
         original_defaults = dict(ELEMENT_COLORS)
         self.assertEqual(self.edit_oxygen(window, '#123456'), colour('O').lower())
         self.assertEqual(window.preset_combo.currentData(), CUSTOM_KEY)
-        saved_custom = snapshot(window.renderer.options)
+        saved_custom = snapshot(window.render_options)
         self.choose(window, 'Soft pastel')
         self.choose(window, CUSTOM_KEY)
-        self.assertEqual(snapshot(window.renderer.options), saved_custom)
+        self.assertEqual(snapshot(window.render_options), saved_custom)
         self.save(window, 'Blue oxygen')
         data = json.loads(self.path.read_text())
         self.assertEqual(data['Blue oxygen']['element_colors'], {'O': '#123456'})
         restarted = self.make_window()
         self.choose(restarted, 'Blue oxygen')
-        self.assertEqual(restarted.renderer._display_color('O'), '#123456')
+        self.assertEqual(self.oxygen_colour(restarted), '#123456')
         self.assertEqual(ELEMENT_COLORS, original_defaults)
 
     def test_switching_saved_styles_keeps_colours_independent(self):
@@ -194,11 +199,11 @@ class StyleQtWorkflowTests(unittest.TestCase):
         self.assertEqual(window.preset_combo.currentData(), CUSTOM_KEY)
         self.save(window, 'Pale oxygen')
         self.choose(window, 'Blue oxygen')
-        self.assertEqual(window.renderer._display_color('O'), '#123456')
+        self.assertEqual(self.oxygen_colour(window), '#123456')
         self.choose(window, 'Pale oxygen')
-        self.assertEqual(window.renderer._display_color('O'), '#abcdef')
+        self.assertEqual(self.oxygen_colour(window), '#abcdef')
         self.choose(window, 'Classic ball and stick')
-        self.assertEqual(window.renderer._display_color('O'), colour('O'))
+        self.assertEqual(self.oxygen_colour(window), colour('O'))
 
     def test_legacy_presets_load_alongside_new_presets(self):
         legacy = deepcopy(BUILTIN_PRESETS['Soft pastel'])
@@ -206,15 +211,15 @@ class StyleQtWorkflowTests(unittest.TestCase):
         self.path.write_text(json.dumps({'Legacy style': legacy}), encoding='utf-8')
         restarted = self.make_window()
         self.choose(restarted, 'Legacy style')
-        self.assertEqual(restarted.renderer.options.atom_palette, 'Pastel')
-        self.assertEqual(restarted.renderer.options.element_colors, {})
+        self.assertEqual(restarted.render_options.atom_palette, 'Pastel')
+        self.assertEqual(restarted.render_options.element_colors, {})
 
     def test_all_preset_widgets_stay_in_sync(self):
         window = self.window
         for name, preset in BUILTIN_PRESETS.items():
             with self.subTest(preset=name):
                 self.choose(window, name)
-                self.assertEqual(snapshot(window.renderer.options), preset)
+                self.assertEqual(snapshot(window.render_options), preset)
                 self.assertEqual(window.style_combo.currentText(), preset['style'])
                 self.assertEqual(window.bond_check.isChecked(), preset['bonds'])
                 self.assertEqual(window.atom_slider.value(), round(preset['atom_scale'] * 100))

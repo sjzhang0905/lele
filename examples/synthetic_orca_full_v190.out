@@ -1,0 +1,172 @@
+ O   R   C   A
+ ORCA VERSION 6.1
+ Synthetic LELE format fixture. NOT a real calculation.
+| 1> ! RKS PBE0 def2-SVP Opt Freq CPCM(water)
+| 2> %geom Scan
+| 3> end
+| 4> * xyz 0 1
+ Your calculation utilizes the basis: def2-SVP
+ Total Charge Charge .... 0
+ Multiplicity Mult .... 1
+ GEOMETRY OPTIMIZATION CYCLE 1
+ CARTESIAN COORDINATES (ANGSTROEM)
+ -------------------------------
+ O 0.000000 0.000000 0.000000
+ H 1.000000 0.000000 0.000000
+ H -0.250000 0.930000 0.000000
+
+ SCF CONVERGED AFTER 7 CYCLES
+ FINAL SINGLE POINT ENERGY -75.000000000
+ RMS gradient 0.002000 0.000100 NO
+ MAX gradient 0.004000 0.000300 NO
+ RMS step 0.005000 0.002000 NO
+ MAX step 0.010000 0.004000 NO
+ ORBITAL ENERGIES
+ NO OCC E(Eh) E(eV)
+ 0 2.0000 -20.000000 -544.227720
+ 1 2.0000 -1.000000 -27.211386
+ 2 2.0000 -0.700000 -19.047970
+ 3 2.0000 -0.500000 -13.605693
+ 4 2.0000 -0.300000 -8.163416
+ 5 0.0000  0.050000  1.360569
+
+ GEOMETRY OPTIMIZATION CYCLE 2
+ CARTESIAN COORDINATES (ANGSTROEM)
+ -------------------------------
+ O 0.000000 0.000000 0.000000
+ H 0.960000 0.000000 0.000000
+ H -0.240000 0.920000 0.000000
+
+ SCF CONVERGED AFTER 4 CYCLES
+ FINAL SINGLE POINT ENERGY -75.010000000
+ RMS gradient 0.000020 0.000100 YES
+ MAX gradient 0.000040 0.000300 YES
+ RMS step 0.000500 0.002000 YES
+ MAX step 0.001000 0.004000 YES
+ *** THE OPTIMIZATION HAS CONVERGED ***
+ VIBRATIONAL FREQUENCIES
+ -----------------------
+ Scaling factor for frequencies = 1.000000000 (already applied!)
+ 0: 0.00 cm**-1
+ 1: 0.00 cm**-1
+ 2: 0.00 cm**-1
+ 3: 0.00 cm**-1
+ 4: 0.00 cm**-1
+ 5: 0.00 cm**-1
+ 6: -250.00 cm**-1 ***imaginary mode***
+ 7: 1500.00 cm**-1
+ 8: 3600.00 cm**-1
+
+ NORMAL MODES
+ ------------
+ These modes are the cartesian displacements weighted by the diagonal matrix
+ M(i,i)=1/sqrt(m[i]) where m[i] is the mass of the displaced atom
+ Thus, these vectors are normalized but *not* orthogonal
+
+ 0 1 2 3 4 5
+ 0 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000
+ 1 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000
+ 2 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000
+ 3 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000
+ 4 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000
+ 5 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000
+ 6 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000
+ 7 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000
+ 8 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000
+
+ 6 7 8
+ 0 0.100000 0.000000 0.000000
+ 1 0.000000 0.200000 0.000000
+ 2 0.000000 0.000000 0.300000
+ 3 0.150000 0.800000 0.000000
+ 4 0.400000 0.100000 0.000000
+ 5 0.000000 0.000000 0.500000
+ 6 -0.350000 -0.400000 0.000000
+ 7 0.100000 0.200000 0.000000
+ 8 0.000000 0.000000 -0.500000
+
+ IR SPECTRUM
+ -----------
+ Mode freq eps Int T**2 TX TY TZ
+      cm**-1 L/(mol*cm) km/mol a.u.
+ --------------------------------
+ 7: 1500.00 0.002004 10.13 0.000511 (0.022596 0.000000 0.000000)
+ 8: 3600.00 0.039321 198.71 0.004363 (0.066052 0.000000 0.000000)
+
+ RAMAN SPECTRUM
+ --------------
+ Mode freq (cm**-1) Activity Depolarization
+ ----------------------------------------
+ 7: 1500.00 3.043852 0.750000
+ 8: 3600.00 24.527417 0.750000
+
+ DIPOLE MOMENT
+ -------------
+ Total Dipole Moment : 1.000000 -2.000000 0.500000
+ Magnitude (Debye) : 5.824006
+ ORCA TERMINATED NORMALLY
+
+ JOB NUMBER 2
+| 1> ! UKS PBE0 def2-SVP TightSCF
+| 2> %tddft nroots 2 end
+| 3> * xyz 1 2
+ CARTESIAN COORDINATES (ANGSTROEM)
+ -------------------------------
+ O 0.000000 0.000000 1.000000
+ H 0.970000 0.000000 1.000000
+ H -0.240000 0.930000 1.000000
+
+ Total Charge Charge .... 1
+ Multiplicity Mult .... 2
+ SCF CONVERGED AFTER 6 CYCLES
+ Expectation value of <S**2> : 0.752000
+ FINAL SINGLE POINT ENERGY -74.800000000
+ ORBITAL ENERGIES
+ SPIN UP ORBITALS
+ NO OCC E(Eh) E(eV)
+ 0 1.0000 -0.500000 -13.605693
+ 1 1.0000 -0.200000 -5.442277
+ 2 0.0000  0.100000  2.721139
+ SPIN DOWN ORBITALS
+ NO OCC E(Eh) E(eV)
+ 0 1.0000 -0.300000 -8.163416
+ 1 0.0000  0.050000  1.360569
+
+ TD-DFT/TDA EXCITED STATES
+ ------------------------
+ STATE 1: E= 0.142238 au 3.870 eV 31217.5 cm**-1 <S**2> = 0.75 Mult 2
+ 1a -> 2a : 0.760130 (c= -0.87185424)
+ STATE 2: E= 0.357323 au 9.723 eV 78423.4 cm**-1 <S**2> = 0.75 Mult 2
+ 0b -> 1b : 0.998607 (c= 0.99930350)
+
+ ABSORPTION SPECTRUM VIA TRANSITION ELECTRIC DIPOLE MOMENTS
+ -------------------------------------------------------
+ Transition Energy Energy Wavelength fosc(D2) D2 DX DY DZ
+            (eV)   (cm-1) (nm)               (au**2) (au) (au) (au)
+ -------------------------------------------------------
+ 0-2A -> 1-2A 3.870000 31217.5 320.4 0.100000000 1.054500 0.100000 -0.200000 1.002247
+ 0-2A -> 2-2A 9.723000 78423.4 127.5 0.200000000 0.839600 -0.400000 0.800000 0.200000
+
+ ABSORPTION SPECTRUM VIA TRANSITION VELOCITY DIPOLE MOMENTS
+ -------------------------------------------------------
+ Transition Energy Energy Wavelength fosc(P2) P2 PX PY PZ
+            (eV)   (cm-1) (nm)               (au**2) (au) (au) (au)
+ -------------------------------------------------------
+ 0-2A -> 1-2A 3.870000 31217.5 320.4 0.090000000 0.010000 0.010000 -0.020000 0.030000
+ 0-2A -> 2-2A 9.723000 78423.4 127.5 0.190000000 0.020000 -0.040000 0.080000 0.020000
+
+ CD SPECTRUM VIA TRANSITION ELECTRIC DIPOLE MOMENTS
+ ------------------------------------------------
+ Transition Energy Energy Wavelength R MX MY MZ
+            (eV)   (cm-1) (nm) (1e40*cgs) (au) (au) (au)
+ ------------------------------------------------
+ 0-2A -> 1-2A 3.870000 31217.5 320.4 0.000001 0.001000 -0.002000 0.003000
+ 0-2A -> 2-2A 9.723000 78423.4 127.5 -0.000001 -0.004000 0.008000 0.002000
+
+ UNRELAXED EXCITED STATE DIPOLE MOMENTS
+ ------------------------------------
+ E(eV) DX(au) DY(au) DZ(au) |D|(D)
+ IROOT= 0: 0.000 0.100000 -0.200000 0.300000 0.951027
+ IROOT= 1: 3.870 0.400000 -0.500000 0.600000 2.230268
+
+ ORCA TERMINATED NORMALLY

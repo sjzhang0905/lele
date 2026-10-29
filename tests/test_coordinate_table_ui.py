@@ -78,7 +78,21 @@ class FakeQt:
         ItemIsEditable = 1
 
 
+class FakeCombo:
+    def __init__(self):
+        self.items = []
+        self.current = ''
+
+    def currentText(self): return self.current
+    def clear(self): self.items = []; self.current = ''
+    def addItems(self, items): self.items.extend(items)
+    def setCurrentText(self, text): self.current = text
+
+
 class DummyWindow:
+    def _alignment_enabled(self):
+        return False
+
     def __init__(self, frame):
         self.frame = frame
         self.atom_table = FakeTable()
@@ -87,6 +101,8 @@ class DummyWindow:
         self.scene_updates = 0
         self.info_updates = 0
         self._ignore_table = False
+        self._active_vibration = None
+        self.element_combo = FakeCombo()
 
     def _sync_selection_to_table(self):
         self.selection_synced = list(self.selection)
@@ -101,7 +117,7 @@ class DummyWindow:
 def extracted_methods():
     tree = ast.parse(APP_PATH.read_text(encoding='utf-8'))
     cls = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == 'LELEWindow')
-    wanted = {'_refresh_coordinates', '_refresh_after_geometry_edit'}
+    wanted = {'_refresh_coordinates', '_refresh_after_geometry_edit', '_refresh_element_choices'}
     methods = [n for n in cls.body if isinstance(n, ast.FunctionDef) and n.name in wanted]
     assert len(methods) == len(wanted)
     namespace = {'__name__': 'lele.app', '__package__': 'lele',
@@ -115,7 +131,7 @@ class CoordinateUIRegressionTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         methods = extracted_methods()
-        for name in ('_refresh_coordinates', '_refresh_after_geometry_edit'):
+        for name in ('_refresh_coordinates', '_refresh_after_geometry_edit', '_refresh_element_choices'):
             setattr(DummyWindow, name, methods[name])
 
     def test_translation_updates_coordinate_cells_and_keeps_selection(self):

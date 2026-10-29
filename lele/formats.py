@@ -27,6 +27,21 @@ MAX_VOLUME_POINTS = 2_000_000
 BOHR_ANG = 0.529177210903
 
 
+def _with_output_vibrations(document, kind):
+    if kind == 'gaussian_out':
+        from .gaussian_vibrations import read_gaussian_vibrations
+        document.vibrations, note = read_gaussian_vibrations(document.path)
+        document.note = ' '.join(filter(None, (document.note, note)))
+    elif kind == 'orca_out':
+        from .orca_results import read_orca_results
+        from .orca_vibrations import read_orca_vibrations
+        if document.calculation_results is None:
+            document.calculation_results = read_orca_results(document.path)
+        document.vibrations, note = read_orca_vibrations(document.path, document.calculation_results)
+        document.note = ' '.join(filter(None, (document.note, note)))
+    return document
+
+
 def _frame_from_ase(atoms):
     energy = None
     # The SinglePointCalculator attached by ASE is the only supported energy
@@ -39,6 +54,11 @@ def _frame_from_ase(atoms):
             pass
     info = {str(k): str(v)[:180] for k, v in atoms.info.items()
             if isinstance(v, (str, int, float, bool))}
+    if calc is not None and 'forces' in getattr(calc, 'results', {}):
+        forces=np.asarray(calc.results['forces'],float)
+        if forces.size and np.isfinite(forces).all():
+            info['cartesian_max_force_ev_ang']=float(np.abs(forces).max())
+            info['cartesian_rms_force_ev_ang']=float(np.sqrt(np.mean(forces**2)))
     return Frame(symbols=atoms.get_chemical_symbols(),
                  positions=atoms.get_positions().copy(),
                  cell=atoms.cell.array.copy(),
@@ -83,14 +103,64 @@ def _cube_grid(path: Path) -> Volume:
     return Volume(data, origin * factor, np.asarray(steps) * factor)
 
 
-def load_document(filename: str | Path, max_frames: int = MAX_FRAMES) -> Document:
+def _load_document(filename: str | Path, max_frames: int = MAX_FRAMES) -> Document:
     from ase.io import iread
 
     path = Path(filename).expanduser().resolve()
+    if path.name.endswith('.finalensemble.xyz'):
+        from .orca_goat import read_goat_ensembles
+        ensembles=read_goat_ensembles(path)
+        frames=[]
+        for ei,e in enumerate(ensembles):
+            for c in e.conformers:
+                if c.reference is not None:
+                    c.reference.info.update(goat_ensemble=ei,goat_conformer=c.number,series_key=f'goat:{ei}',series_label=f'GOAT ensemble {ei+1}')
+                    frames.append(c.reference)
+        if not frames:raise ValueError('No complete conformer coordinates in ensemble XYZ')
+        return Document(path,'ORCA GOAT ensemble',frames)
+    if path.name.endswith(('.NEB.log','.interp','.interp.final','_MEP_trj.xyz','_MEP_ALL_trj.xyz')):
+        from .orca_neb import companion_prefix,read_xyz_records
+        prefix=companion_prefix(path,[])
+        xyz=Path(str(prefix)+'_MEP_trj.xyz')
+        if not xyz.exists():xyz=Path(str(prefix)+'_MEP_ALL_trj.xyz')
+        records=read_xyz_records(xyz) if xyz.exists() else []
+        if not records:raise ValueError('Open the main NEB output, or place the MEP XYZ beside this NEB results file.')
+        if path.name.endswith('_MEP_ALL_trj.xyz') and not Path(str(prefix)+'.NEB.log').exists() and not Path(str(prefix)+'.interp').exists() and not Path(str(prefix)+'_MEP_trj.xyz').exists():
+            return Document(path,'XYZ NEB records (image count unavailable)',records,note='Place the main output/NEB.log beside this file to identify images and iterations.')
+        return Document(path,'ORCA NEB results',[records[0]])
     detection = legacy.detect_format(path)
     kind = detection.kind
     note = ''
     volume = None
+
+    if kind in ('xtb_out','xtb_trj'):
+        from .xtb_results import read_xtb_results
+        results=read_xtb_results(path,trajectory=kind=='xtb_trj')
+        frames=results.frames(max_frames)
+        note=results.note
+        if not frames:
+            note+=' Results loaded independently; no coordinate records were printed in this file.'
+        return Document(path,detection.label,frames,note=note,calculation_results=results)
+
+    if kind in ('gaussian_out','orca_out'):
+        from .calculation_results import read_calculation_results
+        results=read_calculation_results(path,kind)
+        frames=results.frames(max_frames)
+        if not frames and kind=='orca_out':
+            from .orca_goat import read_goat_ensembles
+            ensembles=read_goat_ensembles(path)
+            for ei,e in enumerate(ensembles):
+                for c in e.conformers:
+                    if c.reference is not None:
+                        c.reference.info.update(goat_ensemble=ei,goat_conformer=c.number,series_key=f'goat:{ei}',series_label=f'GOAT ensemble {ei+1}')
+                        frames=[c.reference];break
+                if frames:break
+            if ensembles and not frames:
+                frames=[Frame([],np.empty((0,3)),info={'missing_geometry':True})]
+                note='Analysis-only ensemble: no printed or companion geometry was found.'
+        if frames and not results.periodic_geometry_seen:
+            return _with_output_vibrations(Document(path,detection.label,frames,note=note,
+                calculation_results=results),kind)
 
     if kind == 'siesta_out':
         frames, note = load_siesta_history(path, max_frames)
@@ -136,14 +206,47 @@ def load_document(filename: str | Path, max_frames: int = MAX_FRAMES) -> Documen
             frames = [_frame_from_ase(final_atoms)]
             note = f'Only last geometry loaded (multi-frame reader: {str(ex)[:150]})'
         if frames:
-            return Document(path, detection.label, frames, volume, note)
+            return _with_output_vibrations(Document(path, detection.label, frames, volume, note), kind)
 
     atoms, detection = legacy.read_structure(path, detection)
     frame = _frame_from_ase(atoms)
     if kind == 'vasp_in':
         frame = _with_poscar_groups(frame, path)
-    return Document(path, detection.label, [frame], volume,
-                    'Final structure only (legacy parser).' if kind.endswith('_out') else '')
+    return _with_output_vibrations(Document(path, detection.label, [frame], volume,
+                    'Final structure only (legacy parser).' if kind.endswith('_out') else ''), kind)
+
+
+def load_document(filename: str | Path, max_frames: int = MAX_FRAMES) -> Document:
+    document = _load_document(filename, max_frames)
+    try:kind = legacy.detect_format(document.path).kind
+    except Exception:kind = 'siesta_out' if document.path.suffix.lower()=='.ani' else document.format_name
+    if document.format_name.startswith('ORCA'):kind='orca_out'
+    for frame in document.frames:
+        frame.info['source_kind'] = kind
+        frame.info['source_format'] = document.format_name
+        if frame.energy_ev is not None and not np.isfinite(frame.energy_ev):frame.energy_ev = None
+    if kind == 'gaussian_out':
+        from .gaussian_properties import read_gaussian_properties
+        document.dipoles, document.electronic_spectra = read_gaussian_properties(document.path)
+    for analysis in document.vibrations:
+        analysis.reference.info['source_kind']=kind
+    if document.calculation_results is None:
+        from .calculation_results import read_calculation_results
+        document.calculation_results=read_calculation_results(document.path,kind)
+    if kind == 'orca_out':
+        from .gaussian_properties import read_orca_properties
+        document.dipoles,document.electronic_spectra=read_orca_properties(document.path,document.calculation_results)
+        from .orca_neb import attach_neb
+        from .orca_goat import attach_goat
+        from .orca_soc import read_soc
+        if document.format_name=='ORCA NEB results':document.frames.clear()
+        attach_neb(document)
+        attach_goat(document)
+        document.soc_results=read_soc(document.path)
+        for frame in document.frames:
+            frame.info.setdefault('source_kind',kind)
+            frame.info.setdefault('source_format',document.format_name)
+    return document
 
 
 def export_frame(frame: Frame, filename: str | Path, target: str, box_size: float = 30.0):

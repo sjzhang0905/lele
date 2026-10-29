@@ -1,0 +1,12 @@
+{
+  "passed": true,
+  "real_xtb_energy_only": {
+    "records": 175,
+    "geometry_frames": 0,
+    "every_record_selectable": true
+  },
+  "alignment_preserves_source": true,
+  "actual_vtk_rendered": true,
+  "artificial_qt_previews": 4,
+  "actual_vtk_previews": 2
+}
