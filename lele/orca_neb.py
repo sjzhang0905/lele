@@ -37,14 +37,12 @@ class NebRun:
 
 def read_xyz_records(path, bare_energy=False):
     lines = read_output_lines(path)
-    records=[];i=0;atoms_read=0
+    records=[];i=0
     while i<len(lines):
         if not lines[i].strip():i+=1;continue
         try:n=int(lines[i].strip())
         except ValueError:break
         if n<1 or i+n+2>len(lines):break
-        atoms_read+=n
-        if atoms_read>2_000_000 or len(records)>=50000:raise ValueError('Result trajectory exceeds 2,000,000 atom records / 50,000 frames')
         comment=lines[i+1];symbols=[];positions=[]
         try:
             for line in lines[i+2:i+n+2]:
@@ -146,7 +144,7 @@ def _main_profiles(lines):
 
 def attach_neb(document):
     path=document.path;lines=read_output_lines(path)
-    is_neb=any('Nudged Elastic Band Calculation' in s or re.search(r'\bNEB(?:-TS)?\b',s) and re.match(r'^\s*\|\s*\d+>\s*!',s) for s in lines)
+    is_neb=any('Nudged Elastic Band Calculation' in s or 'NEB' in s and re.search(r'\bNEB(?:-TS)?\b',s) and re.match(r'^\s*\|\s*\d+>\s*!',s) for s in lines)
     direct=path.name.endswith(('.NEB.log','.interp','.interp.final','_MEP_trj.xyz','_MEP_ALL_trj.xyz'))
     if not is_neb and not direct:return
     prefix=companion_prefix(path,lines);main,convergence=_main_profiles(lines)
@@ -216,8 +214,7 @@ def attach_neb(document):
     for i,line in enumerate(lines):
         if line.strip()=='SADDLE POINT (ANGSTROEM)':
             from .orca_results import _coordinates
-            block=list(lines[i:]);block[0]='CARTESIAN COORDINATES (ANGSTROEM)'
-            ci_reference,_=_coordinates(block,0)
+            ci_reference,_=_coordinates(lines,i,force_angstrom=True)
             for preceding in lines[max(0,i-12):i]:
                 value=re.match(rf'\s*Energy\s*\.+\s*({NUMBER})\s*Eh',preceding)
                 if value:ci_energy=_number(value[1])

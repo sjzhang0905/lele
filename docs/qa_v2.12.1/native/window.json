@@ -1,0 +1,60 @@
+{
+  "display": "Qt offscreen with native VTK EGL offscreen target",
+  "startup": [
+    true,
+    true,
+    "ready",
+    [
+      "Co",
+      "O"
+    ]
+  ],
+  "render": {
+    "size": [
+      626,
+      1037
+    ],
+    "selection_center_xy": [
+      557,
+      401
+    ],
+    "new_green_pixels": 264,
+    "center_max_channel_delta_9px": 0,
+    "ring_lines": 32
+  },
+  "footer_offsets_px": [
+    0,
+    0,
+    0
+  ],
+  "footer_layout": [
+    [
+      1100,
+      301,
+      301
+    ],
+    [
+      1400,
+      365,
+      365
+    ],
+    [
+      1600,
+      417,
+      417
+    ]
+  ],
+  "last_offset_after_3s": 0,
+  "last_offset_after_manual_sync": 0,
+  "right_click": "Atom index",
+  "swap": "Atom index",
+  "vacuum_action": "Modify slab vacuum",
+  "small_gap_dialog": {
+    "entered": 1.0,
+    "reopened": 1.0,
+    "apply_enabled": true
+  },
+  "summary": "Atoms 2  |  Composition Co0.5Fe0.15Ni0.3O  |  electrons unknown  |",
+  "ok": true,
+  "footer_pass": true
+}

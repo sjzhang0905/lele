@@ -1,0 +1,329 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="10" skipped="0" tests="12" time="1.177" timestamp="2026-11-02T06:52:50.179938-07:00" hostname="7585ea99c0e7"><testcase classname="acceptance_v212.repro.test_acceptance_extra" name="test_reindexed_atom_keeps_trajectory_monitor_identity" time="0.004"><failure message="AssertionError: &#10;Not equal to tolerance rtol=1e-07, atol=0&#10;&#10;Mismatched elements: 1 / 2 (50%)&#10;Max absolute difference among violations: 1.&#10;Max relative difference among violations: 0.5&#10; ACTUAL: array([2., 1.])&#10; DESIRED: array([2, 2])">def test_reindexed_atom_keeps_trajectory_monitor_identity():
+        doc = trajectory()
+        # Row #2 in the edited reference is now H at (0,2,0); both frames are identical.
+        p = GeometryParameter('Distance', (0,1))
+        distances = parameter_values(doc, (0,1), p, doc.frames[0].symbols)
+&gt;       np.testing.assert_allclose(distances, [2,2])
+E       AssertionError: 
+E       Not equal to tolerance rtol=1e-07, atol=0
+E       
+E       Mismatched elements: 1 / 2 (50%)
+E       Max absolute difference among violations: 1.
+E       Max relative difference among violations: 0.5
+E        ACTUAL: array([2., 1.])
+E        DESIRED: array([2, 2])
+
+../../acceptance_v212/repro/test_acceptance_extra.py:34: AssertionError</failure></testcase><testcase classname="acceptance_v212.repro.test_acceptance_extra" name="test_reindexed_atom_keeps_document_wide_color_identity" time="0.001"><failure message="AssertionError: assert [{2: '#123456...2: '#123456'}] == [{2: '#123456...3: '#123456'}]&#10;  &#10;  At index 1 diff: {2: '#123456'} != {3: '#123456'}&#10;  Use -v to get more diff">def test_reindexed_atom_keeps_document_wide_color_identity():
+        doc = trajectory()
+        w = SimpleNamespace(doc=doc, frame=doc.frames[0], current_doc=0, frame_index=0,
+                            _vibration_references={}, undo_stack=[], selection=[1], _active_vibration=None)
+        apply_appearance(w,[1],{'color':'#123456'})
+        actual = [dict((i+1, s.color) for i,s in f.atom_appearance.items()) for f in doc.frames]
+&gt;       assert actual == [{2:'#123456'},{3:'#123456'}]
+E       AssertionError: assert [{2: '#123456...2: '#123456'}] == [{2: '#123456...3: '#123456'}]
+E         
+E         At index 1 diff: {2: '#123456'} != {3: '#123456'}
+E         Use -v to get more diff
+
+../../acceptance_v212/repro/test_acceptance_extra.py:43: AssertionError</failure></testcase><testcase classname="acceptance_v212.repro.test_acceptance_extra" name="test_small_vacuum_can_be_read_back_and_reset" time="0.001"><failure message="assert (2.0, 3.0, True) == (1.0, 4.0, False)&#10;  &#10;  At index 0 diff: 2.0 != 1.0&#10;  Use -v to get more diff">def test_small_vacuum_can_be_read_back_and_reset():
+        f = slab()
+        old = f.clone()
+        change_vacuum(f,1,2)
+        np.testing.assert_array_equal(f.positions,old.positions)
+        assert f.cell[2,2] == 5.
+        view = slab_vacuum(f,2)
+&gt;       assert (view['gap'], view['thickness'], view['split']) == (1.,4.,False)
+E       assert (2.0, 3.0, True) == (1.0, 4.0, False)
+E         
+E         At index 0 diff: 2.0 != 1.0
+E         Use -v to get more diff
+
+../../acceptance_v212/repro/test_acceptance_extra.py:53: AssertionError</failure></testcase><testcase classname="acceptance_v212.repro.test_acceptance_extra" name="test_confirming_current_vacuum_preserves_results" time="0.001"><failure message="assert (None, None) == (-12.34, True)&#10;  &#10;  At index 0 diff: None != -12.34&#10;  Use -v to get more diff">def test_confirming_current_vacuum_preserves_results():
+        f=slab()
+        old=f.clone()
+        change_vacuum(f,slab_vacuum(f,2)['gap'],2)
+        np.testing.assert_array_equal(f.cell,old.cell)
+&gt;       assert (f.energy_ev, f.info.get('optimization_converged')) == (-12.34,True)
+E       assert (None, None) == (-12.34, True)
+E         
+E         At index 0 diff: None != -12.34
+E         Use -v to get more diff
+
+../../acceptance_v212/repro/test_acceptance_extra.py:63: AssertionError</failure></testcase><testcase classname="acceptance_v212.repro.test_acceptance_extra" name="test_poscar_constraints_survive_edit_and_export[vacuum]" time="0.011"><failure message="AssertionError: C  Ni O &#10;   1.0000000000000000&#10;       5.0000000000000000    0.0000000000000000    0.0000000000000000&#10;       0.0000000000000000    6.0000000000000000    0.0000000000000000&#10;       0.0000000000000000    0.0000000000000000   16.0000000000000000&#10;   C   Ni  O  &#10;     1   1   1&#10;  Cartesian&#10;    3.0000000000000000  1.0000000000000000  7.0000000000000000&#10;    1.0000000000000000  1.0000000000000000  3.0000000000000000&#10;    2.0000000000000000  2.0000000000000000  5.0000000000000000&#10;  &#10;[+3 more lines; full report in element text]">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_poscar_constraints_surviv0')
+operation = 'vacuum'
+
+    @pytest.mark.parametrize('operation', ['vacuum','reindex'])
+    def test_poscar_constraints_survive_edit_and_export(tmp_path,operation):
+        f=load_document(write_poscar(tmp_path)).frames[0]
+        if operation=='vacuum':
+            change_vacuum(f,12,2)
+        else:
+            reorder_atoms(f,index_order(3,0,2))
+        p=tmp_path/'results.POSCAR'
+        export_frame(f,p,'poscar-cartesian')
+        g=read(p,format='vasp')
+&gt;       assert len(g.constraints) == 2, p.read_text()
+E       AssertionError: C  Ni O 
+E          1.0000000000000000
+E              5.0000000000000000    0.0000000000000000    0.0000000000000000
+E              0.0000000000000000    6.0000000000000000    0.0000000000000000
+E              0.0000000000000000    0.0000000000000000   16.0000000000000000
+E          C   Ni  O  
+E            1   1   1
+E         Cartesian
+E           3.0000000000000000  1.0000000000000000  7.0000000000000000
+E           1.0000000000000000  1.0000000000000000  3.0000000000000000
+E           2.0000000000000000  2.0000000000000000  5.0000000000000000
+E         
+E       assert 0 == 2
+E        +  where 0 = len([])
+E        +    where [] = Atoms(symbols='CNiO', pbc=True, cell=[5.0, 6.0, 16.0]).constraints
+
+../../acceptance_v212/repro/test_acceptance_extra.py:98: AssertionError</failure></testcase><testcase classname="acceptance_v212.repro.test_acceptance_extra" name="test_poscar_constraints_survive_edit_and_export[reindex]" time="0.002"><failure message="AssertionError: O  C  Ni&#10;   1.0000000000000000&#10;       5.0000000000000000    0.0000000000000000    0.0000000000000000&#10;       0.0000000000000000    6.0000000000000000    0.0000000000000000&#10;       0.0000000000000000    0.0000000000000000   20.0000000000000000&#10;   O   C   Ni &#10;     1   1   1&#10;  Cartesian&#10;    2.0000000000000000  2.0000000000000000  5.0000000000000000&#10;    3.0000000000000000  1.0000000000000000  7.0000000000000000&#10;    1.0000000000000000  1.0000000000000000  3.0000000000000000&#10;  &#10;[+3 more lines; full report in element text]">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_poscar_constraints_surviv1')
+operation = 'reindex'
+
+    @pytest.mark.parametrize('operation', ['vacuum','reindex'])
+    def test_poscar_constraints_survive_edit_and_export(tmp_path,operation):
+        f=load_document(write_poscar(tmp_path)).frames[0]
+        if operation=='vacuum':
+            change_vacuum(f,12,2)
+        else:
+            reorder_atoms(f,index_order(3,0,2))
+        p=tmp_path/'results.POSCAR'
+        export_frame(f,p,'poscar-cartesian')
+        g=read(p,format='vasp')
+&gt;       assert len(g.constraints) == 2, p.read_text()
+E       AssertionError: O  C  Ni
+E          1.0000000000000000
+E              5.0000000000000000    0.0000000000000000    0.0000000000000000
+E              0.0000000000000000    6.0000000000000000    0.0000000000000000
+E              0.0000000000000000    0.0000000000000000   20.0000000000000000
+E          O   C   Ni 
+E            1   1   1
+E         Cartesian
+E           2.0000000000000000  2.0000000000000000  5.0000000000000000
+E           3.0000000000000000  1.0000000000000000  7.0000000000000000
+E           1.0000000000000000  1.0000000000000000  3.0000000000000000
+E         
+E       assert 0 == 2
+E        +  where 0 = len([])
+E        +    where [] = Atoms(symbols='OCNi', pbc=True, cell=[5.0, 6.0, 20.0]).constraints
+
+../../acceptance_v212/repro/test_acceptance_extra.py:98: AssertionError</failure></testcase><testcase classname="acceptance_v212.repro.test_acceptance_extra" name="test_poscar_vacuum_roundtrip_preserves_atom_order" time="0.003"><failure message="AssertionError: assert ['C', 'Ni', 'O'] == ['Ni', 'O', 'C']&#10;  &#10;  At index 0 diff: 'C' != 'Ni'&#10;  Use -v to get more diff">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_poscar_vacuum_roundtrip_p0')
+
+    def test_poscar_vacuum_roundtrip_preserves_atom_order(tmp_path):
+        f = load_document(write_poscar(tmp_path)).frames[0]
+        change_vacuum(f,12,2)
+        p = tmp_path/'results.POSCAR'
+        export_frame(f,p,'poscar-cartesian')
+        g=load_document(p).frames[0]
+&gt;       assert g.symbols==f.symbols
+E       AssertionError: assert ['C', 'Ni', 'O'] == ['Ni', 'O', 'C']
+E         
+E         At index 0 diff: 'C' != 'Ni'
+E         Use -v to get more diff
+
+../../acceptance_v212/repro/test_acceptance_extra.py:107: AssertionError</failure></testcase><testcase classname="acceptance_v212.repro.test_acceptance_extra" name="test_ordinary_vacuum_roundtrip" time="0.001" /><testcase classname="acceptance_v212.repro.test_acceptance_extra" name="test_three_component_site_with_vacancy_and_full_site" time="0.008" /><testcase classname="acceptance_v212.repro.test_acceptance_extra" name="test_mixed_site_retains_species_under_equivalent_coordinates[periodic]" time="0.002"><failure message="AssertionError: assert [{'Co': 0.6}] == [{'Co': 0.6, 'Ni': 0.4}]&#10;  &#10;  At index 0 diff: {'Co': 0.6} != {'Co': 0.6, 'Ni': 0.4}&#10;  Use -v to get more diff">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_mixed_site_retains_specie0')
+equivalence = 'periodic'
+
+    @pytest.mark.parametrize('equivalence', ['periodic', 'inversion'])
+    def test_mixed_site_retains_species_under_equivalent_coordinates(tmp_path,equivalence):
+        head=CIF.split('Co1 Co')[0]
+        if equivalence=='periodic':
+            # The two coordinates represent the same P1 site on the cell face.
+            rows='Co1 Co 0 .5 .25 .6\nNi1 Ni 1 .5 .25 .4\n'
+            count=1
+        else:
+            head=head.replace("'P 1'","'P -1'").replace("'x,y,z'", "'x,y,z'\n'-x,-y,-z'")
+            rows='Co1 Co .2 .5 .25 .6\nNi1 Ni .8 .5 .75 .4\n'
+            count=2
+        p=tmp_path/'equivalent.cif';p.write_text(head+rows+'O1 O .75 .5 .4 1\n')
+        f=load_document(p).frames[0]
+&gt;       assert f.info['site_occupancies'][:count]==[{'Co':.6,'Ni':.4}]*count
+E       AssertionError: assert [{'Co': 0.6}] == [{'Co': 0.6, 'Ni': 0.4}]
+E         
+E         At index 0 diff: {'Co': 0.6} != {'Co': 0.6, 'Ni': 0.4}
+E         Use -v to get more diff
+
+../../acceptance_v212/repro/test_acceptance_extra.py:169: AssertionError</failure></testcase><testcase classname="acceptance_v212.repro.test_acceptance_extra" name="test_mixed_site_retains_species_under_equivalent_coordinates[inversion]" time="0.002"><failure message="AssertionError: assert [{'Co': 0.6}, {'Co': 0.6}] == [{'Co': 0.6, ...6, 'Ni': 0.4}]&#10;  &#10;  At index 0 diff: {'Co': 0.6} != {'Co': 0.6, 'Ni': 0.4}&#10;  Use -v to get more diff">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_mixed_site_retains_specie1')
+equivalence = 'inversion'
+
+    @pytest.mark.parametrize('equivalence', ['periodic', 'inversion'])
+    def test_mixed_site_retains_species_under_equivalent_coordinates(tmp_path,equivalence):
+        head=CIF.split('Co1 Co')[0]
+        if equivalence=='periodic':
+            # The two coordinates represent the same P1 site on the cell face.
+            rows='Co1 Co 0 .5 .25 .6\nNi1 Ni 1 .5 .25 .4\n'
+            count=1
+        else:
+            head=head.replace("'P 1'","'P -1'").replace("'x,y,z'", "'x,y,z'\n'-x,-y,-z'")
+            rows='Co1 Co .2 .5 .25 .6\nNi1 Ni .8 .5 .75 .4\n'
+            count=2
+        p=tmp_path/'equivalent.cif';p.write_text(head+rows+'O1 O .75 .5 .4 1\n')
+        f=load_document(p).frames[0]
+&gt;       assert f.info['site_occupancies'][:count]==[{'Co':.6,'Ni':.4}]*count
+E       AssertionError: assert [{'Co': 0.6}, {'Co': 0.6}] == [{'Co': 0.6, ...6, 'Ni': 0.4}]
+E         
+E         At index 0 diff: {'Co': 0.6} != {'Co': 0.6, 'Ni': 0.4}
+E         Use -v to get more diff
+
+../../acceptance_v212/repro/test_acceptance_extra.py:169: AssertionError</failure></testcase><testcase classname="acceptance_v212.repro.test_acceptance_extra" name="test_explicit_identity_operation_without_spacegroup_name" time="0.002"><failure message="lele.legacy_converter.ConversionError: Reader failed for CIF: either *no* and *setting* or *symbol* must be given">path = PosixPath('/tmp/pytest-of-root/pytest-0/test_explicit_identity_operati0/symop_only.cif')
+detection = Detection(kind='cif', label='CIF', ase_format=None)
+
+    def read_structure(path: Path, detection: Optional[Detection] = None) -&gt; tuple[Atoms, Detection]:
+        detection = detection or detect_format(path)
+        kind = detection.kind
+    
+        try:
+            if kind == "xyz":
+                atoms = ase_read(str(path), index=-1, format="extxyz")
+            elif kind == "cif":
+&gt;               atoms = ase_read(str(path), index=-1, format="cif", fractional_occupancies=True)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+lele/legacy_converter.py:1075: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../../qa-fix-venv/lib/python3.12/site-packages/ase/io/formats.py:821: in read
+    return next(_iread(filename, slice(index, None), format, io,
+../../qa-fix-venv/lib/python3.12/site-packages/ase/parallel.py:301: in new_generator
+    for result in generator(*args, **kwargs):
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../qa-fix-venv/lib/python3.12/site-packages/ase/io/formats.py:887: in _iread
+    for dct in io.read(fd, *args, **kwargs):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../qa-fix-venv/lib/python3.12/site-packages/ase/io/formats.py:645: in wrap_read_function
+    yield from read(filename, index, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../qa-fix-venv/lib/python3.12/site-packages/ase/io/cif.py:662: in read_cif
+    return list(g)
+           ^^^^^^^
+../../qa-fix-venv/lib/python3.12/site-packages/ase/io/cif.py:591: in iread_cif
+    atoms = block.get_atoms(
+../../qa-fix-venv/lib/python3.12/site-packages/ase/io/cif.py:486: in get_atoms
+    spacegroup = self.get_spacegroup(subtrans_included)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../qa-fix-venv/lib/python3.12/site-packages/ase/io/cif.py:375: in get_spacegroup
+    spacegroup = spacegroup_from_data(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+no = None, symbol = None, setting = 1, centrosymmetric = None
+scaled_primitive_cell = None, reciprocal_cell = None
+subtrans = [(0.0, 0.0, 0.0)], sitesym = ['x,y,z'], rotations = None
+translations = None, datafile = None
+
+    def spacegroup_from_data(no=None,
+                             symbol=None,
+                             setting=None,
+                             centrosymmetric=None,
+                             scaled_primitive_cell=None,
+                             reciprocal_cell=None,
+                             subtrans=None,
+                             sitesym=None,
+                             rotations=None,
+                             translations=None,
+                             datafile=None):
+        """Manually create a new space group instance.  This might be
+        useful when reading crystal data with its own spacegroup
+        definitions."""
+        if no is not None and setting is not None:
+            spg = Spacegroup(no, setting, datafile)
+        elif symbol is not None:
+            spg = Spacegroup(symbol, None, datafile)
+        else:
+&gt;           raise SpacegroupValueError('either *no* and *setting* '
+                                       'or *symbol* must be given')
+E           ase.spacegroup.spacegroup.SpacegroupValueError: either *no* and *setting* or *symbol* must be given
+
+../../qa-fix-venv/lib/python3.12/site-packages/ase/spacegroup/spacegroup.py:941: SpacegroupValueError
+
+The above exception was the direct cause of the following exception:
+
+tmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_explicit_identity_operati0')
+
+    def test_explicit_identity_operation_without_spacegroup_name(tmp_path):
+        p=tmp_path/'symop_only.cif';p.write_text(CIF.replace("_space_group_name_H-M_alt 'P 1'\n",''))
+&gt;       f=load_document(p).frames[0]
+          ^^^^^^^^^^^^^^^^
+
+../../acceptance_v212/repro/test_acceptance_extra.py:174: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+lele/formats.py:284: in load_document
+    document = _load_complete_document(filename, max_frames)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+lele/formats.py:290: in _load_complete_document
+    document = _load_document(filename, max_frames)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+lele/formats.py:273: in _load_document
+    atoms, detection = legacy.read_structure(path, detection)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+path = PosixPath('/tmp/pytest-of-root/pytest-0/test_explicit_identity_operati0/symop_only.cif')
+detection = Detection(kind='cif', label='CIF', ase_format=None)
+
+    def read_structure(path: Path, detection: Optional[Detection] = None) -&gt; tuple[Atoms, Detection]:
+        detection = detection or detect_format(path)
+        kind = detection.kind
+    
+        try:
+            if kind == "xyz":
+                atoms = ase_read(str(path), index=-1, format="extxyz")
+            elif kind == "cif":
+                atoms = ase_read(str(path), index=-1, format="cif", fractional_occupancies=True)
+            elif kind == "vasp_in":
+                atoms = ase_read(str(path), index=-1, format="vasp")
+            elif kind == "vasp_out":
+                atoms = ase_read(str(path), index=-1, format="vasp-out")
+            elif kind == "vasp_xdatcar":
+                atoms = ase_read(str(path), index=-1, format="vasp-xdatcar")
+            elif kind == "gaussian_in":
+                atoms = ase_read(str(path), index=-1, format="gaussian-in")
+            elif kind == "gaussian_out":
+                atoms = ase_read(str(path), index=-1, format="gaussian-out")
+            elif kind == "orca_in":
+                atoms = parse_orca_input(path)
+            elif kind == "orca_out":
+                atoms = ase_read(str(path), index=-1, format="orca-output")
+            elif kind == 'molden_vib':
+                from .molden_vibrations import read_molden_vibrations
+                frame,_,_,_=read_molden_vibrations(path)
+                atoms=Atoms(frame.symbols,positions=frame.positions,cell=frame.cell,pbc=frame.pbc,info=dict(frame.info))
+            elif kind in ("xtb_out","xtb_trj"):
+                from .xtb_results import read_xtb_results
+                result=read_xtb_results(path,trajectory=kind=="xtb_trj")
+                frame=next((s.geometry for s in reversed(result.steps) if s.geometry is not None),None)
+                if frame is None:raise ConversionError('No complete xTB geometry found')
+                atoms=Atoms(frame.symbols,positions=frame.positions,info=dict(frame.info))
+            elif kind == "nwchem_in":
+                atoms = ase_read(str(path), index=-1, format="nwchem-in")
+            elif kind == "nwchem_out":
+                atoms = ase_read(str(path), index=-1, format="nwchem-out")
+            elif kind == "cp2k_in":
+                atoms = parse_cp2k_input(path)
+            elif kind == "cp2k_out":
+                atoms = parse_cp2k_output(path)
+            elif kind == "qe_in":
+                atoms = ase_read(str(path), index=-1, format="espresso-in")
+            elif kind == "qe_out":
+                atoms = ase_read(str(path), index=-1, format="espresso-out", results_required=False)
+            elif kind == "siesta_in":
+                atoms = parse_siesta_input(path)
+            elif kind == "siesta_out":
+                atoms = parse_siesta_output(path)
+            elif kind == "mol2":
+                atoms = parse_mol2(path)
+            elif kind == "pqr":
+                atoms = parse_pqr(path)
+            elif kind == "ase_generic":
+                if not detection.ase_format:
+                    raise ConversionError("Generic ASE reader has no format identifier")
+                atoms = ase_read(str(path), index=-1, format=detection.ase_format)
+            else:
+                raise ConversionError(f"No reader is configured for {kind}")
+        except ConversionError:
+            raise
+        except Exception as exc:
+&gt;           raise ConversionError(f"Reader failed for {detection.label}: {exc}") from exc
+E           lele.legacy_converter.ConversionError: Reader failed for CIF: either *no* and *setting* or *symbol* must be given
+
+lele/legacy_converter.py:1129: ConversionError</failure></testcase></testsuite></testsuites>

@@ -10,7 +10,7 @@ import numpy as np
 from ase.data import atomic_numbers
 from ase.units import Hartree, Bohr
 from .core import Frame
-from .output_text import read_output_lines
+from .output_text import read_output_lines, check_load_cancelled, load_progress
 from .calculation_results import (NUMBER, CalculationResults, CalculationJob,
     CalculationStep, CalculationStage, Orbital, OrbitalSet)
 
@@ -50,15 +50,16 @@ def xyz_block(lines,start):
 
 
 def read_xtb_xyz(path):
-    lines=read_output_lines(path);frames=[];i=0;atoms=0;note=''
+    lines=read_output_lines(path);frames=[];i=0;note=''
+    report=load_progress('xTB: coordinate trajectory',len(lines))
     while i<len(lines):
+        check_load_cancelled();report(i)
         if not lines[i].strip():i+=1;continue
         frame,end=xyz_block(lines,i)
         if frame is None:
             note=f'Incomplete or invalid XYZ record at line {i+1}; only earlier complete records are available.';break
-        atoms+=len(frame.symbols)
-        if atoms>2000000:raise ValueError('xTB trajectory exceeds 2,000,000 atom records')
         frames.append(frame);i=end
+    report(len(lines))
     return frames,note
 
 
@@ -83,8 +84,9 @@ def final_geometry(lines,index):
 def parse_orbital_table(lines,start):
     rows=[];labels={};gap=None;i=start+1
     while i<len(lines):
+        check_load_cancelled()
         line=lines[i];stripped=line.strip()
-        if HEADER.match(line):break
+        if HEADER.match(line) or CYCLE.match(line):break
         match=re.search(rf'HL-Gap\s+({NUMBER})\s+Eh\s+({NUMBER})\s+eV',line,re.I)
         if match:gap=number(match[2]);break
         if not stripped or set(stripped)<=set('-=') or '...' in stripped:i+=1;continue
@@ -168,11 +170,13 @@ def read_xtb_results(path,trajectory=False):
         block=lines[start:end];job=CalculationJob(ji,start+1);result.jobs.append(job)
         _metadata(job,'\n'.join(block));steps=[];snapshots={};phase='initial';current=None;reference=None
         stage=CalculationStage(len(result.stages),ji,'xTB geometry optimization','optimization',start+1,end)
+        progress=load_progress('xTB: energies and orbitals',len(block))
         i=0;final_energy=None;converged=False;matched=None
         def snapshot(key,line):
             if key not in snapshots:snapshots[key]=OrbitalSet(ji,line,numbering='1-based xTB orbital numbers; printed frontier labels take precedence')
             return snapshots[key]
         while i<len(block):
+            check_load_cancelled();progress(i)
             line=block[i];source_line=start+i+1
             cycle=CYCLE.match(line)
             if cycle:
@@ -236,15 +240,19 @@ def read_xtb_results(path,trajectory=False):
                 if job.charge is not None:step.geometry.info['converter_charge']=job.charge
                 if job.multiplicity is not None:step.geometry.info['converter_mult']=job.multiplicity
         offset=len(result.steps);result.steps.extend(steps)
+        # Source lines uniquely identify cycles in this job. Avoid a full
+        # reverse/forward cycle search for every orbital snapshot.
+        cycle_positions={p.source_line:i for i,p in enumerate(steps)}
         for key,s in snapshots.items():
             if key=='final':s.step_index=offset+len(steps)-1
             elif key=='initial' and steps[0].geometry is not None and (not job.tasks.intersection({'Optimization'}) or matched):s.step_index=offset
             elif isinstance(key,tuple):
-                position=next((i for i,p in enumerate(steps) if p.source_line==key[1]),None)
+                position=cycle_positions.get(key[1])
                 if position is not None:s.step_index=offset+position
             if len(s.channels)==1 and s.reported_gap_ev is not None:
                 channel=next(iter(s.channels));h,l,g=s.frontier(channel)
                 if h is not None and l is not None and abs((l.energy_ev-h.energy_ev)-s.reported_gap_ev)<2e-4:s.printed_gaps[channel]=s.reported_gap_ev
             result.orbitals.append(s)
+        progress(len(block))
     result.note=' '.join(dict.fromkeys(notes))
     return result

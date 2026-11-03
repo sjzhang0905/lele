@@ -128,12 +128,15 @@ class AtomPanel(QWidget):
                             item = QTreeWidgetItem([f'{symbol}{ordinal}  ·  #{i + 1}'])
                             item.setData(0, Qt.ItemDataRole.UserRole, i)
                             item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
-                            item.setToolTip(0, f'Atom #{i + 1}: {symbol}; original coordinate-table index')
+                            from .site_occupancy import description
+                            item.setToolTip(0, f'Atom #{i + 1}: {symbol}; coordinate-table index\nOccupancy: '+description(frame,i))
                             parent.addChild(item)
                             self._items[i] = item
                         parent.setExpanded(symbol in expanded)
             if frame is not None:
                 for i, item in self._items.items():
+                    from .site_occupancy import description
+                    item.setToolTip(0,f'Atom #{i+1}: {frame.symbols[i]}; coordinate-table index\nOccupancy: '+description(frame,i))
                     style = appearance(frame, i)
                     item.setCheckState(0, Qt.CheckState.Checked if style.visible else Qt.CheckState.Unchecked)
                     item.setForeground(0, QBrush(QColor('#303343' if style.visible else '#999999')))

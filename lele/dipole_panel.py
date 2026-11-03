@@ -36,18 +36,24 @@ class DipolePanel(QWidget):
 
     def prepare_document(self,document,requested='permanent'):
         if document is not self._document:
+            from .output_text import progress_items
             self._document=document
             with QSignalBlocker(self.source):
                 self.source.clear();self.source.addItem('Permanent · matching geometry','permanent')
-                for i,r in enumerate(document.dipoles):
+                for i,r in enumerate(progress_items(document.dipoles,'Preparing dipole sources')):
                     self.source.addItem(f'{r.kind.title()} · state {r.state_number or "—"} · record {i+1}',f'permanent:{i}')
                 for i,s in enumerate(document.electronic_spectra):
                     for t in s.transitions:
                         if t.electric_dipole_au is not None:self.source.addItem(f'Transition 0 → {t.number} {t.state} · {t.wavelength_nm:g} nm · TD {i+1}',f'transition:{i}:{t.number}')
             self.table.setRowCount(len(document.dipoles))
-            for i,r in enumerate(document.dipoles):
+            for i,r in enumerate(progress_items(document.dipoles,'Building dipole table')):
                 for j,value in enumerate([i+1,r.kind+(' '+str(r.state_number) if r.state_number else ''),r.density,*[f'{v:.4f}' for v in r.vector],f'{r.printed_total:.4f}']):
                     self.table.setItem(i,j,QTableWidgetItem(str(value)))
+            self._norm_summary=''
+            if document.dipoles:
+                import numpy as np
+                norms=np.linalg.norm(np.asarray([r.vector for r in document.dipoles]),axis=1)
+                self._norm_summary=f'\n{len(norms)} printed records · mean |μ| {np.mean(norms):.4f} D · SD {np.std(norms):.4f} D'
             self.export_data.setEnabled(bool(document.dipoles or document.electronic_spectra))
             self.export_transitions.setEnabled(bool(document.electronic_spectra))
         index=self.source.findData(requested)
@@ -65,7 +71,5 @@ class DipolePanel(QWidget):
             import numpy as np
             text='\n'.join(f'{a} = {v:.4f} D' for a,v in zip('XYZ',vector))+f'\n|μ| = {np.linalg.norm(vector):.4f} D'
         if self._document is not None and self._document.dipoles:
-            import numpy as np
-            norms=[np.linalg.norm(r.vector) for r in self._document.dipoles]
-            text+=f'\n{len(norms)} printed records · mean |μ| {np.mean(norms):.4f} D · SD {np.std(norms):.4f} D'
+            text+=self._norm_summary
         self.values.setText(text)

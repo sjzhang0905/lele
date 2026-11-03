@@ -1,0 +1,146 @@
+{
+  "baseline_archive": "LELE_v2.12.1_fixed_20261102.zip",
+  "baseline_sha256": "954b48536bfa93075a1c428960b7517a860eb5d7050fa1ccf98d410acf0bcb7d",
+  "original_files": 521,
+  "missing_files": [],
+  "changed_original_files": [
+    {
+      "path": "CHANGELOG.md",
+      "before_sha256": "6a7984357c2434fe2e6fc61408f179efc84384cdd7b94f44241caa833146e503",
+      "after_sha256": "fa495b529bff390c246c967d0bedb3757309aa93f742f4618c6ab056f5afa5c4"
+    },
+    {
+      "path": "README.md",
+      "before_sha256": "c175fb89a141afbf3d8a3afeb2297c893b7ca52fe8e32bf358a58f37177e5bc2",
+      "after_sha256": "b7b7b74dcb6712a5a18a7eeba5be2e9316ff5b7f1cd65a1f2a24b2f2f526f344"
+    },
+    {
+      "path": "README_CN.md",
+      "before_sha256": "fc03aa6e821ef57fd7c9e249bd66face9fe5e98c4581dc761ecdd7ddf4d7d599",
+      "after_sha256": "01d29cd32104eb6aacfb40ab384fcfee7d1e17de912ef7555fc5189e032ba872"
+    },
+    {
+      "path": "lele/__init__.py",
+      "before_sha256": "4cf6e3745309530facba96f766ebf36e6c7c53fdaa453ae338696431997e764e",
+      "after_sha256": "dd80bab1a8c4a53ea38319ff80dd6723ce92abcfc585a982a82c0d96c8b08323"
+    },
+    {
+      "path": "lele/app.py",
+      "before_sha256": "a51fd852aa8c88fab18bb7151f780e90925fd20bd1ca1d9a28dc49bc4e1f0ad9",
+      "after_sha256": "9cac802df090bd4a70c33af93fb21e92e61508a20dea6a007955e3ca8473f888"
+    },
+    {
+      "path": "lele/core.py",
+      "before_sha256": "1f804258101721fd9e1372ed09a371bed4e70601eae8f81546ac2375a0a7f5f1",
+      "after_sha256": "75b5f9433eb69d90f13860d44076afa04f3a3827844fc9b8c4fdbdd86ea46674"
+    },
+    {
+      "path": "lele/legacy_converter.py",
+      "before_sha256": "36584b574d84529d49f8db76776fb4dab7e8dad5643ddd8b91ae3266e7bd0d05",
+      "after_sha256": "49c45c9eb087d0ce61e7908c67f8b9ddac6c04f37916219a7f349ae9b52b4b28"
+    },
+    {
+      "path": "lele/render_options.py",
+      "before_sha256": "87f36318e788145be348f0e1be6be2fc79f1b072ab457555ff8111233e022cb9",
+      "after_sha256": "1e1f125a055ea3f906aba6d6c2ef13e4d14f24058aeb2e1ff491141e76ae1896"
+    },
+    {
+      "path": "lele/renderer.py",
+      "before_sha256": "2792116f708793930cb286a779633bdd7275092c56d4c45d02747099cda3a3d9",
+      "after_sha256": "a0affd17c6f3f1e722a2fc3bcf8133e60e0ac642365d8394108395cef93ea51d"
+    },
+    {
+      "path": "lele/style_presets.py",
+      "before_sha256": "7b8f61fcd8e81fdb2ef2317592224a83bfa14e7bc00544f7ac36dc1486ea0a97",
+      "after_sha256": "ea5575a1373f2175be16ce8339051c05a2c9df2b9fd0d7ee2e44925d51b6d318"
+    },
+    {
+      "path": "lele/welcome.py",
+      "before_sha256": "3e3d64bd82cb6277487c44e8b95231570f214833f53860d5efc63d48207ff859",
+      "after_sha256": "6c06292bb3b456ef6cf0831534fc3cbc1c36c12be2d5e299c31f824ef8b6dc9b"
+    },
+    {
+      "path": "tests/test_reference_defaults_v290.py",
+      "before_sha256": "e2f08fef3a7de06ada5b81ca18094edd716045d28731963c94c2b11d4f8b44f1",
+      "after_sha256": "dc58f3aad9159e287e947481f828fc3e35857a3d00393c8ae11f965c6a12cd80"
+    },
+    {
+      "path": "tests/test_style_fixes_v081.py",
+      "before_sha256": "d641b046baa672fa86b8d6eca83989ee3a13068967b99c5b3c16a17fab2d5093",
+      "after_sha256": "31b9d97bb2c5288cdbb93e447651ea97f432474651250aa11182e5a9c68dd7df"
+    },
+    {
+      "path": "tests/test_welcome_v092.py",
+      "before_sha256": "02d56b5b602bb14fce7aa519b261df1287fc0e237436efe0eeae024da5ab2d4c",
+      "after_sha256": "567cabd93c1a98b4cf878305aa6e66cc8314ff8d77a81cc531367f1950330e07"
+    }
+  ],
+  "unchanged_original_files": 507,
+  "added_files": [
+    {
+      "path": "docs/FEATURES_v2.13.0_CN.md",
+      "sha256": "90b43e97c0187ddc2a8e558912a75c77bc34f43a0914af46349a643cc9cbe2b7"
+    },
+    {
+      "path": "docs/VALIDATION_v2.13.0.md",
+      "sha256": "bfee5219682c9349862b324d062e80dcbf0ae2ad8e051a345c8b3a21e8f5fe29"
+    },
+    {
+      "path": "docs/qa_v2.13.0/display.log",
+      "sha256": "c50fa82cb48e2dfc090cc04206878f8277a588ed0ee269e91992ab410bbfd8e6"
+    },
+    {
+      "path": "docs/qa_v2.13.0/display.xml",
+      "sha256": "ec4d41b9d1e7b1bff84afa3debfc89085af6c7c58f8df13370b6af4baa05e2c2"
+    },
+    {
+      "path": "docs/qa_v2.13.0/full.log",
+      "sha256": "75d63f5938c9aa0353c4c0686c78768b4fa95398f7794cb83f9959bed2185c8d"
+    },
+    {
+      "path": "docs/qa_v2.13.0/full.xml",
+      "sha256": "947732df768e33ea8363d5f8ce89f6b8fa9c443434153427892043d535740ee5"
+    },
+    {
+      "path": "docs/qa_v2.13.0/native/display.json",
+      "sha256": "5bcf25d850a83eda5ac0b5f9ac6a52a25dec1ce09b3be2121544473e859fdbba"
+    },
+    {
+      "path": "docs/qa_v2.13.0/native/sibyl_slab.png",
+      "sha256": "6e8e863817ea1a132923829cf00cf7852bd7a271c6488029eae0c8aa948032cf"
+    },
+    {
+      "path": "docs/qa_v2.13.0/native/welcome.png",
+      "sha256": "85585176e4cf1b5f43457dbcb090b84e5d483f8a14b51647803266138a8b33cc"
+    },
+    {
+      "path": "docs/qa_v2.13.0/repro/check_display_v2130.py",
+      "sha256": "97afb52170f05a2b9f7f25a9be2b0e739c74f90519cdf26b668e3f5b95e4def9"
+    },
+    {
+      "path": "docs/qa_v2.13.0/wheel.log",
+      "sha256": "a34f034edf472163c9ff6a146ab03c1c7fcfae4191d7eb52d6c5aa9799519fae"
+    },
+    {
+      "path": "docs/qa_v2.13.0/wheel_contents.json",
+      "sha256": "4f7e9b0916b327b3fc9334348a6efdaaabf86f58846ef3a2efcabfcaaf3be064"
+    },
+    {
+      "path": "docs/reference_data/Sibyl.tcl",
+      "sha256": "df1f31f3a4b765817410c62410ba7036b75d4f4e0077d5177d1d23fb710cfdb8"
+    },
+    {
+      "path": "lele/sibyl_palette.py",
+      "sha256": "5ed7ab043a09e278930b16f2e7e8192cd848df58382b1b98a00f8b22b6ba25db"
+    },
+    {
+      "path": "tests/test_display_and_order_v2130.py",
+      "sha256": "929fd6d890973ab4142dc6e6b3d0bf46d938a019092d413a8ded53eb65172409"
+    },
+    {
+      "path": "tools/extract_sibyl_palette.py",
+      "sha256": "c3ea4a12c1efe0d9f8170d6ce9866ff3167190c21e73e41ba1104fa4bfdc2eed"
+    }
+  ],
+  "hash_excluded_self": "docs/qa_v2.13.0/source_integrity.json"
+}

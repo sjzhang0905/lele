@@ -1,0 +1,19 @@
+data_delta
+_cell_length_a 5
+_cell_length_b 6
+_cell_length_c 7
+_cell_angle_alpha 90
+_cell_angle_beta 90
+_cell_angle_gamma 90
+_space_group_IT_number 1
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+_atom_site_occupancy
+Co1 Co .25 .5 .25 .1666667
+Ni1 Ni .25 .5 .25 .1666667
+Fe1 Fe .25 .5 .25 .6666666
+O1 O .75 .5 .4 1

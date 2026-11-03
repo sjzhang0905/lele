@@ -1,6 +1,8 @@
 """ORCA result browsers with independent sources and explicit geometry links."""
 from pathlib import Path
 import csv,json
+from .operations import gui_operation,ui_operation,run_data_task
+from .output_text import progress_items
 import numpy as np
 from ase.units import Hartree
 from PySide6.QtCore import Qt,QSignalBlocker
@@ -20,7 +22,7 @@ def fill(widget,headers,rows):
     column=widget.horizontalHeader().sortIndicatorSection() if widget.isSortingEnabled() else 0
     order=widget.horizontalHeader().sortIndicatorOrder() if widget.isSortingEnabled() else Qt.SortOrder.AscendingOrder
     widget.setSortingEnabled(False);widget.setColumnCount(len(headers));widget.setHorizontalHeaderLabels(headers);widget.setRowCount(len(rows))
-    for i,row in enumerate(rows):
+    for i,row in enumerate(progress_items(rows,'Building result table')):
         for j,value in enumerate(row):
             item=QTableWidgetItem()
             if isinstance(value,(int,float,np.floating)) and not isinstance(value,bool):item.setData(Qt.ItemDataRole.DisplayRole,float(value) if isinstance(value,(float,np.floating)) else int(value))
@@ -46,8 +48,10 @@ def figure(layout):
 def export_rows(parent,document,suffix,headers,rows):
     path,_=QFileDialog.getSaveFileName(parent,'Export results',str(document.path.with_name(document.path.stem+suffix)),'CSV (*.csv)')
     if path:
-        with open(path,'w',encoding='utf-8-sig',newline='') as stream:
-            writer=csv.writer(stream);writer.writerow(headers);writer.writerows(rows)
+        def write():
+            with open(path,'w',encoding='utf-8-sig',newline='') as stream:
+                writer=csv.writer(stream);writer.writerow(headers);writer.writerows(progress_items(rows,'Writing result CSV'))
+        run_data_task(parent,'Exporting results',write)
 
 
 class NebDialog(QDialog):
@@ -87,6 +91,7 @@ class NebDialog(QDialog):
         line,=ax.plot([v[0] for v in values],[v[1] for v in values],'.-',label=label,picker=6,**kw)
         self.links[line]=([v[2] for v in values],sequence,label)
 
+    @gui_operation('Preparing result display')
     def redraw(self,*_):
         if not hasattr(self,'canvas'):return
         self.fig.clear();self.links={};self._rows=[];self._frames=[];self._sequence=[]
@@ -190,6 +195,7 @@ class GoatDialog(QDialog):
             self.reference.addItems([f'RMSD reference: conformer {c.number}' for c in e.conformers]);self.temperature.setValue(e.temperature or 298.15)
         self.redraw()
 
+    @gui_operation('Preparing result display')
     def redraw(self,*_):
         from .orca_goat import aligned_rmsd
         self.fig.clear();self.rows=[];self.headers=['Conformer','Relative energy (kcal/mol)','Degeneracy','Printed population (%)','Printed cumulative (%)','Calculated population (%)','Aligned RMSD (Å)','Geometry frame','Analysis temperature (K)']
@@ -234,6 +240,7 @@ class SocDialog(QDialog):
         for w in (self.analysis,self.component,self.unit):w.currentIndexChanged.connect(self.redraw)
         self.states.itemSelectionChanged.connect(self.state_selected);self.redraw()
 
+    @gui_operation('Preparing result display')
     def redraw(self,*_):
         if self.analysis.currentIndex()<0:return
         a=self.document.soc_results[self.analysis.currentIndex()];factor=1. if self.unit.currentIndex()==0 else 1239.841984332/1.e7

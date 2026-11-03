@@ -2,6 +2,136 @@
 
 **Local Environment and Lattice Explorer**
 
+Version **3.0.0** defaults PNG saving to **4× resolution with Smooth edges**.
+See the [release validation](docs/VALIDATION_v3.0.0.md).
+
+Version **2.13.6** fixes both corner-axis acceptance findings: complete XYZ/abc
+letters in the live canvas and consistent axes in high-resolution smooth PNGs.
+See the [fix validation](docs/VALIDATION_v2.13.6.md).
+
+Version **2.13.5** sets default Ball and stick bond thickness to 7, enlarges
+Default-palette H display radii by 15%, and adds another 5% white to the palette.
+Save PNG now offers resolution and edge-smoothing controls, defaulting to 3×
+output with smoother geometry and annotations. See the [guide and validation](docs/VALIDATION_v2.13.5.md).
+
+Version **2.13.4** renames the default atom palette to **Default**, mixes 10%
+white into its element colors, and reduces the initial atom size to 50% and
+bond thickness to 9. See the [validation](docs/VALIDATION_v2.13.4.md).
+
+Version **2.13.3** keeps the footer and canvas height stable when selection
+measurements appear or disappear, and uses a pure white (#FFFFFF) default
+background. See the [validation](docs/VALIDATION_v2.13.3.md).
+
+Version **2.13.2** fixes the full-acceptance PQR and CUBE findings. PQR reads
+whitespace fields (optional chain IDs) and fixed-column records consistently;
+CUBE shares one Bohr/Angstrom header normalization path for atoms and grids,
+including negative grid counts. See the [fix details](docs/FIX_PQR_CUBE_v2.13.2_CN.md)
+and [validation](docs/VALIDATION_v2.13.2.md).
+
+Version **2.13.1** fixes all five delta-acceptance findings: skew-cell CIF face
+coordinates, precise occupancy round trips, atom identity after additions,
+duplicate POSCAR species blocks, and original mixed-site CIF component row order.
+See the [fix details](docs/FIX_DELTA_v2.13.1_CN.md) and [validation](docs/VALIDATION_v2.13.1.md).
+
+Version **2.13.0** uses the supplied **Sibyl.tcl** palette and **Glossy** lighting
+by default, simplifies the welcome page, and automatically shows periodic **abc**
+or molecular **XYZ** axes. Every structure export preserves the current atom
+order, with added atoms appended in addition order, including the legacy
+converter. See the [guide](docs/FEATURES_v2.13.0_CN.md) and [validation](docs/VALIDATION_v2.13.0.md).
+
+Version **2.12.1** fixes all seven v2.12.0 acceptance findings: symmetry-equivalent
+CIF occupancies, POSCAR selective-dynamics flags and atom order, cross-frame atom
+identity, unchanged and small vacuum spacing, automatic footer alignment and
+explicit-identity Chemcraft CIF input. See the [fix details](docs/FIX_A1_B4_v2.12.1_CN.md)
+and [validation](docs/VALIDATION_v2.12.1.md).
+
+Version **2.12.0** displays fractional CIF occupancies as colored site sectors,
+adds right-click atom reindex/swap and fixed-coordinate slab-vacuum editing,
+aligns the summary footer with the coordinate pane, and uses a green dashed
+selection silhouette. See the [guide](docs/FEATURES_v2.12.0_CN.md) and [validation](docs/VALIDATION_v2.12.0.md).
+
+Version **2.11.0** reorients periodic structures with a proper rotation of both
+coordinates and lattice. Use **Edit → Reorient complete structure / crystal…**
+to set origin/X/Z together or paste the analyzer script's row-vector matrix.
+Nearest-image centering, volume grids, image bonds, undo and projects follow
+the same transform. See the [guide](docs/FEATURES_v2.11.0_CN.md) and [validation](docs/VALIDATION_v2.11.0.md).
+
+Version **2.10.1** fixes the independent acceptance findings: QE optimization
+convergence now requires explicit success; CP2K cell and coordinate repetitions
+are independent; `ANGLES` and explicit angle units preserve oblique cells.
+See the [fix details](docs/FIX_A1_A3_v2.10.1_CN.md) and [validation](docs/VALIDATION_v2.10.1.md).
+
+Version **2.10.0** extends QE PW input/vc-relax results, PHONON frequencies and normalized
+matdyn modes, with explicit reference association and q-phase-aware periodic animation.
+See the [QE guide](docs/FEATURES_v2.10.0_CN.md) and [validation](docs/VALIDATION_v2.10.0.md).
+
+Version 2.9.0 uses Chemcraft's GaussView-style compatibility palette, Chemcraft
+ordinary pair-distance limits, and selectable VESTA space-filling radii (Atomic
+at 100% by default). See [sources and compatibility limits](docs/display_reference_data.md).
+See the [2.9.0 guide](docs/FEATURES_v2.9.0_CN.md) and [validation](docs/VALIDATION_v2.9.0.md).
+
+Version 2.8.0 imports CP2K/Molden `.mol` normal modes, including frozen-atom zero
+vectors, animation, arrows and GIF export. **View → Atom legend…** now opens a
+separate legend-only canvas with its own PNG export; the main-canvas overlay is removed.
+See the [2.8.0 guide](docs/FEATURES_v2.8.0_CN.md) and [validation](docs/VALIDATION_v2.8.0.md).
+
+Version **2.7.0** audits long multistep imports across supported output formats,
+adds delayed progress to data processing/exports/projects, marks converged optimization
+frames, and adds **View → Atom legend** (also in PNG/GIF). The welcome page now lists
+both contact emails. See the [2.7.0 guide](docs/FEATURES_v2.7.0_CN.md) and
+[validation](docs/VALIDATION_v2.7.0.md), including CP2K vibrational output file organization.
+
+Version **2.6.0** adds editable distance/angle/dihedral values, effective bond-cutoff
+controls (0.10–5.00), a lower compact footer and faster ORCA optimization loading.
+Scientific outputs load in a cancellable background worker; long loads show the
+current phase, its percentage and elapsed time. See the
+[2.6.0 guide](docs/FEATURES_v2.6.0_CN.md) and
+[validation](docs/VALIDATION_v2.6.0.md).
+
+Version **2.5.0** removes the application frame-count cap and speeds up long
+trajectories. Native CP2K/plain XYZ and XDATCAR readers stream coordinate blocks;
+output analyses share decoded text within one load. The Files tree expands long
+sequences on demand, and large scientific files parse in the background with
+cancellation. All frames and energy records remain available. See the
+[long-file guide](docs/FEATURES_v2.5.0_CN.md) and
+[validation and benchmarks](docs/VALIDATION_v2.5.0.md).
+
+Version **2.4.0** adds independent CP2K input/restart, stdout and XYZ trajectory
+readers. View inline structures, printed FORCE_EVAL energies, optimization
+criteria, final orbital tables separated by k point/spin, and TDDFPT spectra/CSV.
+No companion files are required or searched. See the
+[CP2K guide](docs/FEATURES_v2.4.0_CP2K_CN.md) and
+[validation record](docs/VALIDATION_v2.4.0.md).
+
+Version **2.3.1** uses only VASP **E0** (OSZICAR E0= / OUTCAR σ→0) in
+results, curves and CSV. Missing E0 stays unavailable. See the
+[energy-policy and validation notes](docs/VASP_E0_v2.3.1_CN.md).
+
+Version **2.3.0** adds element-pair bond/coordination rules, quantitative
+polyhedron analysis with trajectory curves/CSV, and portable **.lele projects**.
+Use **Crystal → Pair rules**, **Analysis → Coordination / polyhedron analysis…**,
+and **File → Save/Open project…**. Projects restore loaded structures/results,
+edited bonds, atom appearance, per-file cameras, HKL cuts and display settings.
+See the [2.3.0 guide](docs/FEATURES_v2.3.0_CN.md) and
+[validation record](docs/VALIDATION_v2.3.0.md).
+
+Version **2.2.0** adds Miller **(hkl) display cuts** and a **Polyhedral** style.
+Use **Crystal → HKL planes** for signed offsets in d/Å, one-sided cuts, slabs,
+multiple-plane intersections and normal views. Use **Crystal → Polyhedra** to
+choose centers, ligands, distance rules, translucent faces and edges. Periodic
+coordination shells are completed across cell boundaries. Source structures
+and manually edited ordinary bonds retain their existing behavior.
+See the [2.2.0 guide](docs/FEATURES_v2.2.0_CN.md) and
+[validation record](docs/VALIDATION_v2.2.0.md).
+
+Version **2.1.0** adds independent VASP OUTCAR, XDATCAR and OSZICAR readers.
+Open optimization/MD structures, energy-only results or geometry-only
+trajectories without companion files. VASP normal modes retain imaginary
+frequencies, their own reference structure and mass-corrected animation.
+View ionic E0 energies and export them to CSV (E0-only policy since 2.3.1).
+See the [2.1.0 guide](docs/FEATURES_v2.1.0_CN.md) and
+[validation record](docs/VALIDATION_v2.1.0.md).
+
 Version **2.0.3** adds **Ctrl+H** to draw/remove a dashed hydrogen bond between
 two selected atoms, independently of ordinary **Ctrl+B** bonds, with undo.
 Each open file now retains its camera, colours and complete display settings
@@ -50,7 +180,7 @@ printed orbital contributions remain available.
 
 LELE is a desktop workbench for visualizing and editing molecular and periodic
 structures, inspecting calculation outputs, and exploring atomic environments.
-Version **2.0.3** retains the restored 1.4/1.5 feature set on top of the real periodic
+Version **2.6.0** retains the restored 1.4/1.5 feature set on top of the real periodic
 supercell feature from 1.6.0: improved GIF quality, file-relative save paths,
 camera-facing axis letters, molecular/periodic energy display units, Gaussian/ORCA
 IR/Raman/UV-Vis spectra, typed dipole arrows and CSV exports, bond filtering,
@@ -186,7 +316,7 @@ Use **64-bit CPython 3.12** (recommended) or **3.11**.
 2. Double-click `start_windows.bat` to create `.venv`, install dependencies and
    launch LELE.
 3. Confirm that the title displays
-   `LELE 2.0.3 - Local Environment and Lattice Explorer`.
+   `LELE 2.6.0 - Local Environment and Lattice Explorer`.
 
 To build an executable, run `build_windows.bat` after the first successful
 launch. The result is `dist/LELE/LELE.exe`. Distribute the complete `dist/LELE`

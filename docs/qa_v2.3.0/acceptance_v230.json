@@ -1,0 +1,110 @@
+{
+  "version": "2.3.0",
+  "synthetic": {
+    "project_native_pixel_difference": 0,
+    "project_documents": 2,
+    "trajectory_metrics": [
+      {
+        "frame": 0,
+        "coordination": 6,
+        "volume_A3": 10.66666666666667,
+        "distortion_index": 0.0,
+        "quadratic_elongation": 1.0,
+        "angle_variance_deg2": 0.0,
+        "effective_coordination": 6.0
+      },
+      {
+        "frame": 1,
+        "coordination": 6,
+        "volume_A3": 11.199999999999998,
+        "distortion_index": 0.021857923497267756,
+        "quadratic_elongation": 1.001069745085106,
+        "angle_variance_deg2": 0.0,
+        "effective_coordination": 5.887002389272379
+      },
+      {
+        "frame": 2,
+        "coordination": 6,
+        "volume_A3": 11.733333333333338,
+        "distortion_index": 0.04301075268817204,
+        "quadratic_elongation": 1.0041270213984663,
+        "angle_variance_deg2": 0.0,
+        "effective_coordination": 5.560309125940315
+      },
+      {
+        "frame": 3,
+        "coordination": 6,
+        "volume_A3": 12.26666666666667,
+        "distortion_index": 0.06349206349206347,
+        "quadratic_elongation": 1.0089705914239995,
+        "angle_variance_deg2": 0.0,
+        "effective_coordination": 5.100836275129386
+      },
+      {
+        "frame": 4,
+        "coordination": 6,
+        "volume_A3": 12.8,
+        "distortion_index": 0.08333333333333331,
+        "quadratic_elongation": 1.0154292994411616,
+        "angle_variance_deg2": 0.0,
+        "effective_coordination": 4.648051807073853
+      }
+    ]
+  },
+  "actual_vasp": {
+    "OUTCAR_opt": {
+      "atoms": 166,
+      "frames": 20,
+      "modes": 0,
+      "rules": 5,
+      "analyzed_centers": 68,
+      "coordination_counts": {
+        "5": 23,
+        "4": 16,
+        "3": 11,
+        "6": 14,
+        "2": 4
+      },
+      "all_coordinates_cells_energies_and_modes_exact": true,
+      "source_files_unavailable": true
+    },
+    "XDATCAR": {
+      "atoms": 166,
+      "frames": 20,
+      "modes": 0,
+      "rules": 5,
+      "analyzed_centers": 68,
+      "coordination_counts": {
+        "5": 23,
+        "4": 16,
+        "3": 11,
+        "6": 14,
+        "2": 4
+      },
+      "all_coordinates_cells_energies_and_modes_exact": true,
+      "source_files_unavailable": true
+    },
+    "OUTCAR_freq": {
+      "atoms": 4,
+      "frames": 25,
+      "modes": 12,
+      "rules": 0,
+      "analyzed_centers": 1,
+      "coordination_counts": {
+        "0": 1
+      },
+      "all_coordinates_cells_energies_and_modes_exact": true,
+      "source_files_unavailable": true
+    }
+  },
+  "actual_gui_restore": {
+    "documents": 3,
+    "paused_vasp_mode": true,
+    "source_files_unavailable": true
+  },
+  "qt_previews": [
+    "v230_pair_rules.png",
+    "v230_polyhedron_analysis.png",
+    "v230_polyhedron_curve.png"
+  ]
+}

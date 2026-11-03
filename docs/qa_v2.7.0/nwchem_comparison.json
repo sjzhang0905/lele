@@ -1,0 +1,34 @@
+[
+  {
+    "file": "nwchem_1000.nwo",
+    "frames": 1000,
+    "baseline_seconds": 0.09470888350006135,
+    "current_seconds": 0.10387184499995783,
+    "speedup": 0.9117858982874503,
+    "numeric_and_record_equivalence": true
+  },
+  {
+    "file": "nwchem_4000.nwo",
+    "frames": 4000,
+    "baseline_seconds": 0.44929147999937413,
+    "current_seconds": 0.43812104599965096,
+    "speedup": 1.0254962278158444,
+    "numeric_and_record_equivalence": true
+  },
+  {
+    "file": "nwchem_continuation_1000.nwo",
+    "frames": 2,
+    "baseline_seconds": 2.699732749500072,
+    "current_seconds": 0.11121310700036702,
+    "speedup": 24.275310908193244,
+    "numeric_and_record_equivalence": true
+  },
+  {
+    "file": "nwchem_continuation_4000.nwo",
+    "frames": 2,
+    "baseline_seconds": 41.24516592800046,
+    "current_seconds": 0.5018028730000879,
+    "speedup": 82.19396130877321,
+    "numeric_and_record_equivalence": true
+  }
+]

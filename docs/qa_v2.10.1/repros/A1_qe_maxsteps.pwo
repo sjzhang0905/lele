@@ -1,0 +1,14 @@
+Program PWSCF v.7.3.1 starts
+ number of atoms/cell = 2
+ lattice parameter (alat) = 10.0 a.u.
+ crystal axes: (cart. coord. in units of alat)
+ a(1) = ( 1.0 0.0 0.0 )
+ a(2) = ( 0.0 1.0 0.0 )
+ a(3) = ( 0.0 0.0 1.0 )
+ positions (alat units)
+ 1 H tau( 1) = ( 0.0 0.0 0.0 )
+ 2 H tau( 2) = ( 0.0 0.0 0.2 )
+! total energy = -2.00000000 Ry
+The maximum number of steps has been reached.
+End of BFGS Geometry Optimization
+JOB DONE.

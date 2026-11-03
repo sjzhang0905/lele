@@ -1,0 +1,17 @@
+{
+  "version": "2.4.0",
+  "frames": 4000,
+  "seconds": [
+    0.36776593800004775,
+    0.15389231900007871,
+    0.1493182720000732
+  ],
+  "median_seconds": 0.15389231900007871,
+  "initial_widgets": [
+    4003,
+    4003,
+    4003
+  ],
+  "max_rss_kib": 273756,
+  "includes_first_frame_page": true
+}

@@ -1,0 +1,12 @@
+Processing /workspace/scratch/944a3a3c4a4d/axes_fix/source/LELE
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Building wheels for collected packages: lele-explorer
+  Building wheel for lele-explorer (pyproject.toml): started
+  Building wheel for lele-explorer (pyproject.toml): finished with status 'done'
+  Created wheel for lele-explorer: filename=lele_explorer-2.13.6-py3-none-any.whl size=1176254 sha256=6f3e2dc764da0f7d079af8cb9fd1b6551e15266e3c269ea0ba788d3eb9df28b5
+  Stored in directory: /tmp/pip-ephem-wheel-cache-_na2gfsw/wheels/6f/7a/0c/1d7415dc8f6f7e968be1c0e158f1ad7ef392a9ede90338eafa
+Successfully built lele-explorer
+
+[notice] A new release of pip is available: 25.0.1 -> 26.3
+[notice] To update, run: python -m pip install --upgrade pip

@@ -1,0 +1,28 @@
+{
+  "OUTCAR_opt": {
+    "atoms": 166,
+    "polyhedra_before_cuts": 64,
+    "coordination_numbers": {
+      "3": 11,
+      "4": 19,
+      "5": 24,
+      "6": 10
+    },
+    "clip_faces": 1,
+    "miller_111_spacing_A": 8.727725493777925,
+    "source_coordinates_preserved": true
+  },
+  "XDATCAR": {
+    "atoms": 166,
+    "polyhedra_before_cuts": 64,
+    "coordination_numbers": {
+      "3": 11,
+      "4": 19,
+      "5": 24,
+      "6": 10
+    },
+    "clip_faces": 1,
+    "miller_111_spacing_A": 8.727725781632946,
+    "source_coordinates_preserved": true
+  }
+}

@@ -12,7 +12,7 @@ os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 from PySide6.QtCore import QMimeData, QPointF, Qt, QUrl, Signal, QObject, QTimer
 from PySide6.QtGui import QDropEvent
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication, QLabel, QWidget
+from PySide6.QtWidgets import QApplication, QLabel, QPushButton, QWidget
 from vtkmodules.vtkRenderingCore import vtkRenderWindow, vtkRenderWindowInteractor
 
 from lele import APP_CONTACT_EMAIL, APP_FULL_NAME, APP_NAME, APP_REPOSITORY_URL, __version__
@@ -123,28 +123,30 @@ class WelcomeTests(unittest.TestCase):
         self.assertIn('href="' + APP_REPOSITORY_URL + '"', page.repository_label.text())
         self.assertTrue(page.repository_label.openExternalLinks())
         self.assertLess(page.contact_label.geometry().bottom(), page.repository_label.geometry().top())
-        self.assertLess(page.repository_label.geometry().bottom(), page.open_button.geometry().top())
+        self.assertLess(page.repository_label.geometry().bottom(), page.parrot_walk.geometry().top())
+        self.assertEqual(page.findChildren(QPushButton), [])
+        self.assertFalse(any('Drop a structure or calculation' in label.text() for label in page.findChildren(QLabel)))
         self.assertFalse(window.windowIcon().isNull())
         self.assertFalse(window.windowIcon().pixmap(32, 32).isNull())
         self.assertEqual(page.parrot_walk.findChildren(QLabel), [])
         self.assertEqual(page.grab().toImage().pixelColor(1, 1).name(), '#ffffff')
         self.assertFalse(window.structure_page.isVisible())
 
-    def test_open_button_loads_file_and_stops_welcome_animation(self):
+    def test_open_menu_loads_file_and_stops_welcome_animation(self):
         window = self.window()
         with patch('lele.app.QFileDialog.getOpenFileNames', return_value=([str(self.path)], '')):
-            window.welcome_page.open_button.click()
+            window.file_menu.actions()[0].trigger()
         self.app.processEvents()
         self.assert_loaded(window)
         window.change_frame(0)
         self.assertEqual(window.vtk.initialize_count, 1)
 
-    def test_ctrl_o_works_from_welcome_button_focus(self):
+    def test_ctrl_o_works_from_welcome_focus(self):
         window = self.window()
-        window.welcome_page.open_button.setFocus()
+        window.welcome_page.setFocus()
         self.app.processEvents()
         with patch('lele.app.QFileDialog.getOpenFileNames', return_value=([str(self.path)], '')):
-            QTest.keyClick(window.welcome_page.open_button, Qt.Key.Key_O,
+            QTest.keyClick(window.welcome_page, Qt.Key.Key_O,
                            Qt.KeyboardModifier.ControlModifier)
         self.assert_loaded(window)
 

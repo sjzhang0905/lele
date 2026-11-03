@@ -16,11 +16,13 @@ class SettingsMigrationTests(unittest.TestCase):
             old = Path(directory) / 'ChemViewStudio' / 'style_presets.json'
             new = Path(directory) / 'LELE' / 'style_presets.json'
             old.parent.mkdir()
-            preset = {**BUILTIN_PRESETS['Classic ball and stick'], 'element_colors': {'O': '#123456'}}
+            preset = {**BUILTIN_PRESETS['Classic ball and stick'], 'atom_palette': 'Sibyl',
+                      'element_colors': {'O': '#123456'}}
             old.write_text(json.dumps({'My oxygen': preset}), encoding='utf-8')
             original = old.read_bytes()
             loaded = read_style_presets(new, legacy_paths=[old])
             self.assertEqual(loaded['My oxygen']['element_colors'], {'O': '#123456'})
+            self.assertEqual(loaded['My oxygen']['atom_palette'], 'Default')
             self.assertEqual(json.loads(new.read_text()), loaded)
             self.assertEqual(old.read_bytes(), original)
 

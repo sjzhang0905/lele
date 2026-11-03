@@ -1,0 +1,15 @@
+{
+  "version": "2.5.0",
+  "synthetic": true,
+  "file_bytes": 6366670,
+  "frames": 100000,
+  "energy_records": 100000,
+  "last_frame_index": 99999,
+  "background_load_and_attach_seconds": 4.278391748000104,
+  "gui_timer_ticks_during_import": 205,
+  "tree_widgets_after_first_and_last_frame": 808,
+  "curve_points": 100000,
+  "csv_rows": 100000,
+  "csv_last_geometry_frame": 100000,
+  "coordinates_verified": true
+}

@@ -6,9 +6,10 @@ HC_EV_NM=1239.841984332
 
 
 def broaden(x, centers, strengths, fwhm, shape='Gaussian'):
+    from .output_text import progress_items
     if not np.isfinite(fwhm) or fwhm<=0:raise ValueError('FWHM must be positive')
     x=np.asarray(x);result=np.zeros_like(x,dtype=float)
-    for center,strength in zip(centers,strengths):
+    for center,strength in progress_items(zip(centers,strengths),'Broadening spectrum',len(centers)):
         d=x-center
         if shape=='Lorentzian':
             g=fwhm/2;result+=strength*g/(np.pi*(d*d+g*g))

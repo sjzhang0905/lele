@@ -1,5 +1,7 @@
 """Printed orbital occupations and frontier energies; default unit is eV."""
 from ase.units import Hartree
+from .operations import gui_operation
+from .output_text import progress_items
 from PySide6.QtWidgets import (QDialog,QVBoxLayout,QHBoxLayout,QComboBox,QLabel,
     QTableWidget,QTableWidgetItem,QAbstractItemView)
 
@@ -12,7 +14,7 @@ class OrbitalDialog(QDialog):
         self.setWindowTitle('HOMO / LUMO — '+document.path.name);self.resize(820,650)
         layout=QVBoxLayout(self);row=QHBoxLayout();layout.addLayout(row)
         self.calculation=QComboBox()
-        for snapshot in self.snapshots:
+        for snapshot in progress_items(self.snapshots,'Preparing orbital snapshots'):
             frame='unmatched' if snapshot.frame_index is None else str(snapshot.frame_index+1)
             self.calculation.addItem(f'Job {snapshot.job_index+1} · frame {frame} · line {snapshot.source_line}')
         row.addWidget(self.calculation,1)
@@ -26,6 +28,7 @@ class OrbitalDialog(QDialog):
         self.calculation.currentIndexChanged.connect(self.redraw);self.unit.currentIndexChanged.connect(self.redraw)
         self.calculation.setCurrentIndex(len(self.snapshots)-1);self.redraw()
 
+    @gui_operation('Preparing orbital energies')
     def redraw(self,*_):
         index=self.calculation.currentIndex()
         if index<0:
@@ -41,7 +44,7 @@ class OrbitalDialog(QDialog):
                 self.summary.setItem(i,j,QTableWidgetItem('Not printed' if value is None else f'{value:.6f}' if j in (2,4,5) else str(value)))
             rows += [(channel,row.number,row.occupation,row.energy_ev*factor) for row in orbitals]
         self.table.setRowCount(len(rows))
-        for i,row in enumerate(rows):
+        for i,row in enumerate(progress_items(rows,'Building orbital table')):
             for j,value in enumerate(row):self.table.setItem(i,j,QTableWidgetItem(f'{value:.6f}' if j==3 else str(value)))
         self.summary.resizeColumnsToContents();self.table.resizeColumnsToContents()
         identification=('Frontiers use explicit source HOMO/LUMO labels, including fractional occupations.'

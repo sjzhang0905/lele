@@ -40,6 +40,8 @@ def electron_parity(frame: Frame):
 
     A parity statement is not evidence for a specific spin state.
     """
+    from .site_occupancy import is_disordered
+    if is_disordered(frame):return 'Unknown (fractional site occupancies; no unique integer-electron configuration)'
     missing = sorted(set(frame.symbols).difference(ATOMIC_NUMBERS))
     if missing:
         return f'Unknown (unsupported elements: {", ".join(missing)})'

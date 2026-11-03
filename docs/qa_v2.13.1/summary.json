@@ -1,0 +1,31 @@
+{
+  "independent_before": {
+    "passed": 6,
+    "failed": 5
+  },
+  "independent_after": {
+    "passed": 11,
+    "failed": 0,
+    "skipped": 0
+  },
+  "new_extended": {
+    "passed": 31
+  },
+  "full": {
+    "tests": 912,
+    "subtests": 78,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 69.21
+  },
+  "native_and_edge_checks": {
+    "native_window_ok": true,
+    "footer": true,
+    "small_vacuum": true,
+    "default_display_ok": true,
+    "old_monitor": true,
+    "new_monitor": true,
+    "raw_component_order": true
+  }
+}

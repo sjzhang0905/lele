@@ -1,0 +1,105 @@
+{
+  "orthogonal": {
+    "x": 0.0,
+    "x_mod_1": 0.0,
+    "sites": [
+      {
+        "Co": 0.6,
+        "Ni": 0.4
+      },
+      {
+        "O": 1.0
+      }
+    ]
+  },
+  "skew_face": {
+    "x": -1.7240811785058932e-17,
+    "x_mod_1": 1.0,
+    "sites": [
+      {
+        "Co": 0.6,
+        "Ni": 0.4
+      },
+      {
+        "O": 1.0
+      }
+    ]
+  },
+  "translated": {
+    "x": -1.7240811785058932e-17,
+    "x_mod_1": 1.0,
+    "sites": [
+      {
+        "Co": 0.6,
+        "Ni": 0.4
+      },
+      {
+        "O": 1.0
+      }
+    ]
+  },
+  "thirds": {
+    "before": [
+      {
+        "Co": 0.1666667,
+        "Ni": 0.1666667,
+        "Fe": 0.6666666
+      },
+      {
+        "O": 1.0
+      }
+    ],
+    "after": {
+      "sites": [
+        {
+          "Co": 0.1666667,
+          "Ni": 0.1666667,
+          "Fe": 0.6666666
+        },
+        {
+          "O": 1.0
+        }
+      ]
+    }
+  },
+  "mixed_plus_h": {
+    "written_rows": [
+      "Co",
+      "Ni",
+      "O",
+      "H"
+    ],
+    "reread_sites": [
+      {
+        "Co": 0.6,
+        "Ni": 0.4
+      },
+      {
+        "O": 1.0
+      },
+      {
+        "H": 1.0
+      }
+    ]
+  },
+  "blocks": {
+    "written_header": [
+      " C   C   O  ",
+      "   1   1   2"
+    ]
+  },
+  "distances": {
+    "original": [
+      2.0,
+      2.0
+    ],
+    "after_replacing_C_existing_monitor": [
+      2.0,
+      2.0
+    ],
+    "after_replacing_C_new_monitor": [
+      2.0,
+      2.0
+    ]
+  }
+}

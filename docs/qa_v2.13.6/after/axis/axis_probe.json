@@ -1,0 +1,414 @@
+{
+  "package": "/workspace/scratch/944a3a3c4a4d/axes_fix/wheel_install/lele/__init__.py",
+  "version": "2.13.6",
+  "scenes": {
+    "molecule": {
+      "size": [
+        1022,
+        620
+      ],
+      "live": {
+        "all": {
+          "pixels": 783,
+          "width": 124,
+          "height": 100
+        },
+        "red": {
+          "pixels": 288,
+          "width": 62,
+          "height": 38
+        },
+        "green": {
+          "pixels": 227,
+          "width": 61,
+          "height": 38
+        },
+        "blue": {
+          "pixels": 268,
+          "width": 11,
+          "height": 63
+        }
+      },
+      "1x_standard": {
+        "all": {
+          "pixels": 783,
+          "width": 124,
+          "height": 100
+        },
+        "red": {
+          "pixels": 288,
+          "width": 62,
+          "height": 38
+        },
+        "green": {
+          "pixels": 227,
+          "width": 61,
+          "height": 38
+        },
+        "blue": {
+          "pixels": 268,
+          "width": 11,
+          "height": 63
+        }
+      },
+      "1x_smooth": {
+        "all": {
+          "pixels": 791,
+          "width": 122,
+          "height": 101
+        },
+        "red": {
+          "pixels": 278,
+          "width": 61,
+          "height": 38
+        },
+        "green": {
+          "pixels": 234,
+          "width": 61,
+          "height": 38
+        },
+        "blue": {
+          "pixels": 279,
+          "width": 12,
+          "height": 64
+        }
+      },
+      "2x_standard": {
+        "all": {
+          "pixels": 767,
+          "width": 122,
+          "height": 101
+        },
+        "red": {
+          "pixels": 270,
+          "width": 61,
+          "height": 38
+        },
+        "green": {
+          "pixels": 229,
+          "width": 61,
+          "height": 38
+        },
+        "blue": {
+          "pixels": 268,
+          "width": 12,
+          "height": 63
+        }
+      },
+      "2x_smooth": {
+        "all": {
+          "pixels": 802,
+          "width": 122,
+          "height": 101
+        },
+        "red": {
+          "pixels": 285,
+          "width": 62,
+          "height": 38
+        },
+        "green": {
+          "pixels": 238,
+          "width": 60,
+          "height": 36
+        },
+        "blue": {
+          "pixels": 279,
+          "width": 12,
+          "height": 64
+        }
+      },
+      "3x_standard": {
+        "all": {
+          "pixels": 763,
+          "width": 121,
+          "height": 100
+        },
+        "red": {
+          "pixels": 266,
+          "width": 61,
+          "height": 37
+        },
+        "green": {
+          "pixels": 231,
+          "width": 60,
+          "height": 37
+        },
+        "blue": {
+          "pixels": 266,
+          "width": 12,
+          "height": 64
+        }
+      },
+      "3x_smooth": {
+        "all": {
+          "pixels": 794,
+          "width": 121,
+          "height": 101
+        },
+        "red": {
+          "pixels": 282,
+          "width": 61,
+          "height": 38
+        },
+        "green": {
+          "pixels": 237,
+          "width": 60,
+          "height": 36
+        },
+        "blue": {
+          "pixels": 275,
+          "width": 12,
+          "height": 64
+        }
+      },
+      "4x_standard": {
+        "all": {
+          "pixels": 779,
+          "width": 122,
+          "height": 100
+        },
+        "red": {
+          "pixels": 276,
+          "width": 62,
+          "height": 37
+        },
+        "green": {
+          "pixels": 228,
+          "width": 60,
+          "height": 36
+        },
+        "blue": {
+          "pixels": 275,
+          "width": 12,
+          "height": 64
+        }
+      },
+      "4x_smooth": {
+        "all": {
+          "pixels": 803,
+          "width": 122,
+          "height": 101
+        },
+        "red": {
+          "pixels": 283,
+          "width": 62,
+          "height": 38
+        },
+        "green": {
+          "pixels": 242,
+          "width": 60,
+          "height": 37
+        },
+        "blue": {
+          "pixels": 278,
+          "width": 12,
+          "height": 64
+        }
+      }
+    },
+    "crystal": {
+      "size": [
+        1022,
+        620
+      ],
+      "live": {
+        "all": {
+          "pixels": 793,
+          "width": 124,
+          "height": 98
+        },
+        "red": {
+          "pixels": 288,
+          "width": 62,
+          "height": 38
+        },
+        "green": {
+          "pixels": 243,
+          "width": 61,
+          "height": 38
+        },
+        "blue": {
+          "pixels": 262,
+          "width": 11,
+          "height": 61
+        }
+      },
+      "1x_standard": {
+        "all": {
+          "pixels": 793,
+          "width": 124,
+          "height": 98
+        },
+        "red": {
+          "pixels": 288,
+          "width": 62,
+          "height": 38
+        },
+        "green": {
+          "pixels": 243,
+          "width": 61,
+          "height": 38
+        },
+        "blue": {
+          "pixels": 262,
+          "width": 11,
+          "height": 61
+        }
+      },
+      "1x_smooth": {
+        "all": {
+          "pixels": 799,
+          "width": 122,
+          "height": 98
+        },
+        "red": {
+          "pixels": 276,
+          "width": 61,
+          "height": 38
+        },
+        "green": {
+          "pixels": 252,
+          "width": 61,
+          "height": 38
+        },
+        "blue": {
+          "pixels": 271,
+          "width": 12,
+          "height": 61
+        }
+      },
+      "2x_standard": {
+        "all": {
+          "pixels": 776,
+          "width": 122,
+          "height": 98
+        },
+        "red": {
+          "pixels": 268,
+          "width": 61,
+          "height": 38
+        },
+        "green": {
+          "pixels": 247,
+          "width": 61,
+          "height": 38
+        },
+        "blue": {
+          "pixels": 261,
+          "width": 12,
+          "height": 60
+        }
+      },
+      "2x_smooth": {
+        "all": {
+          "pixels": 806,
+          "width": 122,
+          "height": 98
+        },
+        "red": {
+          "pixels": 277,
+          "width": 62,
+          "height": 38
+        },
+        "green": {
+          "pixels": 262,
+          "width": 60,
+          "height": 37
+        },
+        "blue": {
+          "pixels": 267,
+          "width": 12,
+          "height": 61
+        }
+      },
+      "3x_standard": {
+        "all": {
+          "pixels": 785,
+          "width": 121,
+          "height": 99
+        },
+        "red": {
+          "pixels": 271,
+          "width": 61,
+          "height": 38
+        },
+        "green": {
+          "pixels": 253,
+          "width": 60,
+          "height": 37
+        },
+        "blue": {
+          "pixels": 261,
+          "width": 12,
+          "height": 62
+        }
+      },
+      "3x_smooth": {
+        "all": {
+          "pixels": 797,
+          "width": 122,
+          "height": 98
+        },
+        "red": {
+          "pixels": 278,
+          "width": 61,
+          "height": 38
+        },
+        "green": {
+          "pixels": 253,
+          "width": 61,
+          "height": 37
+        },
+        "blue": {
+          "pixels": 266,
+          "width": 12,
+          "height": 61
+        }
+      },
+      "4x_standard": {
+        "all": {
+          "pixels": 785,
+          "width": 122,
+          "height": 98
+        },
+        "red": {
+          "pixels": 270,
+          "width": 62,
+          "height": 38
+        },
+        "green": {
+          "pixels": 253,
+          "width": 60,
+          "height": 37
+        },
+        "blue": {
+          "pixels": 262,
+          "width": 12,
+          "height": 61
+        }
+      },
+      "4x_smooth": {
+        "all": {
+          "pixels": 801,
+          "width": 122,
+          "height": 98
+        },
+        "red": {
+          "pixels": 276,
+          "width": 61,
+          "height": 38
+        },
+        "green": {
+          "pixels": 258,
+          "width": 61,
+          "height": 37
+        },
+        "blue": {
+          "pixels": 267,
+          "width": 12,
+          "height": 61
+        }
+      }
+    }
+  }
+}

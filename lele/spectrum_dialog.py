@@ -1,6 +1,8 @@
 """IR, Raman and UV-Vis plots with raw-line and broadened-curve exports."""
 from pathlib import Path
 import csv
+from .operations import run_data_task,gui_operation,ui_checkpoint,ui_operation
+from .output_text import progress_items
 from PySide6.QtWidgets import (QDialog,QVBoxLayout,QGridLayout,QComboBox,QDoubleSpinBox,
     QLabel,QPushButton,QTableWidget,QTableWidgetItem,QFileDialog,QMessageBox,QAbstractItemView)
 
@@ -47,6 +49,7 @@ class SpectrumDialog(QDialog):
         self.scale.setEnabled(not uv);self.laser.setEnabled(self.kind.currentText()=='Raman');self.temperature.setEnabled(self.laser.isEnabled())
         self.axis.setEnabled(uv);self.save_transitions.setVisible(uv);self.redraw()
 
+    @gui_operation('Preparing spectrum')
     def redraw(self,*_):
         if not hasattr(self,'canvas'):return
         import numpy as np
@@ -56,8 +59,9 @@ class SpectrumDialog(QDialog):
         self._curve=None
         try:
             if calc<0:raise ValueError('This file has no corresponding calculations')
-            x,y,label=simulated_spectrum(self.document,kind,calc,fwhm=self.fwhm.value(),shape=self.shape.currentText(),scale=self.scale.value(),
+            options=dict(fwhm=self.fwhm.value(),shape=self.shape.currentText(),scale=self.scale.value(),
                 laser_nm=self.laser.value(),temperature=self.temperature.value(),wavelength=self.axis.currentIndex()==0)
+            x,y,label=run_data_task(self,'Calculating spectrum',lambda:simulated_spectrum(self.document,kind,calc,**options))
             self._curve=(x,y,label);ax.plot(x,y,lw=1.3);ax.set_xlabel(label);ax.set_ylabel('Relative intensity')
             if kind=='UV-Vis':
                 columns=['State','Energy (eV)','Wavelength (nm)','Oscillator strength f','μx (au)','μy (au)','μz (au)','Dip. strength (au²)','|μ| (D)','Major transitions (printed coefficients)'];rows=[]
@@ -66,6 +70,16 @@ class SpectrumDialog(QDialog):
                     rows.append([f'{t.number} {transition_state_label(t.state)}',t.energy_ev,t.wavelength_nm,t.oscillator_strength,*(['']*3 if mu is None else mu),
                                  t.dipole_strength_au2,'' if mu is None else np.linalg.norm(mu)*AU_TO_DEBYE,contribution_text(t)])
                 self.note.setText('Energy-domain broadening; absorption evaluated at E = hc/λ. Transition moments use length-gauge electric au.')
+                if any(t.metadata for t in self.document.electronic_spectra[calc].transitions):
+                    columns=['State','Energy (eV)','Wavelength (nm)','Oscillator strength f','Printed x (au)','Printed y (au)','Printed z (au)','Dipole form','Source detail']
+                    rows=[]
+                    for t in self.document.electronic_spectra[calc].transitions:
+                        mu=t.electric_dipole_au if t.electric_dipole_au is not None else t.velocity_dipole_au
+                        if mu is None:mu=t.metadata.get('component_magnitudes_au',t.metadata.get('printed_components_au'))
+                        rows.append([f'{t.number} {t.state}',t.energy_ev,t.wavelength_nm,t.oscillator_strength,
+                                     *(['']*3 if mu is None else mu),t.metadata.get('dipole_form',''),t.source_label])
+                    self.note.setText('Printed CP2K transition energies and oscillator strengths. Energy-domain broadening is a simulated spectrum. '
+                        'Component magnitudes have no vector direction or phase and do not generate dipole arrows. K-point auxiliary fields stay as printed; they are not excitation amplitudes.')
             else:
                 units={m.ir_intensity_unit for m in self.document.vibrations[calc].modes if m.ir_intensity is not None}
                 ir_unit=next(iter(units)) if len(units)==1 else 'source units'
@@ -75,7 +89,7 @@ class SpectrumDialog(QDialog):
                       for m in self.document.vibrations[calc].modes]
                 self.note.setText('Positive modes only in simulated curves. IR uses printed intensities; Raman uses laser/temperature-corrected relative Stokes weights. No experimental fit.')
             self.table.setColumnCount(len(columns));self.table.setHorizontalHeaderLabels(columns);self.table.setRowCount(len(rows))
-            for i,row in enumerate(rows):
+            for i,row in enumerate(progress_items(rows,'Building spectrum table')):
                 for j,value in enumerate(row):self.table.setItem(i,j,QTableWidgetItem('' if value is None else f'{value:.6f}' if isinstance(value,(float,np.floating)) else str(value)))
             self.table.resizeColumnsToContents()
         except (ValueError,IndexError) as ex:
@@ -90,7 +104,8 @@ class SpectrumDialog(QDialog):
             try:
                 x,y,label=self._curve
                 with Path(path).open('w',encoding='utf-8-sig',newline='') as f:
-                    writer=csv.writer(f);writer.writerow([label,'relative_intensity']);writer.writerows(zip(x,y))
+                    with ui_operation(self,'Exporting spectrum'):
+                        writer=csv.writer(f);writer.writerow([label,'relative_intensity']);writer.writerows(progress_items(zip(x,y),'Writing spectrum CSV',len(x)))
             except OSError as ex:QMessageBox.warning(self,'Export failed',str(ex))
 
     def export_transitions(self):
@@ -98,5 +113,5 @@ class SpectrumDialog(QDialog):
         calc=self.calculation.currentIndex()
         path,_=QFileDialog.getSaveFileName(self,'Export transition table',str(self.document.path.with_name(f'{self.document.path.stem}_td_{calc+1}_transitions.csv')),'CSV (*.csv)')
         if path:
-            try:export_transitions(path,self.document,calc)
+            try:run_data_task(self,'Exporting transitions',lambda:export_transitions(path,self.document,calc))
             except (ValueError,OSError) as ex:QMessageBox.warning(self,'Export failed',str(ex))

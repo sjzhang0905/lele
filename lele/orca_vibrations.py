@@ -3,8 +3,8 @@ import re
 import numpy as np
 from .core import NormalMode, VibrationalAnalysis
 from .gaussian_vibrations import _number
-from .orca_results import COORDINATES, FREQUENCY, NUMBER, reference_at
-from .output_text import read_output_lines
+from .orca_results import COORDINATES, FREQUENCY, NUMBER, reference_at, ReferenceIndex
+from .output_text import read_output_lines, check_load_cancelled, load_progress
 
 
 def _normal_modes(lines, start, analysis):
@@ -81,17 +81,22 @@ def _strengths(lines, start, analysis, kind):
 
 def read_orca_vibrations(path, results):
     lines = read_output_lines(path)
+    if not any('VIBRATIONAL FREQUENCIES' in line.upper() for line in lines):return [], ''
+    index=ReferenceIndex(results)
+    progress=load_progress('ORCA: vibrational frequencies',len(lines))
     analyses, notices = [], []
     analysis = None
     job_starts = {job.start_line-1 for job in results.jobs}
     i = 0
     while i < len(lines):
+        check_load_cancelled()
+        progress(i)
         line = lines[i]
         text = line.strip().upper()
-        if i in job_starts or COORDINATES.search(line):
+        if i in job_starts or ('CARTESIAN COORDINATES' in text and COORDINATES.search(line)):
             analysis = None
         if text == 'VIBRATIONAL FREQUENCIES':
-            reference = reference_at(results, i+1)
+            reference = reference_at(results, i+1,index)
             modes = []
             j = i+1
             while j < len(lines):
@@ -128,6 +133,7 @@ def read_orca_vibrations(path, results):
             i = max(i+1, _strengths(lines, i, analysis, 'IR' if text == 'IR SPECTRUM' else 'Raman'))
             continue
         i += 1
+    progress(len(lines))
     for analysis in analyses:
         analysis.modes = [mode for mode in analysis.modes if mode.frequency_cm1 != 0 or mode.can_animate]
         if any(mode.frequency_cm1 != 0 and mode.displacements is None for mode in analysis.modes):

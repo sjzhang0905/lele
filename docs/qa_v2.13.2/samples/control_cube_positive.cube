@@ -1,0 +1,8 @@
+Synthetic Bohr grid
+LELE positive-count branch
+1 1 2 3
+2 .5 0 0
+2 0 .5 0
+2 0 0 .5
+8 0 1.25 2.25 3.25
+0 1 2 3 4 5 6 7

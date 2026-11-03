@@ -1,0 +1,13 @@
+repeated carbon blocks
+1
+10 0 0
+0 10 0
+0 0 20
+C C O
+1 1 2
+Selective dynamics
+Cartesian
+1 1 1 F F F
+2 1 1 T F T
+3 2 1 T T T
+4 2 3 T T T

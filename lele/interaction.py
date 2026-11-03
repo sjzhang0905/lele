@@ -35,6 +35,7 @@ class InteractiveVTKView(QVTKRenderWindowInteractor):
     """A reliable, Qt-level single-click signal and dedicated right-button roll."""
 
     atomClick = Signal(float, float)  # Qt logical top-left pixel coordinates
+    atomContextClick = Signal(float,float)
     clearSelectionClick = Signal()  # right click without dragging
     fragmentGestureBegin = Signal(str, float, float)
     fragmentGestureMove = Signal(str, float, float)
@@ -159,7 +160,7 @@ class InteractiveVTKView(QVTKRenderWindowInteractor):
             if (self._right_start is not None and not self._right_dragged
                 and (event.position().x()-self._right_start.x())**2
                   + (event.position().y()-self._right_start.y())**2 <= 64):
-                self.clearSelectionClick.emit()
+                self.atomContextClick.emit(float(event.position().x()),float(event.position().y()))
             self._right_start = None
             self._right_last = None
             self._right_dragged = False

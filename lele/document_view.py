@@ -15,6 +15,7 @@ class DocumentView:
     custom_style: dict
     preset: str
     camera: object = None
+    frame_index: int = 0
 
 
 class DocumentViewActions:
@@ -32,6 +33,7 @@ class DocumentViewActions:
         state.options = self.render_options
         state.custom_style = deepcopy(self._custom_style_state)
         state.preset = self.preset_combo.currentData()
+        state.frame_index = self.frame_index
         # A results-only page may still have another file's canvas behind it.
         if self.scene is not None and self._scene_document is self._view_document:
             from vtkmodules.vtkRenderingCore import vtkCamera
@@ -53,8 +55,12 @@ class DocumentViewActions:
             # First visits inherit the current appearance, then remain isolated.
             state = DocumentView(document, deepcopy(self.render_options),
                                  deepcopy(self._custom_style_state), self.preset_combo.currentData())
+            self._initialize_document_pair_rules(document, state.options)
             self._document_views[id(document)] = state
         self.current_doc = index
+        # Widget synchronization can inspect the active frame before the
+        # caller's change_frame() has assigned its requested index.
+        self.frame_index = min(state.frame_index, max(0, len(document.frames)-1))
         self._view_document = document
         self.render_options = state.options
         self._custom_style_state = deepcopy(state.custom_style)
@@ -68,14 +74,18 @@ class DocumentViewActions:
         self.playback.stop()
         self.play_btn.setText('Play')
         self._sync_document_view_widgets(state.preset)
+        self._update_source_view()
         return True
 
     def _sync_document_view_widgets(self, preset):
         opts = self.render_options
+        if preset == 'Space filling (CPK)':preset = 'Space filling (VESTA)'
         self._sync_style_widgets()
         controls = [
             (self.preset_combo, 'setCurrentIndex', self.preset_combo.findData(preset)),
+            (self.bond_model_combo, 'setCurrentText', opts.bond_model),
             (self.cutoff_slider, 'setValue', round(opts.bond_cutoff * 100)),
+            (self.cutoff_spin, 'setValue', opts.bond_cutoff),
             (self.hbond_check, 'setChecked', opts.hydrogen_bonds),
             (self.cell_check, 'setChecked', opts.unit_cell),
             (self.axes_position_combo, 'setCurrentIndex', self.axes_position_combo.findData(opts.axes_position)),
@@ -100,6 +110,7 @@ class DocumentViewActions:
         self.custom_font_btn.setText('Font file: ' + Path(opts.label_font_file).name
                                     if opts.label_font_file else 'Choose TTF/OTF font file…')
         self.boundary_panel.set_values(opts.boundary_enabled, opts.boundary_bounds)
+        self.crystal_panel.set_values(opts)
 
     def _apply_document_camera(self, reset_camera):
         # Restore after constructing the target scene, so neither fit-to-window

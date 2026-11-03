@@ -1,0 +1,72 @@
+{
+  "version": "2.1.0",
+  "files": {
+    "OUTCAR_opt": {
+      "sha256": "6f9b3e0977bfa363994266aee02a817f37e1c8979cdd05745a76fedae457aaa9",
+      "bytes": 3444136,
+      "isolated_load": true,
+      "atoms": 166,
+      "frames": 20,
+      "ionic_records": 20,
+      "volume_A3": 6301.446817676562,
+      "first_energy_eV": -941.77455196,
+      "last_energy_eV": -941.77525006,
+      "modes": 0,
+      "imaginary_modes": 0,
+      "animated_modes": 0,
+      "ase_max_coordinate_difference_A": 0.0,
+      "ase_max_cell_difference_A": 0.0,
+      "ase_max_energy_difference_eV": 0.0
+    },
+    "XDATCAR": {
+      "sha256": "f4b4594400cd812059913382c71b29e4ef6ad22b80c889019c990db55f026747",
+      "bytes": 127087,
+      "isolated_load": true,
+      "atoms": 166,
+      "frames": 20,
+      "ionic_records": 20,
+      "volume_A3": 6301.447009281902,
+      "first_energy_eV": null,
+      "last_energy_eV": null,
+      "modes": 0,
+      "imaginary_modes": 0,
+      "animated_modes": 0,
+      "ase_max_coordinate_difference_A": 0.0,
+      "ase_max_cell_difference_A": 0.0,
+      "ase_max_energy_difference_eV": null
+    },
+    "OUTCAR_freq": {
+      "sha256": "9d3b2f5d673d4f68b03095ace09d228592fef5cb6ec82cf8a5f586e88c86e846",
+      "bytes": 545976,
+      "isolated_load": true,
+      "atoms": 4,
+      "frames": 25,
+      "ionic_records": 25,
+      "volume_A3": 3586.5816198298544,
+      "first_energy_eV": -19.53619395,
+      "last_energy_eV": -19.53539558,
+      "modes": 12,
+      "imaginary_modes": 3,
+      "animated_modes": 12,
+      "ase_max_coordinate_difference_A": 0.0,
+      "ase_max_cell_difference_A": 0.0,
+      "ase_max_energy_difference_eV": 0.0
+    }
+  },
+  "checks": {
+    "real_geometry_without_energy": {
+      "frames": 20,
+      "energies": 0
+    },
+    "real_ionic_energies_without_geometry": {
+      "records": 20,
+      "frames": 0
+    },
+    "real_files_qt_ui": "PASS: all source files, matched frequency reference, imaginary mode, CSV and geometry/results-only switches",
+    "actual_vasp_native_vtk_gif_export": {
+      "vibration_frames": 8,
+      "xdatcar_frames": 2,
+      "result": "PASS"
+    }
+  }
+}

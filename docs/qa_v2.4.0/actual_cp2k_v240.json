@@ -1,0 +1,76 @@
+{
+  "version": "2.4.0",
+  "files": {
+    "cp2k.inp": {
+      "isolated_single_file_exact": true,
+      "atoms": 128,
+      "frames": 1,
+      "energy_records": 0,
+      "energy_records_without_structure": 0,
+      "jobs": 1,
+      "orbital_snapshots": 0,
+      "channels_per_snapshot": [],
+      "spectra": 0,
+      "transitions": 0
+    },
+    "cp2k.out": {
+      "isolated_single_file_exact": true,
+      "atoms": 128,
+      "frames": 1,
+      "energy_records": 135,
+      "energy_records_without_structure": 134,
+      "jobs": 1,
+      "orbital_snapshots": 0,
+      "channels_per_snapshot": [],
+      "spectra": 0,
+      "transitions": 0
+    },
+    "Phenylhydrazine-pos-1.xyz": {
+      "isolated_single_file_exact": true,
+      "atoms": 128,
+      "frames": 134,
+      "energy_records": 134,
+      "energy_records_without_structure": 0,
+      "jobs": 1,
+      "orbital_snapshots": 0,
+      "channels_per_snapshot": [],
+      "spectra": 0,
+      "transitions": 0
+    },
+    "Phenylhydrazine-1.restart": {
+      "isolated_single_file_exact": true,
+      "atoms": 128,
+      "frames": 1,
+      "energy_records": 0,
+      "energy_records_without_structure": 0,
+      "jobs": 1,
+      "orbital_snapshots": 0,
+      "channels_per_snapshot": [],
+      "spectra": 0,
+      "transitions": 0
+    },
+    "cp2k.out_tddft": {
+      "isolated_single_file_exact": true,
+      "atoms": 128,
+      "frames": 2,
+      "energy_records": 2,
+      "energy_records_without_structure": 0,
+      "jobs": 2,
+      "orbital_snapshots": 2,
+      "channels_per_snapshot": [
+        5,
+        5
+      ],
+      "spectra": 1,
+      "transitions": 200
+    }
+  },
+  "checks": {
+    "stdout_135_energies_exact": true,
+    "xyz_134_hartree_energies_exact_no_cell_inferred": true,
+    "magnitudes_do_not_become_vectors_or_coefficients": true,
+    "actual_gui_135_point_curve_and_csv": true,
+    "actual_gui_5_kpoint_channels_and_200_transition_spectrum_csv": true,
+    "all_five_documents_project_roundtrip_exact": true
+  }
+}

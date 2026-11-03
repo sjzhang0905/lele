@@ -1,0 +1,585 @@
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -1,4 +1,11 @@
+ # Changelog
++
++## 2.10.1 — 2026-11-02
++
++- Fix A1: require explicit QE BFGS convergence, with failed/max-step/error exits taking priority within their PWSCF job. Keep normal process completion separate from optimization status and retain convergence only on matching final-coordinate reprints.
++- Fix A2: independently read CP2K CELL and TOPOLOGY MULTIPLE_UNIT_CELL. Use the original unit cell for fractional coordinates and replica translations; preserve CP2K's X-fastest replica order, atom kinds and periodic axes. Explain mismatched repeated-topology input compatibility in the import note.
++- Fix A3: support CP2K ANGLES as an ALPHA_BETA_GAMMA alias, including explicit degree/radian units. Report invalid angles instead of silently showing an orthogonal or degenerate cell.
++- Retain the independent acceptance expectations as permanent regressions, correct the old QE success fixture, and extend coverage to failure priority, separate jobs, oblique cells, unequal repeats, invalid geometry and project round trips.
+ 
+ ## 2.10.0 — 2026-10-30
+ 
+--- a/README.md
++++ b/README.md
+@@ -1,6 +1,11 @@
+ # LELE
+ 
+ **Local Environment and Lattice Explorer**
++
++Version **2.10.1** fixes the independent acceptance findings: QE optimization
++convergence now requires explicit success; CP2K cell and coordinate repetitions
++are independent; `ANGLES` and explicit angle units preserve oblique cells.
++See the [fix details](docs/FIX_A1_A3_v2.10.1_CN.md) and [validation](docs/VALIDATION_v2.10.1.md).
+ 
+ Version **2.10.0** extends QE PW input/vc-relax results, PHONON frequencies and normalized
+ matdyn modes, with explicit reference association and q-phase-aware periodic animation.
+--- a/README_CN.md
++++ b/README_CN.md
+@@ -1,6 +1,8 @@
+ # LELE
+ 
+ **Local Environment and Lattice Explorer — 局域环境与晶格探索工具**
++
++v2.10.1 修复独立验收发现的 **A1–A3**：QE 优化状态必须有明确收敛证据；CP2K 晶胞扩展与原子重复分别读取；支持 `ANGLES` 别名及显式角度单位，保留斜晶胞。见[修复说明](docs/FIX_A1_A3_v2.10.1_CN.md)和[复验记录](docs/VALIDATION_v2.10.1.md)。
+ 
+ v2.10.0 完善 **QE 输入、PWSCF 变胞优化、PHONON 频率及 matdyn 模式导入**。模式文件可明确关联参考结构和 alat，支持非 Γ 点的周期振动相位、箭头、GIF、q 点 CSV 和项目保存。见[QE 使用说明](docs/FEATURES_v2.10.0_CN.md)和[验证报告](docs/VALIDATION_v2.10.0.md)。
+ 
+--- a/lele/__init__.py
++++ b/lele/__init__.py
+@@ -1,6 +1,6 @@
+ #!/usr/bin/env python3
+ """Local Environment and Lattice Explorer."""
+-__version__ = "2.10.0"
++__version__ = "2.10.1"
+ APP_NAME = "LELE"
+ APP_FULL_NAME = "Local Environment and Lattice Explorer"
+ APP_CONTACT_EMAIL = "sjzhang0905@hotmail.com"
+--- a/lele/cp2k_input.py
++++ b/lele/cp2k_input.py
+@@ -1,6 +1,8 @@
+ """Read inline CP2K input/restart data without opening referenced files."""
+ import re
+ import shlex
++from itertools import product
++from math import prod
+ import numpy as np
+ from ase.data import atomic_numbers
+ from ase.geometry import cellpar_to_cell
+@@ -54,14 +56,38 @@
+     return np.asarray([real(x) for x in values])*factor
+ 
+ 
++def angle_values(values):
++    values=list(values);unit='deg'
++    if values and values[0].startswith('['):unit=values.pop(0).strip('[]').lower()
++    if unit not in ('deg','rad'):raise ValueError('Unsupported CP2K angle unit: '+unit)
++    if len(values)!=3:raise ValueError('CP2K cell angles require three values')
++    angles=np.asarray([real(x) for x in values])
++    if unit=='rad':angles=np.degrees(angles)
++    if np.any((angles<=0)|(angles>=180)):raise ValueError('Invalid CP2K cell angles')
++    return angles
++
++
++def repeat_factors(section, name):
++    try:values=tuple(int(x) for x in section.get('MULTIPLE_UNIT_CELL',('1','1','1')))
++    except ValueError:raise ValueError(f'Invalid CP2K {name}/MULTIPLE_UNIT_CELL') from None
++    if len(values)!=3 or min(values)<1:
++        raise ValueError(f'Invalid CP2K {name}/MULTIPLE_UNIT_CELL: three positive integers required')
++    return values
++
++
+ def inline_frame(subsys):
+     cell_node=subsys.child('CELL');cell=np.zeros((3,3))
+     if all(cell_node.get(key) for key in 'ABC'):
+         cell=np.asarray([length_values(cell_node.get(key)) for key in 'ABC']).reshape(3,3)
+     elif cell_node.get('ABC'):
+         abc=length_values(cell_node.get('ABC'))
+-        angles=[real(x) for x in cell_node.get('ALPHA_BETA_GAMMA',('90','90','90'))]
+-        cell=cellpar_to_cell([*abc,*angles])
++        angles=angle_values(cell_node.get('ALPHA_BETA_GAMMA',cell_node.get('ANGLES',('90','90','90'))))
++        if len(abc)!=3 or np.any(abc<=0):raise ValueError('Invalid CP2K ABC cell lengths')
++        try:cell=cellpar_to_cell([*abc,*angles])
++        except (AssertionError,ValueError):raise ValueError('Invalid CP2K cell lengths or angles') from None
++        if abs(np.linalg.det(cell))<1.e-12:raise ValueError('Degenerate CP2K cell angles')
++    cell_repeats=repeat_factors(cell_node,'CELL')
++    coord_repeats=repeat_factors(subsys.child('TOPOLOGY'),'TOPOLOGY')
+     periodic=''.join(cell_node.get('PERIODIC',('XYZ',))).upper()
+     if periodic not in ('NONE','X','Y','Z','XY','XZ','YZ','XYZ'):raise ValueError('Invalid CP2K periodicity')
+     pbc=tuple(axis in periodic for axis in 'XYZ') if np.linalg.det(cell)!=0 else (False,)*3
+@@ -80,15 +106,21 @@
+     if scaled:
+         if abs(np.linalg.det(cell))<1.e-12:raise ValueError('Scaled CP2K coordinates require an inline cell')
+         positions=np.asarray(positions)@cell
+-    frame=Frame(symbols,positions,cell,pbc,info={'source_line':coord.line,'source_kind':'cp2k_in'})
+-    repeats=[int(x) for x in cell_node.get('MULTIPLE_UNIT_CELL',('1','1','1'))]
+-    if repeats!=[1,1,1]:
+-        from ase import Atoms
+-        if len(repeats)!=3 or min(repeats)<1 or len(symbols)*int(np.prod(repeats))>100000:
+-            raise ValueError('Invalid or excessive CP2K MULTIPLE_UNIT_CELL')
+-        atoms=Atoms(symbols,positions=positions,cell=cell,pbc=pbc).repeat(repeats)
+-        frame=Frame(atoms.get_chemical_symbols(),atoms.positions,atoms.cell.array,pbc,info=frame.info)
+-    return frame
++    copies=prod(coord_repeats)
++    if copies!=1:
++        if len(symbols)*copies>100000:raise ValueError('Excessive CP2K TOPOLOGY/MULTIPLE_UNIT_CELL')
++        if abs(np.linalg.det(cell))<1.e-12:raise ValueError('CP2K coordinate repetition requires an inline cell')
++        # Both fractional coordinates and replica translations use the original
++        # unit cell. CP2K enumerates replicas with X changing fastest.
++        shifts=np.asarray([(x,y,z) for z,y,x in product(*(range(n) for n in coord_repeats[::-1]))])@cell
++        positions=(np.asarray(positions)[None,:,:]+shifts[:,None,:]).reshape(-1,3)
++        symbols=symbols*copies
++    # CELL changes only the displayed cell, never the coordinate count/scale.
++    try:cell=cell*np.asarray(cell_repeats,dtype=float)[:,None]
++    except OverflowError:raise ValueError('Excessive CP2K CELL/MULTIPLE_UNIT_CELL') from None
++    if not np.all(np.isfinite(cell)):raise ValueError('Non-finite repeated CP2K cell')
++    return Frame(symbols,positions,cell,pbc,info={'source_line':coord.line,'source_kind':'cp2k_in',
++                 'cp2k_cell_repeats':cell_repeats,'cp2k_topology_repeats':coord_repeats})
+ 
+ 
+ def read_cp2k_input(path):
+@@ -114,6 +146,8 @@
+             frame=inline_frame(subsys)
+         except (ValueError,IndexError) as exc:notes.append(str(exc));frame=None
+         if frame is not None:
++            if frame.info['cp2k_topology_repeats']!=(1,1,1) and frame.info['cp2k_topology_repeats']!=frame.info['cp2k_cell_repeats']:
++                notes.append('CP2K requires matching CELL/TOPOLOGY MULTIPLE_UNIT_CELL when TOPOLOGY repeats coordinates; independent input specifications are shown.')
+             frame.info.update(converter_charge=job.charge,converter_mult=job.multiplicity,cp2k_project=project,
+                               cp2k_run_type=run,calculation_index=index,stage_index=index)
+             frames.append(frame)
+--- a/lele/qe_results.py
++++ b/lele/qe_results.py
+@@ -12,6 +12,12 @@
+ def number(text):return float(text.replace('D','E').replace('d','e'))
+ def numbers(text):return [number(s) for s in re.findall(NUMBER,text)]
+ TAU = re.compile(r'^\s*\d+\s+(\S+).*?tau\(\s*\d+\s*\)\s*=\s*\(([^)]+)\)')
++BFGS_CONVERGED = re.compile(r'^\s*bfgs\s+converged\b',re.I)
++OPTIMIZATION_FAILED = re.compile(
++    r'\bmaximum\s+(?:number\s+of\s+)?steps\s+(?:has\s+been\s+)?reached\b'
++    r'|\bbfgs\s+(?:failed|not\s+converged)\b'
++    r'|\bconvergence\s+(?:not\s+achieved|has\s+not\s+been\s+achieved)\b'
++    r'|\bError\s+in\s+routine\b|\bMaximum\s+CPU\s+time\s+exceeded\b',re.I)
+ 
+ 
+ @dataclass
+@@ -92,7 +98,7 @@
+     from ase.io.espresso import get_atomic_positions,get_cell_parameters,label_to_symbol
+     lines=read_output_lines(path)
+     result=QeResults('Quantum ESPRESSO',periodic_geometry_seen=True,force_unit='eV/Å')
+-    current=None;cell=None;alat=None;job=None;success=False;i=0
++    current=None;cell=None;alat=None;job=None;success=False;i=0;failed_jobs=set()
+     report=load_progress('Quantum ESPRESSO: structures, energies and forces',len(lines))
+     while i<len(lines):
+         if i%256==0:report(i);check_load_cancelled()
+@@ -123,7 +129,8 @@
+             if rows is None or len(rows)!=nat:raise ValueError('Incomplete QE ATOMIC_POSITIONS')
+             geometry=Frame([label_to_symbol(r[0]) for r in rows],np.asarray([r[1] for r in rows]),cell.copy(),(True,)*3,
+                            info={'qe_alat_ang':alat,'source_kind':'qe_out'})
+-            current=CalculationStep(job.index,i+1,geometry,converged=success and same_geometry(current.geometry,geometry))
++            success=success and same_geometry(current.geometry,geometry)
++            current=CalculationStep(job.index,i+1,geometry,converged=success)
+             result.steps.append(current);i+=nat+1;continue
+         match=re.match(r'^\s*!\s+total energy\s*=\s*('+NUMBER+r')\s+Ry',line)
+         if match:
+@@ -145,13 +152,23 @@
+                 values=np.asarray(data)*Ry/Bohr;maximum=float(np.abs(values).max());rms=float(np.sqrt(np.mean(values**2)))
+                 current.geometry.info.update(qe_forces_ev_ang=values,cartesian_max_force_ev_ang=maximum,cartesian_rms_force_ev_ang=rms)
+                 current.convergence.update(max_force=(maximum,None),rms_force=(rms,None))
+-        if 'End of BFGS Geometry Optimization' in line or re.search(r'\bbfgs converged\b',line):success=True;current.converged=True
++        # The BFGS end banner and JOB DONE are also printed after failed or
++        # exhausted optimizations. Only an explicit success confirms geometry.
++        if OPTIMIZATION_FAILED.search(line):
++            failed_jobs.add(job.index);success=False;current.converged=False
++        elif BFGS_CONVERGED.search(line) and job.index not in failed_jobs:
++            success=True;current.converged=True
+         if 'JOB DONE.' in line:job.termination='Completed (JOB DONE)'
+         if 'number of electrons' in line:
+             values=numbers(line.split('=')[-1])
+             if values:current.geometry.info['qe_valence_electrons']=values[0]
+         i+=1
+     if not result.jobs:raise ValueError('No PWSCF calculation header')
++    if failed_jobs:
++        # A later failure also invalidates earlier final-coordinate reprints in
++        # this job. One pass keeps long/concatenated outputs linear in size.
++        for step in result.steps:
++            if step.job_index in failed_jobs:step.converged=False
+     if len(result.steps)>1:
+         a,b=result.steps[-2:]
+         if b.energy_ev is None and b.job_index==a.job_index and same_geometry(a.geometry,b.geometry):a.converged|=b.converged;result.steps.pop()
+--- a/tests/test_long_operations_v270.py
++++ b/tests/test_long_operations_v270.py
+@@ -30,7 +30,7 @@
+             if variable:yield f'CELL_PARAMETERS (angstrom)\n{5+i*.0001:.8f} 0 0\n0 5 0\n0 0 5\n\n'
+             yield f'ATOMIC_POSITIONS (angstrom)\nH 0 0 0\nH 0 0 {1+i*.00001:.8f}\n'
+         yield f'!    total energy = {-2-i*.001:.9f} Ry\n'
+-    yield 'End of BFGS Geometry Optimization\nJOB DONE.\n'
++    yield f'bfgs converged in {count} scf cycles and {count} bfgs steps\nEnd of BFGS Geometry Optimization\nJOB DONE.\n'
+ 
+ 
+ def nwchem_block(number,geometry=True):
+@@ -64,14 +64,14 @@
+     assert not any(f.info.get('optimization_converged') for f in doc.frames[:-1])
+     assert doc.frames[-1].info['optimization_converged']
+     assert any('Quantum ESPRESSO' in e[0] for e in events)
+-    path.write_text(path.read_text().replace('End of BFGS Geometry Optimization','Maximum steps reached'))
++    path.write_text(path.read_text().replace(f'bfgs converged in 1003 scf cycles and 1003 bfgs steps','The maximum number of steps has been reached.'))
+     assert not any(f.info.get('optimization_converged') for f in load_document(path).frames)
+ 
+ 
+ def test_qe_job_boundaries_and_final_reprinted_structure(tmp_path):
+     path=tmp_path/'jobs.pwo'
+     text=''.join(qe_text(3))+'ATOMIC_POSITIONS (angstrom)\nH 0 0 0\nH 0 0 1.00002\n'
+-    path.write_text(text+''.join(qe_text(2)).replace('End of BFGS Geometry Optimization','Stopped'))
++    path.write_text(text+''.join(qe_text(2)).replace('bfgs converged in 2 scf cycles and 2 bfgs steps','Stopped'))
+     frames=load_document(path).frames
+     assert len(frames)==6 and frames[3].info['optimization_converged']
+     assert not frames[-1].info.get('optimization_converged')
+--- /dev/null
++++ b/tests/test_acceptance_v2101.py
+@@ -0,0 +1,105 @@
++"""Independent v2.10.0 acceptance cases retained as v2.10.1 regressions."""
++from pathlib import Path
++import numpy as np
++import pytest
++from lele.formats import load_document
++
++
++def write(tmp_path, name, text):
++    path = tmp_path / name
++    path.write_text(text, encoding='utf-8')
++    return path
++
++
++QE_HEADER = '''Program PWSCF v.7.3.1 starts
++ number of atoms/cell = 2
++ lattice parameter (alat) = 10.0 a.u.
++ crystal axes: (cart. coord. in units of alat)
++ a(1) = ( 1.0 0.0 0.0 )
++ a(2) = ( 0.0 1.0 0.0 )
++ a(3) = ( 0.0 0.0 1.0 )
++ positions (alat units)
++ 1 H tau( 1) = ( 0.0 0.0 0.0 )
++ 2 H tau( 2) = ( 0.0 0.0 0.2 )
++! total energy = -2.00000000 Ry
++'''
++
++
++@pytest.mark.parametrize('ending,expected', [
++    ('The maximum number of steps has been reached.\nEnd of BFGS Geometry Optimization\nJOB DONE.\n', False),
++    ('bfgs converged in 2 scf cycles and 1 bfgs steps\nEnd of BFGS Geometry Optimization\nJOB DONE.\n', True),
++    ('JOB DONE.\n', False),
++], ids=['A1_maxsteps_is_not_converged', 'positive_convergence', 'normal_exit_only'])
++def test_qe_optimization_status(tmp_path, ending, expected):
++    doc = load_document(write(tmp_path, 'qe_status.pwo', QE_HEADER + ending))
++    assert bool(doc.frames[-1].info.get('optimization_converged')) is expected
++
++
++def cp2k_input(cell_repeat='', topology_repeat='', angles=''):
++    return f'''&GLOBAL
++ RUN_TYPE ENERGY
++&END GLOBAL
++&FORCE_EVAL
++ METHOD QS
++ &SUBSYS
++  &CELL
++   ABC 4 4 4
++   {cell_repeat}
++   {angles}
++  &END CELL
++  &COORD
++   He 1 1 1
++  &END COORD
++  &TOPOLOGY
++   {topology_repeat}
++  &END TOPOLOGY
++ &END SUBSYS
++&END FORCE_EVAL
++'''
++
++
++@pytest.mark.parametrize('cell_repeat,topology_repeat,natoms,cell_x', [
++    ('MULTIPLE_UNIT_CELL 2 1 1', '', 1, 8),
++    ('', 'MULTIPLE_UNIT_CELL 2 1 1', 2, 4),
++    ('MULTIPLE_UNIT_CELL 2 1 1', 'MULTIPLE_UNIT_CELL 2 1 1', 2, 8),
++    ('', '', 1, 4),
++], ids=['A2_cell_only', 'A2_topology_only', 'both_repeat', 'no_repeat'])
++def test_cp2k_cell_and_coordinate_repetitions_are_independent(tmp_path, cell_repeat, topology_repeat, natoms, cell_x):
++    doc = load_document(write(tmp_path, 'repeat.inp', cp2k_input(cell_repeat, topology_repeat)))
++    frame = doc.frames[0]
++    assert len(frame.symbols) == natoms
++    np.testing.assert_allclose(frame.cell, np.diag([cell_x, 4, 4]))
++
++
++@pytest.mark.parametrize('keyword', ['ALPHA_BETA_GAMMA', 'ANGLES'])
++def test_cp2k_angle_alias_preserves_cell(tmp_path, keyword):
++    doc = load_document(write(tmp_path, 'angles.inp', cp2k_input(angles=f'{keyword} 90 90 120')))
++    a, b, c = doc.frames[0].cell
++    gamma = np.degrees(np.arccos(np.dot(a,b) / np.linalg.norm(a) / np.linalg.norm(b)))
++    assert gamma == pytest.approx(120.)
++    assert abs(np.linalg.det(doc.frames[0].cell)) == pytest.approx(64*np.sin(2*np.pi/3))
++
++
++def test_siesta_inline_fractional_input(tmp_path):
++    text = '''NumberOfAtoms 2
++NumberOfSpecies 1
++LatticeConstant 4 Ang
++%block ChemicalSpeciesLabel
++1 14 Si
++%endblock ChemicalSpeciesLabel
++%block LatticeVectors
++1 0 0
++0 1 0
++0 0 1
++%endblock LatticeVectors
++AtomicCoordinatesFormat Fractional
++%block AtomicCoordinatesAndAtomicSpecies
++0 0 0 1
++0.25 0.25 0.25 1
++%endblock AtomicCoordinatesAndAtomicSpecies
++'''
++    doc = load_document(write(tmp_path, 'siesta.fdf', text))
++    assert doc.frames[0].symbols == ['Si', 'Si']
++    np.testing.assert_allclose(doc.frames[0].positions, [[0,0,0],[1,1,1]])
++    np.testing.assert_allclose(doc.frames[0].cell, np.eye(3)*4)
++    assert all(doc.frames[0].pbc)
+--- /dev/null
++++ b/tests/test_qe_cp2k_fixes_v2101.py
+@@ -0,0 +1,157 @@
++"""Scientific edge cases for the three independent acceptance defects."""
++import numpy as np
++import pytest
++from lele.formats import load_document
++from lele.project_file import save_project,load_project
++from lele.render_options import RenderOptions
++from test_acceptance_v2101 import QE_HEADER,cp2k_input,write
++
++
++SUCCESS='bfgs converged in 2 scf cycles and 1 bfgs steps\n'
++END='End of BFGS Geometry Optimization\nJOB DONE.\n'
++REPRINT='ATOMIC_POSITIONS (alat)\nH 0 0 0\nH 0 0 .2\n'
++
++
++@pytest.mark.parametrize('ending,expected',[
++    (END,False),
++    ('bfgs failed after 2 scf cycles and 1 bfgs steps, convergence not achieved\n'+END,False),
++    ('convergence NOT achieved after 100 iterations: stopping\n'+END,False),
++    ('Maximum CPU time exceeded\n'+END,False),
++    ('Error in routine electrons (1):\n'+END,False),
++    (' BFGS CONVERGED in 2 scf cycles and 1 bfgs steps\n'+END,True),
++])
++def test_qe_only_explicit_optimization_success_confirms_geometry(tmp_path,ending,expected):
++    d=load_document(write(tmp_path,'status.pwo',QE_HEADER+ending))
++    assert bool(d.frames[-1].info.get('optimization_converged')) is expected
++    assert d.calculation_results.steps[-1].converged is expected
++
++
++@pytest.mark.parametrize('failure',[
++    'The maximum number of steps has been reached.\n',
++    'bfgs failed after 2 scf cycles and 1 bfgs steps, convergence not achieved\n',
++    'Error in routine bfgs (1):\n',
++])
++@pytest.mark.parametrize('failure_first',[False,True])
++def test_qe_failure_has_priority_over_success_and_reprints(tmp_path,failure,failure_first):
++    tail=failure+SUCCESS+REPRINT if failure_first else SUCCESS+REPRINT+failure
++    d=load_document(write(tmp_path,'failed.pwo',QE_HEADER+tail+END))
++    assert not any(s.converged for s in d.calculation_results.steps)
++    assert not any(f.info.get('optimization_converged') for f in d.frames)
++    # A completed PWSCF process can still have an unconverged optimization.
++    assert d.calculation_results.jobs[0].termination=='Completed (JOB DONE)'
++    assert d.frames[0].info['qe_total_energy_ry']==-2.
++
++
++def test_qe_failed_job_does_not_clear_other_jobs_success(tmp_path):
++    failed=QE_HEADER+SUCCESS+REPRINT+'The maximum number of steps has been reached.\n'+END
++    good=QE_HEADER+SUCCESS+END
++    d=load_document(write(tmp_path,'jobs.pwo',good+failed+good))
++    assert [s.converged for s in d.calculation_results.steps]==[True,False,False,True]
++    assert [f.info['calculation_index'] for f in d.frames]==[0,1,1,2]
++
++
++def test_qe_success_does_not_propagate_to_new_geometry_reprinted_twice(tmp_path):
++    changed=REPRINT.replace('H 0 0 .2','H 0 0 .3')
++    d=load_document(write(tmp_path,'changed.pwo',QE_HEADER+SUCCESS+changed+changed+END))
++    assert [s.converged for s in d.calculation_results.steps]==[True,False]
++    assert d.frames[0].info['optimization_converged']
++    assert not d.frames[-1].info.get('optimization_converged')
++
++
++OBLIQUE='''&FORCE_EVAL
++ &SUBSYS
++  &CELL
++   A 4 0 0
++   B -2 3 0
++   C 0 0 6
++   PERIODIC XY
++   MULTIPLE_UNIT_CELL 2 3 1
++  &END
++  &COORD
++   SCALED
++   He .25 .5 .5
++   H .75 .25 .125
++  &END
++  &TOPOLOGY
++   MULTIPLE_UNIT_CELL 3 2 1
++  &END
++ &END
++&END
++'''
++
++
++@pytest.mark.parametrize('scaled',[True,False])
++def test_cp2k_unequal_repeats_oblique_cell_positions_species_and_order(tmp_path,scaled):
++    text=OBLIQUE
++    if not scaled:
++        text=text.replace('SCALED','UNIT bohr').replace('He .25 .5 .5','He 0 2.834589188753655 5.66917837750731')
++        text=text.replace('H .75 .25 .125','H 4.724315314589425 1.4172945943768276 1.4172945943768276')
++    f=load_document(write(tmp_path,'oblique.inp',text)).frames[0]
++    np.testing.assert_allclose(f.cell,[[8,0,0],[-6,9,0],[0,0,6]])
++    assert f.pbc==(True,True,False) and f.symbols==['He','H']*6
++    shifts=np.array([[0,0,0],[4,0,0],[8,0,0],[-2,3,0],[2,3,0],[6,3,0]])
++    base=np.array([[0,1.5,3],[2.5,.75,.75]])
++    np.testing.assert_allclose(f.positions,(base[None,:,:]+shifts[:,None,:]).reshape(-1,3),atol=1.e-8)
++
++
++def test_cp2k_cell_only_does_not_rescale_fractional_coordinates(tmp_path):
++    text=OBLIQUE.replace('MULTIPLE_UNIT_CELL 3 2 1','MULTIPLE_UNIT_CELL 1 1 1')
++    f=load_document(write(tmp_path,'cell_only.inp',text)).frames[0]
++    assert f.symbols==['He','H']
++    np.testing.assert_allclose(f.positions,[[0,1.5,3],[2.5,.75,.75]])
++    np.testing.assert_allclose(f.cell,[[8,0,0],[-6,9,0],[0,0,6]])
++
++
++@pytest.mark.parametrize('keyword',['ALPHA_BETA_GAMMA','ANGLES'])
++@pytest.mark.parametrize('value',['[deg] 90 90 120','[rad] 1.5707963267948966 1.5707963267948966 2.0943951023931953'])
++def test_cp2k_angles_support_explicit_degree_and_radian_units(tmp_path,keyword,value):
++    f=load_document(write(tmp_path,'angles.inp',cp2k_input(angles=f'{keyword} {value}'))).frames[0]
++    np.testing.assert_allclose(f.cell,[[4,0,0],[-2,2*np.sqrt(3),0],[0,0,4]],atol=1.e-12)
++    assert abs(np.linalg.det(f.cell))==pytest.approx(32*np.sqrt(3))
++
++
++@pytest.mark.parametrize('value',['90 90','90 90 90 90','0 90 90','90 90 180','10 10 170','60 60 120','[grad] 90 90 120'])
++def test_cp2k_invalid_angles_do_not_silently_invent_orthogonal_cell(tmp_path,value):
++    d=load_document(write(tmp_path,'bad_angles.inp',cp2k_input(angles='ANGLES '+value)))
++    assert not d.frames and ('angle' in d.note.lower() or 'cell' in d.note.lower())
++
++
++@pytest.mark.parametrize('section',['cell','topology'])
++@pytest.mark.parametrize('value',['2 1','0 1 1','-1 1 1','1.5 1 1'])
++def test_cp2k_invalid_repeat_factors_withhold_geometry_and_report_section(tmp_path,section,value):
++    values={section+'_repeat':'MULTIPLE_UNIT_CELL '+value}
++    d=load_document(write(tmp_path,'bad_repeat.inp',cp2k_input(**values)))
++    assert not d.frames and section.upper()+'/MULTIPLE_UNIT_CELL' in d.note
++
++
++def test_cp2k_topology_atom_guard_uses_nonoverflowing_integer_product(tmp_path):
++    text=cp2k_input(topology_repeat='MULTIPLE_UNIT_CELL 4294967296 4294967296 1')
++    d=load_document(write(tmp_path,'excessive.inp',text))
++    assert not d.frames and 'Excessive CP2K TOPOLOGY/MULTIPLE_UNIT_CELL' in d.note
++
++
++def test_cp2k_missing_cell_does_not_make_coincident_replicas(tmp_path):
++    text=cp2k_input(topology_repeat='MULTIPLE_UNIT_CELL 2 1 1').replace('ABC 4 4 4','PERIODIC NONE')
++    d=load_document(write(tmp_path,'no_cell.inp',text))
++    assert not d.frames and 'coordinate repetition requires an inline cell' in d.note
++
++
++def test_unequal_topology_repeats_include_cp2k_calculation_compatibility_note(tmp_path):
++    d=load_document(write(tmp_path,'repeat.inp',OBLIQUE))
++    assert len(d.frames[0].symbols)==12 and 'requires matching CELL/TOPOLOGY' in d.note
++
++
++def test_fixed_geometry_and_qe_status_survive_project_roundtrip(tmp_path):
++    docs=[load_document(write(tmp_path,'oblique.inp',OBLIQUE)),
++          load_document(write(tmp_path,'good.pwo',QE_HEADER+SUCCESS+REPRINT+END)),
++          load_document(write(tmp_path,'failed.pwo',QE_HEADER+'The maximum number of steps has been reached.\n'+END))]
++    state=dict(documents=[dict(document=d,options=RenderOptions(),frame_index=0) for d in docs],current_document=0)
++    path=tmp_path/'fixed.lele';save_project(path,state)
++    restored=[entry['document'] for entry in load_project(path)['documents']]
++    for actual,expected in zip(restored,docs):
++        assert actual.frames[0].symbols==expected.frames[0].symbols
++        np.testing.assert_array_equal(actual.frames[0].positions,expected.frames[0].positions)
++        np.testing.assert_array_equal(actual.frames[0].cell,expected.frames[0].cell)
++        assert actual.frames[0].energy_ev==expected.frames[0].energy_ev
++    assert restored[1].frames[-1].info['optimization_converged']
++    assert not restored[2].frames[-1].info.get('optimization_converged')
+--- /dev/null
++++ b/docs/FIX_A1_A3_v2.10.1_CN.md
+@@ -0,0 +1,35 @@
++# LELE v2.10.1：A1–A3 修复说明
++
++日期：2026-11-02。基于本次上传的 v2.10.0 源码和独立验收报告修复。
++
++| 问题 | 修复后的行为 |
++| --- | --- |
++| A1：QE 达到最大步数仍显示收敛 | 只有明确的 `bfgs converged` 才确认优化成功。单独的 BFGS 结束提示或 `JOB DONE` 不标记收敛；同一 PWSCF 任务内的失败、最大步数和错误信息优先。 |
++| A2：CP2K 晶胞与原子重复混用 | `CELL/MULTIPLE_UNIT_CELL` 只扩展晶胞，`TOPOLOGY/MULTIPLE_UNIT_CELL` 只复制原子坐标。分数坐标转换和复制平移都使用原始单胞。 |
++| A3：CP2K `ANGLES` 被忽略 | 与 `ALPHA_BETA_GAMMA` 使用同一角度解析，支持默认度数及 `[deg]`、`[rad]`；保留非正交角度和体积。 |
++
++QE 的普通程序完成状态与优化收敛分别保存。成功后的相同最终结构、相同结构上的最终 SCF 求值仍按原有记录规则保留；新结构不会仅因早先出现过成功提示而继承收敛。串接的不同 PWSCF 任务互不影响。
++
++CP2K 验收中的单个 He、4 Å 单胞案例，读取结果为：
++
++| CELL 重复 | TOPOLOGY 重复 | 原子数 | 晶胞边长 / Å | 原子 x 坐标 / Å |
++| --- | --- | ---: | --- | --- |
++| 2×1×1 | 默认 | 1 | 8、4、4 | 1 |
++| 默认 | 2×1×1 | 2 | 4、4、4 | 1、5 |
++| 2×1×1 | 2×1×1 | 2 | 8、4、4 | 1、5 |
++| 默认 | 默认 | 1 | 4、4、4 | 1 |
++
++这些是读取器的独立参数验收。CP2K 当前源码在 TOPOLOGY 实际复制原子时要求两处重复数一致，因此不一致时 LELE 保留两项输入含义，并在读取说明中提示该计算兼容性要求。表格不表示每种参数组合都是可直接运行的 CP2K 作业。
++
++`ABC 4 4 4` 配合 `ANGLES 90 90 120` 的体积现在约为 **55.42562584 Å³**。缺失、非法或无法支持的角度单位会给出读取说明并不生成伪造的几何结构。非法重复数、缺少重复平移所需晶胞以及过量原子复制也会明确报告。
++
++原有 10 个独立验收用例已作为 `tests/test_acceptance_v2101.py` 纳入回归；扩展用例位于 `tests/test_qe_cp2k_fixes_v2101.py`。旧的 QE 长轨迹成功样例补上真实的明确收敛行，失败样例仍保留 BFGS 结束行，避免再次漏测两行同时出现的情况。
++
++格式依据：
++
++- [QE 官方 BFGS 终止实现](https://github.com/QEF/q-e/blob/develop/Modules/bfgs_module.f90)：`terminate_bfgs` 区分明确成功、失败和最大步数；不同分支都会打印结束提示。
++- [CP2K CELL 定义](https://manual.cp2k.org/cp2k-2026_1-branch/CP2K_INPUT/FORCE_EVAL/SUBSYS/CELL.html)：晶胞重复和 `ANGLES` 别名、角度单位。
++- [CP2K TOPOLOGY 定义](https://manual.cp2k.org/cp2k-2026_1-branch/CP2K_INPUT/FORCE_EVAL/SUBSYS/TOPOLOGY.html)：坐标重复的独立含义。
++- [CP2K 原子坐标读取](https://github.com/cp2k/cp2k/blob/master/src/atoms_input.F)与[原子复制实现](https://github.com/cp2k/cp2k/blob/master/src/topology_multiple_unit_cell.F)：原始单胞、复制平移、X 方向优先顺序及重复数兼容性。
++
++具体复验结果和运行边界见 [v2.10.1 验证记录](VALIDATION_v2.10.1.md)。
+--- /dev/null
++++ b/docs/VALIDATION_v2.10.1.md
+@@ -0,0 +1,48 @@
++# LELE v2.10.1 复验记录
++
++日期：2026-11-02。修复范围为本次 v2.10.0 独立验收的 A1–A3。
++
++**结果：757 项测试与 78 个子测试全部通过，0 失败、0 错误、0 跳过，耗时 43.80 秒。** 原始独立验收脚本从修复前的 4 失败、6 通过，变为修复后的 10 项全部通过。
++
++| 检查 | 结果 | 证据 |
++| --- | --- | --- |
++| 修复前独立复现 | 4 失败、6 通过；分别对应 A1、A2 两种情形、A3 | [原版结果](qa_v2.10.1/independent_before.xml) |
++| 修复后原始独立脚本 | 10 通过，无失败或跳过 | [修复后结果](qa_v2.10.1/independent_after.xml) |
++| 全量回归 | 757 测试、78 子测试通过，0 失败、错误、跳过 | [完整 XML](qa_v2.10.1/full_v2101.xml)、[日志](qa_v2.10.1/full_v2101.log) |
++| 新增永久用例 | 保留独立验收的 10 项，另加 40 项扩展用例 | `tests/test_acceptance_v2101.py`、`tests/test_qe_cp2k_fixes_v2101.py` |
++| 原始私人样例 | 原有四份 QE 文件和 CP2K Molden 文件的实际文件测试均执行并通过 | 全量报告中的 `test_real_supplied_qe_files`、`test_actual_124_atom_example_all_frequencies_and_frozen_rows` |
++| 原始源码保留 | 原包 452 个文件均保留；只修改其中 7 个文件，并增加修复说明、测试和验证记录 | [源码核对](qa_v2.10.1/source_integrity.json) |
++
++JUnit 的 `tests` 汇总值为 835（含 78 个子测试），实际 `<testcase>` 元素为 757，不将汇总值写成 835 个独立测试函数。
++
++## 科学数据和状态检查
++
++- QE：最大步数与 BFGS 结束行同时出现时不再标记收敛；普通 `JOB DONE` 不确认优化成功；明确成功继续生效。失败优先级、最终重复结构、新几何、独立 PWSCF 任务，以及项目保存恢复均有覆盖。
++- CP2K：分别验证 CELL 单独扩展、TOPOLOGY 单独复制、两处相同和两处不等的重复数；包括分数坐标、Bohr 坐标、斜晶胞、原子种类/顺序和非 XYZ 周期性。复制使用原始单胞，X 方向索引变化最快。
++- CP2K：`ANGLES`、`ALPHA_BETA_GAMMA`、显式 `[deg]` 与 `[rad]` 得到相同晶胞；γ=120° 和体积 55.42562584 Å³ 正确。无效角度、退化晶胞、无晶胞复制、非法及过量重复数不会静默生成错误结构。
++- QE 实际 `job.out` 仍保留 5 个求值/结构记录、最终原始能量 −659.95599528 Ry、最终体积 56.0357202256568 Å³及明确收敛标记。PHONON 的 48 个频率与 matdyn 的 60 个模式继续通过原有独立断言；CP2K Molden 的 124 原子、6 个模式及固定原子零位移也通过。
++
++四份 QE 文件 SHA256 与 v2.10.0 随包记录逐一相同；CP2K Molden SHA256 为 `6697fab213a9b8ba13513b897992ea8b90894cbab21e0e96e407c07cbde42cc7`。这些私人源数据未放入修复包。
++
++## 运行方法和环境
++
++在源码根目录安装依赖后运行：
++
++```bash
++LELE_QE_EXAMPLE_DIR=/path/to/four/QE/files \
++LELE_CP2K_MOLDEN_EXAMPLE=/path/to/COF2_O2_a_freq-VIBRATIONS-1.mol \
++QT_QPA_PLATFORM=offscreen VTK_DEFAULT_OPENGL_WINDOW=vtkEGLRenderWindow \
++python -m pytest tests -q --junitxml=full_retest.xml
++```
++
++原始独立验收脚本和四个最小复现保存在 `docs/qa_v2.10.1/`，可单独运行：
++
++```bash
++PYTHONPATH=. python -m pytest docs/qa_v2.10.1/test_independent_acceptance.py -q
++```
++
++Python 3.12.14、ASE 3.29.0、NumPy 2.3.5、SciPy 1.17.0、PySide6 6.12.0、VTK 9.7.1、pytest 9.2.0；Linux，Qt offscreen / VTK EGL。未设置私人样例环境变量时，那两个实际文件测试会按设计跳过；本次已提供文件路径，实际无跳过。
++
++完整回归保留现有原生 VTK 渲染、项目恢复、动画/导出、选择编辑和多格式长轨迹检查。此次交付为源码修复包，未构建或运行 Windows EXE；Windows 显卡、高 DPI 与可执行文件分发不属于本次已验证结果。
++
++实现与格式依据见 [A1–A3 修复说明](FIX_A1_A3_v2.10.1_CN.md)。

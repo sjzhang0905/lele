@@ -1,0 +1,48 @@
+{
+  "display": "Qt offscreen, production renderer with a native VTK EGL target",
+  "welcome": {
+    "removed_open_button": true,
+    "removed_drop_hint": true,
+    "glossy_options": "Glossy",
+    "lighting_control": "Glossy",
+    "palette_control": "Sibyl",
+    "backend_ready": true
+  },
+  "periodic": {
+    "basis_setting": "Auto",
+    "axis_labels": [
+      "a",
+      "b",
+      "c"
+    ],
+    "colors": {
+      "O": "#E50000",
+      "C": "#8E8E8E",
+      "H": "#CCCCCC",
+      "Ni": "#5B7AC1",
+      "Fe": "#7F7AC6",
+      "S": "#FFC628"
+    }
+  },
+  "export_order": [
+    "O",
+    "C",
+    "H",
+    "Ni",
+    "Fe",
+    "S",
+    "Co",
+    "H"
+  ],
+  "molecular_axis_labels": [
+    "X",
+    "Y",
+    "Z"
+  ],
+  "return_periodic_axis_labels": [
+    "a",
+    "b",
+    "c"
+  ],
+  "ok": true
+}

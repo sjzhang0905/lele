@@ -3,7 +3,7 @@
 All values are computed from the source geometry. Missing/undefined values
 remain NaN. Alignment applies proper rotations only and never edits a Frame.
 """
-from dataclasses import dataclass
+from dataclasses import dataclass,replace
 import numpy as np
 
 from .core import Frame, measure, rotation_between_vectors
@@ -23,6 +23,8 @@ def displacement_share(mode, selected, atom_count):
     if data is None or data.shape != (atom_count, 3):
         return None
     weights = np.einsum('ij,ij->i', data, data)
+    imaginary=getattr(mode,'imaginary_displacements',None)
+    if imaginary is not None:weights+=np.einsum('ij,ij->i',imaginary,imaginary)
     total = float(weights.sum())
     if not np.isfinite(total) or total <= 1.e-30:
         return None
@@ -41,6 +43,8 @@ class GeometryParameter:
     atoms: tuple[int, ...]
     other: tuple[int, ...] = ()
     nearest_images: bool = False
+    reference_order: tuple = ()
+    reference_symbols: tuple = ()
 
     @property
     def unit(self):
@@ -126,12 +130,26 @@ class GeometryParameter:
         return float(np.linalg.norm(np.cross(delta, direction)))
 
 
-def parameter_values(document, sequence, parameter, symbols, *, unwrap=False):
+def parameter_values(document, sequence, parameter, symbols, *, unwrap=False,reference=None):
+    from .output_text import progress_items
+    from .atom_indices import source_order,mapping_from_order
+    if reference is None:
+        reference=next((f for f in document.frames if f.symbols is symbols),None)
+    if reference is None:
+        reference=next((f for f in document.frames if tuple(f.symbols)==tuple(symbols)),None)
+    order=parameter.reference_order or (source_order(reference) if reference is not None else ())
+    reference_symbols=parameter.reference_symbols or tuple(symbols)
     values = []
-    for index in sequence:
+    for index in progress_items(sequence,'Geometry monitor: '+parameter.label):
         frame = document.frames[index]
         try:
-            value = parameter.value(frame) if tuple(frame.symbols) == tuple(symbols) else np.nan
+            parameter.validate(len(reference_symbols))
+            mapping=mapping_from_order(reference_symbols,order,frame,allow_partial=True)
+            if mapping is None or any(mapping[i] is None for i in parameter.atoms+parameter.other):value=np.nan
+            else:
+                mapped=replace(parameter,atoms=tuple(mapping[i] for i in parameter.atoms),
+                               other=tuple(mapping[i] for i in parameter.other))
+                value=mapped.value(frame)
         except (ValueError, IndexError, FloatingPointError, np.linalg.LinAlgError):
             value = np.nan
         values.append(value)
@@ -151,11 +169,15 @@ class DisplayAlignment:
     reference_index: int = 0
 
     def transform(self, frame):
-        if frame.symbols != self.reference.symbols:
+        from .atom_indices import atom_mapping
+        mapping=atom_mapping(self.reference,frame,allow_partial=True)
+        if mapping is None:
             raise ValueError('Atom count/order differs from the alignment reference')
-        if not self.indices or any(i < 0 or i >= len(frame.symbols) for i in self.indices):
+        if not self.indices or any(i < 0 or i >= len(self.reference.symbols) for i in self.indices):
             raise ValueError('Invalid alignment atoms')
-        source = frame.positions[list(self.indices)]
+        if any(i>=len(mapping) or mapping[i] is None for i in self.indices):
+            raise ValueError('Atom count/order differs from the alignment reference: selected atom identity is missing')
+        source = frame.positions[[mapping[i] for i in self.indices]]
         target = self.reference.positions[list(self.indices)]
         a, b = source.mean(axis=0), target.mean(axis=0)
         x, y = source - a, target - b

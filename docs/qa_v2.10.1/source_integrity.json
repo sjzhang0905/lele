@@ -1,0 +1,44 @@
+{
+  "baseline_archive": "LELE_v2.10.0.tar(1).gz",
+  "baseline_sha256": "88a0689af3e6c197c5831d9039e70822af0244625f97de51e0fab3a214a7a5fe",
+  "original_files": 452,
+  "missing_files": [],
+  "changed_original_files": [
+    {
+      "path": "CHANGELOG.md",
+      "before_sha256": "f20e6b379d1bee50e18ff54fa09d005302547b60a76d3239ecae4516c0fa596d",
+      "after_sha256": "919afa78422362009534cb2da6cda5a28a3c361f04723c5750a14b29e6c71a49"
+    },
+    {
+      "path": "README.md",
+      "before_sha256": "82b5a98444a1863a15d5d87b8e45501e9daa2e102d8af4cbb1077de67ad1f726",
+      "after_sha256": "3f7447b2c9241fb5aaf4fbf0ca1b67b4be4a57d429ea60ef4514c1d0ad87c5c2"
+    },
+    {
+      "path": "README_CN.md",
+      "before_sha256": "80d353bdb81fe91308b4b751d506433e43a8237a3312f1bc32626767fe11e213",
+      "after_sha256": "d16477e84786772cd8c24b211ef6789922af64372eaa7f85d25c7531cb1b45a4"
+    },
+    {
+      "path": "lele/__init__.py",
+      "before_sha256": "ca35411b3a55b26ba7d44db58c7edd62f89052ded7a32cc76e40e009ba873123",
+      "after_sha256": "32fb2db118eace9617df408296af3f2cb88dbb4e687ccac9df5ed304e6490ce7"
+    },
+    {
+      "path": "lele/cp2k_input.py",
+      "before_sha256": "c05cbf5bec398efe9428ee5c89c26cc3d8ea48d4cacfc922460b419f242dbf00",
+      "after_sha256": "2907f2e0ac1a034cde3c8692086dc088836860c4d6ececc3528a83ce59b111e8"
+    },
+    {
+      "path": "lele/qe_results.py",
+      "before_sha256": "b4d8192c3f1d42d5ee44faaa888ec3203a12fb7ecf21711ebe6120fe66d28c76",
+      "after_sha256": "4a0ef6f5007c73803e9de847bfca650df510113e5089af79bddf617fca1916bf"
+    },
+    {
+      "path": "tests/test_long_operations_v270.py",
+      "before_sha256": "83b5e681de168458baca8dc16d1d4ca2dd2aec244a0643233893e160e44f21df",
+      "after_sha256": "1150b5960ea8eee3b24bab52160186f8aafc0d1131cc0f1f0472e6e02ab798c6"
+    }
+  ],
+  "unchanged_original_files": 445
+}

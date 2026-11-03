@@ -1,6 +1,7 @@
 """Printed Gaussian permanent and transition moments, grouped by TD block."""
 from dataclasses import dataclass, field
 from pathlib import Path
+from .output_text import read_output_lines, check_load_cancelled, load_progress
 import re
 import numpy as np
 from ase.units import Hartree, Bohr, Debye
@@ -52,6 +53,7 @@ class Transition:
     contributions: list=field(default_factory=list)
     source_line: int|None=None
     source_label: str=''
+    metadata: dict=field(default_factory=dict)
 
 @dataclass
 class ElectronicSpectrum:
@@ -62,10 +64,14 @@ class ElectronicSpectrum:
 
 
 def read_gaussian_properties(path):
-    lines=Path(path).read_text(errors='replace').splitlines()
+    lines=read_output_lines(path)
+    if not any('Dipole moment (' in line or 'Excited State' in line for line in lines):return [], []
     dipoles=[];spectra=[];current=spectrum=None;info={};data={};density='';selected=last=None;i=0
     last_transition=None
+    progress=load_progress('Gaussian: dipoles and excited states',len(lines))
     while i<len(lines):
+        check_load_cancelled()
+        progress(i)
         line=lines[i]
         if _job_boundary(line):
             current=spectrum=None;info={};data={};density='';selected=last=None
@@ -125,6 +131,7 @@ def read_gaussian_properties(path):
             last_transition.contributions.append(TransitionContribution(int(contribution[1]),int(contribution[4]),
                 _number(contribution[6]),contribution[2].upper(),contribution[5].upper(),contribution[3]))
         i+=1
+    progress(len(lines))
     return dipoles,spectra
 
 
@@ -144,8 +151,11 @@ def read_orca_properties(path, results):
 
 
 def vector_for_geometry(reference,vector,frame):
-    if reference is None or reference.symbols!=frame.symbols or not frame.symbols:return None
-    a=reference.positions-reference.positions.mean(axis=0);b=frame.positions-frame.positions.mean(axis=0)
+    from .atom_indices import atom_mapping
+    if reference is None or not frame.symbols:return None
+    mapping=atom_mapping(reference,frame)
+    if mapping is None:return None
+    a=reference.positions-reference.positions.mean(axis=0);b=frame.positions[list(mapping)]-frame.positions.mean(axis=0)
     if np.allclose(a,b,atol=2e-5,rtol=0):return np.asarray(vector).copy()
     u,_,vt=np.linalg.svd(a.T@b);d=np.eye(3);d[-1,-1]=np.linalg.det(u@vt);r=u@d@vt
     return np.asarray(vector)@r if np.allclose(a@r,b,atol=2e-4,rtol=0) else None

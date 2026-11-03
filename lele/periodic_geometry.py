@@ -143,7 +143,7 @@ def normalized_positions(frame: Frame):
     return frame.positions - floors @ cell, floors
 
 
-def periodic_bonds(frame: Frame, cutoff=1.18, *, max_bonds=150000):
+def periodic_bonds(frame: Frame, cutoff=1.0, *, max_bonds=150000):
     """All periodic covalent edges as (i,j,shift) for normalized coordinates.
 
     Multiple images of the same atom pair are intentionally retained so
@@ -166,10 +166,15 @@ def periodic_bonds(frame: Frame, cutoff=1.18, *, max_bonds=150000):
                 _, shift = minimum_image(xyz[j] - xyz[i], frame)
                 edges.add((i, j, shift))
         return sorted(edges)
-    radii = np.array([radius(s) for s in frame.symbols])
-    search_range = min(6.5, float(2 * radii.max() * cutoff))
-    edges = set()
-    first, second, vectors, shifts = periodic_neighbors(frame, search_range, xyz)
+    from .display_reference import bond_limits, pair_limit
+    limits = bond_limits(frame.symbols, cutoff, frame.info.get('bond_model', 'Chemcraft pair ranges'))
+    from .element_rules import frame_rules, pair_decision, search_radius
+    rules, only = frame_rules(frame)
+    search_range = search_radius(rules, max(limits.values(), default=0.), only=only)
+    edges = set();explicit = set()
+    if search_range <= 0:
+        return [(i, j, minimum_image(xyz[j]-xyz[i], frame)[1]) for i, j in sorted(frame.bond_added-frame.bond_removed)]
+    first, second, vectors, shifts = periodic_neighbors(frame, search_range+1.e-8, xyz)
     for i, j, vector, shift_array in zip(first, second, vectors, shifts):
         i, j = int(i), int(j)
         shift = tuple(int(x) for x in shift_array)
@@ -179,17 +184,19 @@ def periodic_bonds(frame: Frame, cutoff=1.18, *, max_bonds=150000):
         if pair in frame.bond_removed:
             continue
         d = float(np.linalg.norm(vector))
-        if not .2 < d <= min(6.5, (radii[i] + radii[j]) * cutoff):
+        include, matched = pair_decision(rules, frame.symbols[i], frame.symbols[j], d,
+            .2 < d <= pair_limit(limits, frame.symbols[i], frame.symbols[j]), only=only)
+        if not include:
             continue
         oriented_shift = tuple(int(v) for v in (shift if i <= j else tuple(-x for x in shift)))
         if i == j and oriented_shift < tuple(-v for v in oriented_shift):
             oriented_shift = tuple(-v for v in oriented_shift)
-        edges.add((pair[0], pair[1], oriented_shift))
-        if len(edges) > max_bonds:
+        (explicit if matched else edges).add((pair[0], pair[1], oriented_shift))
+        if len(edges)+len(explicit) > max_bonds:
             raise ValueError('Periodic graph is too large for interactive fragment expansion')
     # A manual link overrides the normal distance rule with the nearest image.
     from .bond_filter import prune_occluded
-    edges = set(prune_occluded(xyz, edges, cell))
+    edges = set(prune_occluded(xyz, edges, cell)) | explicit
     for pair in frame.bond_added:
         if pair in frame.bond_removed:
             continue
@@ -211,7 +218,7 @@ class FragmentPreview:
     infinite: bool = False
 
 
-def periodic_fragment(frame: Frame, selection, cutoff=1.18, max_atoms=20000, max_tiles=27):
+def periodic_fragment(frame: Frame, selection, cutoff=1.0, max_atoms=20000, max_tiles=27):
     """Find complete periodic graph components and unwrap finite fragments.
 
     Returns a preview (no coordinate edits); infinite polymer/crystal networks

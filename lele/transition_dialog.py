@@ -2,6 +2,8 @@
 from PySide6.QtWidgets import (QDialog,QVBoxLayout,QComboBox,QLabel,QTableWidget,
     QTableWidgetItem,QAbstractItemView,QPushButton,QFileDialog)
 from .gaussian_properties import contribution_text,transition_state_label
+from .operations import run_data_task,gui_operation
+from .output_text import progress_items
 
 
 class TransitionDialog(QDialog):
@@ -23,23 +25,25 @@ class TransitionDialog(QDialog):
         button=QPushButton('Export transitions + contributions CSV…');button.clicked.connect(self.export_data);layout.addWidget(button)
         self.calculation.currentIndexChanged.connect(self.redraw);self.table.itemSelectionChanged.connect(self.show_details);self.redraw()
 
+    @gui_operation('Preparing transition table')
     def redraw(self,*_):
         index=self.calculation.currentIndex();self.details.setRowCount(0)
         self.transitions=[] if index<0 else self.document.electronic_spectra[index].transitions
         self.table.setRowCount(len(self.transitions))
-        for i,t in enumerate(self.transitions):
+        for i,t in enumerate(progress_items(self.transitions,'Building transition table')):
             for j,value in enumerate([f'{t.number} {transition_state_label(t.state)}',f'{t.energy_ev:.6f}',f'{t.wavelength_nm:.4f}',
                                      t.oscillator_strength,contribution_text(t)]):
                 self.table.setItem(i,j,QTableWidgetItem('Not printed' if value is None else str(value)))
         self.table.resizeColumnsToContents()
         if self.transitions:self.table.selectRow(0)
 
+    @gui_operation('Preparing transition contributions')
     def show_details(self):
         i=self.table.currentRow()
         if not 0<=i<len(self.transitions):return
         rows=sorted(self.transitions[i].contributions,key=lambda c:abs(c.coefficient or 0),reverse=True)
         self.details.setRowCount(len(rows))
-        for i,c in enumerate(rows):
+        for i,c in enumerate(progress_items(rows,'Building contribution table')):
             values=[c.from_orbital,c.from_spin,c.direction,c.to_orbital,c.to_spin,c.coefficient,c.printed_weight]
             for j,value in enumerate(values):self.details.setItem(i,j,QTableWidgetItem('' if value is None else str(value)))
         self.details.resizeColumnsToContents()
@@ -47,4 +51,6 @@ class TransitionDialog(QDialog):
     def export_data(self):
         from .property_export import export_transitions
         path,_=QFileDialog.getSaveFileName(self,'Export transitions',str(self.document.path.with_name(self.document.path.stem+'_transitions.csv')),'CSV (*.csv)')
-        if path:export_transitions(path,self.document,self.calculation.currentIndex())
+        if path:
+            index=self.calculation.currentIndex()
+            run_data_task(self,'Exporting transitions',lambda:export_transitions(path,self.document,index))

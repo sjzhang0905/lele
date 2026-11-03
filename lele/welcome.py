@@ -4,12 +4,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import QRectF, QSize, Qt, QTimer, Signal
+from PySide6.QtCore import QRectF, QSize, Qt, QTimer
 from PySide6.QtGui import QColor, QPainter, QPalette, QPixmap, QTransform
-from PySide6.QtWidgets import (QGridLayout, QHBoxLayout, QLabel, QPushButton,
+from PySide6.QtWidgets import (QGridLayout, QLabel,
                                QScrollArea, QSizePolicy, QVBoxLayout, QWidget)
 
 from . import APP_CONTACT_EMAIL, APP_FULL_NAME, APP_NAME, APP_REPOSITORY_URL, __version__
+from . import APP_CONTACT_EMAIL_SECONDARY
 
 
 POSE_INTERVAL_MS = 800
@@ -43,7 +44,7 @@ SHORTCUT_GROUPS = (
     )),
     ('Mouse & navigation', (
         ('Click atom', 'Add / remove selection'),
-        ('Right click', 'Clear selection'),
+        ('Right click', 'Atom indices / clear empty space'),
         ('Left drag', 'Rotate view'),
         ('Right drag', 'Roll view'),
         ('Middle drag', 'Pan view'),
@@ -129,8 +130,6 @@ class ParrotWalk(QWidget):
 class WelcomePage(QScrollArea):
     """Startup-only document-free page; scroll and reflow on smaller windows."""
 
-    openRequested = Signal()
-
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName('welcomePage')
@@ -153,10 +152,6 @@ class WelcomePage(QScrollArea):
             QLabel#groupTitle { color: #77678F; font-size: 13px; font-weight: 600; }
             QLabel#shortcutKey { color: #51475E; font-size: 12px; font-weight: 600; }
             QLabel#shortcutDescription { color: #64616B; font-size: 12px; }
-            QPushButton { color: #67567E; background: #FFFFFF; border: 1px solid #D9D0E5;
-                          border-radius: 6px; padding: 7px 18px; font-size: 12px; }
-            QPushButton:hover { background: #F7F4FC; border-color: #A998BF; }
-            QPushButton:focus { border: 2px solid #A998BF; }
         ''')
         outer = QVBoxLayout(self.body)
         outer.setContentsMargins(30, 24, 30, 24)
@@ -176,13 +171,14 @@ class WelcomePage(QScrollArea):
         self.version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         outer.addWidget(self.version_label)
         self.contact_label = QLabel(
-            f'<a style="color: #77678F;" href="mailto:{APP_CONTACT_EMAIL}">{APP_CONTACT_EMAIL}</a>')
+            f'<a style="color: #77678F;" href="mailto:{APP_CONTACT_EMAIL}">{APP_CONTACT_EMAIL}</a>'
+            f' &nbsp; | &nbsp; <a style="color: #77678F;" href="mailto:{APP_CONTACT_EMAIL_SECONDARY}">{APP_CONTACT_EMAIL_SECONDARY}</a>')
         self.contact_label.setObjectName('contactEmail')
         self.contact_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.contact_label.setTextInteractionFlags(
             Qt.TextInteractionFlag.TextBrowserInteraction | Qt.TextInteractionFlag.TextSelectableByKeyboard)
         self.contact_label.setOpenExternalLinks(True)
-        self.contact_label.setAccessibleName('Contact email: ' + APP_CONTACT_EMAIL)
+        self.contact_label.setAccessibleName('Contact emails: ' + APP_CONTACT_EMAIL+'; '+APP_CONTACT_EMAIL_SECONDARY)
         outer.addWidget(self.contact_label)
         self.repository_label = QLabel(
             f'<a style="color: #77678F;" href="{APP_REPOSITORY_URL}">{APP_REPOSITORY_URL}</a>')
@@ -193,14 +189,6 @@ class WelcomePage(QScrollArea):
         self.repository_label.setOpenExternalLinks(True)
         self.repository_label.setAccessibleName('Source repository: ' + APP_REPOSITORY_URL)
         outer.addWidget(self.repository_label)
-        start_row = QHBoxLayout()
-        start_row.addStretch()
-        self.open_button = QPushButton('Open a file…  Ctrl+O')
-        self.open_button.clicked.connect(self.openRequested.emit)
-        start_row.addWidget(self.open_button)
-        start_row.addStretch()
-        outer.addLayout(start_row)
-        outer.addSpacing(4)
 
         self.parrot_walk = ParrotWalk()
         outer.addWidget(self.parrot_walk)
@@ -240,11 +228,6 @@ class WelcomePage(QScrollArea):
             self.shortcut_groups.append(group)
         outer.addLayout(self.shortcut_grid)
         outer.addSpacing(10)
-        hint = QLabel('Drop a structure or calculation file anywhere in the window to begin.')
-        hint.setWordWrap(True)
-        hint.setObjectName('version')
-        hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        outer.addWidget(hint)
         outer.addStretch(1)
         self._columns = 0
         self.setWidget(self.body)

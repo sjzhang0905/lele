@@ -138,13 +138,13 @@ class NativeInteractionTests(TestCase):
         self.assertEqual(camera.orthogonalized, 1)
         self.assertIsNone(view._right_last)
 
-    def test_right_click_clears_but_right_drag_does_not(self):
+    def test_right_click_requests_atom_context_but_right_drag_does_not(self):
         view = self.interaction.InteractiveVTKView()
         camera = _Camera()
         view.scene_renderer = SimpleNamespace(GetActiveCamera=lambda: camera)
         view.mousePressEvent(_Event(2, 10, 10))
         view.mouseReleaseEvent(_Event(2, 10, 10))
-        self.assertEqual(view.emissions, [()])
+        self.assertEqual(view.emissions, [(10.0,10.0)])
         view.emissions.clear()
         view.mousePressEvent(_Event(2, 10, 10))
         view.mouseMoveEvent(_Event(2, 50, 10))
@@ -192,7 +192,7 @@ class FragmentGestureNativeTests(NativeInteractionTests):
         view.emissions.clear()
         view.mousePressEvent(_Event(2, 10, 10))
         view.mouseReleaseEvent(_Event(2, 10, 10))
-        self.assertEqual(view.emissions, [()])
+        self.assertEqual(view.emissions, [(10.0,10.0)])
 
     def test_alt_click_without_drag_not_edit_or_clear(self):
         view = self.interaction.InteractiveVTKView()

@@ -7,6 +7,23 @@ Li Li Fe / 10 5 14 -> Li1..Li10, Li1..Li5, Fe1..Fe14.
 from pathlib import Path
 
 
+def block_ids(info,symbols):
+    """Per-atom original block membership, independent of element identity."""
+    stored=info.get('poscar_block_ids')
+    if stored is not None:
+        if len(stored)!=len(symbols):raise ValueError('POSCAR block identities do not match the atoms.')
+        return list(stored)
+    groups=info.get('poscar_groups',[])
+    expanded=[(s,i) for i,(s,count) in enumerate(groups) for _ in range(int(count))]
+    if [s for s,_ in expanded]!=list(symbols):raise ValueError('POSCAR species blocks do not match the atoms.')
+    return [i for _,i in expanded]
+
+
+def groups_from_ids(symbols,identities):
+    from itertools import groupby
+    return [(s,len(list(rows))) for (s,_),rows in groupby(zip(symbols,identities))]
+
+
 def read_poscar_groups(path: str | Path, symbols: list[str]):
     """Preserve POSCAR's *declared* species blocks, including duplicate labels.
 

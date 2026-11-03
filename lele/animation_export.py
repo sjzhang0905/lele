@@ -71,13 +71,11 @@ def gif_delays(count, fps, *, cycle_seconds=None):
     return delays
 
 
-def vibration_frames(reference, mode, count, amplitude):
+def vibration_frames(reference, mode, count, amplitude, cutoff=1.):
     if not mode.can_animate:
         raise ValueError('The selected mode has no usable displacement data')
     for i in range(count):
-        frame = reference.clone()
-        frame.positions = mode.positions_at(reference, tau * i / count, amplitude)
-        yield frame
+        yield mode.preview_frame(reference,tau*i/count,amplitude,cutoff)
 
 
 def write_gif(path, images, delays, *, loop=True, progress=None, cancelled=None, palette=None, dither=True):
@@ -222,7 +220,7 @@ def export_animation_gif(path, document, settings, options, *, camera=None,
         if reference is None or mode is None or not mode.can_animate:
             raise ValueError('Select a vibration mode with complete displacement data')
         count = settings.vibration_frame_count()
-        frames = vibration_frames(reference, mode, count, settings.amplitude)
+        frames = vibration_frames(reference,mode,count,settings.amplitude,options.bond_cutoff)
         delays = gif_delays(count, settings.fps, cycle_seconds=settings.cycle_seconds)
         volume = None
     if cancelled is not None and cancelled():
@@ -230,7 +228,7 @@ def export_animation_gif(path, document, settings, options, *, camera=None,
     renderer = _OffscreenScene(settings, options, camera, selected, source_size)
     renderer.draw.alignment = deepcopy(alignment) if settings.source == 'trajectory' else None
     if mode_arrows and settings.source == 'vibration':
-        renderer.draw.mode_vectors = mode.displacements
+        renderer.draw.mode_vectors = mode.arrow_vectors() if hasattr(mode,'arrow_vectors') else mode.displacements
         renderer.draw.mode_vector_length = mode_arrow_length
         renderer.draw.mode_vector_indices = mode_arrow_indices
     renderer.document=document
@@ -242,7 +240,7 @@ def export_animation_gif(path, document, settings, options, *, camera=None,
 
         def frame_at(i):
             if settings.source=='trajectory':return document.frames[indices[i]]
-            frame=reference.clone();frame.positions=mode.positions_at(reference,tau*i/count,settings.amplitude);return frame
+            return mode.preview_frame(reference,tau*i/count,settings.amplitude,options.bond_cutoff)
 
         from PIL import Image
         import numpy as np

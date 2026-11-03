@@ -1,0 +1,279 @@
+{
+  "full": {
+    "tests": 981,
+    "subtests": 78,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 101.835
+  },
+  "independent_all": {
+    "tests": 114,
+    "subtests": 0,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 15.312
+  },
+  "new_regressions": 69,
+  "baseline_zip_sha256": "5ceaacfd12b4cdd25d7391a9b8ffe7843ed3007a838ade78264c0923679adb8f",
+  "native": {
+    "version": "2.13.2",
+    "module": "/workspace/scratch/944a3a3c4a4d/fix/source/LELE/lele/__init__.py",
+    "cases": {
+      "A1_pqr_single_space.pqr": {
+        "symbols": [
+          "O"
+        ],
+        "positions": [
+          [
+            1.0,
+            2.0,
+            3.0
+          ]
+        ],
+        "atoms_table_rows": 1
+      },
+      "A1_pqr_double_space.pqr": {
+        "symbols": [
+          "O"
+        ],
+        "positions": [
+          [
+            1.0,
+            2.0,
+            3.0
+          ]
+        ],
+        "atoms_table_rows": 1
+      },
+      "A1_pqr_hetatm.pqr": {
+        "symbols": [
+          "O"
+        ],
+        "positions": [
+          [
+            1.0,
+            2.0,
+            3.0
+          ]
+        ],
+        "atoms_table_rows": 1
+      },
+      "A2_cube_negative.cube": {
+        "symbols": [
+          "O"
+        ],
+        "positions": [
+          [
+            1.25,
+            2.25,
+            3.25
+          ]
+        ],
+        "atoms_table_rows": 1,
+        "origin": [
+          1.0,
+          2.0,
+          3.0
+        ],
+        "voxel_vectors": [
+          [
+            0.5,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.5,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.5
+          ]
+        ],
+        "shape": [
+          2,
+          2,
+          2
+        ]
+      },
+      "control_cube_positive.cube": {
+        "symbols": [
+          "O"
+        ],
+        "positions": [
+          [
+            0.6614715132048015,
+            1.1906487237686425,
+            1.7198259343324838
+          ]
+        ],
+        "atoms_table_rows": 1,
+        "origin": [
+          0.5291772105638411,
+          1.0583544211276823,
+          1.5875316316915233
+        ],
+        "voxel_vectors": [
+          [
+            0.2645886052819206,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.2645886052819206,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.2645886052819206
+          ]
+        ],
+        "shape": [
+          2,
+          2,
+          2
+        ]
+      }
+    },
+    "ok": true
+  },
+  "wheel": {
+    "name": "lele_explorer-2.13.2-py3-none-any.whl",
+    "sha256": "0a009fc74ea80b071f758b1ac6a26cff6698f854c5369d6c84a0cf3691769316",
+    "new_modules_present": true,
+    "entry_points": "[gui_scripts]\nlele = lele.app:main\n"
+  },
+  "syntax_failures": [],
+  "wheel_native": {
+    "version": "2.13.2",
+    "module": "/workspace/scratch/944a3a3c4a4d/fix/build/extracted/lele/__init__.py",
+    "cases": {
+      "A1_pqr_single_space.pqr": {
+        "symbols": [
+          "O"
+        ],
+        "positions": [
+          [
+            1.0,
+            2.0,
+            3.0
+          ]
+        ],
+        "atoms_table_rows": 1
+      },
+      "A1_pqr_double_space.pqr": {
+        "symbols": [
+          "O"
+        ],
+        "positions": [
+          [
+            1.0,
+            2.0,
+            3.0
+          ]
+        ],
+        "atoms_table_rows": 1
+      },
+      "A1_pqr_hetatm.pqr": {
+        "symbols": [
+          "O"
+        ],
+        "positions": [
+          [
+            1.0,
+            2.0,
+            3.0
+          ]
+        ],
+        "atoms_table_rows": 1
+      },
+      "A2_cube_negative.cube": {
+        "symbols": [
+          "O"
+        ],
+        "positions": [
+          [
+            1.25,
+            2.25,
+            3.25
+          ]
+        ],
+        "atoms_table_rows": 1,
+        "origin": [
+          1.0,
+          2.0,
+          3.0
+        ],
+        "voxel_vectors": [
+          [
+            0.5,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.5,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.5
+          ]
+        ],
+        "shape": [
+          2,
+          2,
+          2
+        ]
+      },
+      "control_cube_positive.cube": {
+        "symbols": [
+          "O"
+        ],
+        "positions": [
+          [
+            0.6614715132048015,
+            1.1906487237686425,
+            1.7198259343324838
+          ]
+        ],
+        "atoms_table_rows": 1,
+        "origin": [
+          0.5291772105638411,
+          1.0583544211276823,
+          1.5875316316915233
+        ],
+        "voxel_vectors": [
+          [
+            0.2645886052819206,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.2645886052819206,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.2645886052819206
+          ]
+        ],
+        "shape": [
+          2,
+          2,
+          2
+        ]
+      }
+    },
+    "ok": true
+  }
+}

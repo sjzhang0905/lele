@@ -1,0 +1,106 @@
+............FFFFFF                                                       [100%]
+=================================== FAILURES ===================================
+________________ test_corner_axes_keep_extent[True-3-molecule] _________________
+
+scene = 'molecule', factor = 3, smooth = True
+
+    @pytest.mark.parametrize('scene', ['molecule','crystal'])
+    @pytest.mark.parametrize('factor', [1,2,3,4])
+    @pytest.mark.parametrize('smooth', [False,True])
+    def test_corner_axes_keep_extent(scene,factor,smooth):
+        row=scenes[scene]
+        old=row['live']['all']
+        actual=row[f"{factor}x_{'smooth' if smooth else 'standard'}"]['all']
+        # Different tessellation / resampling can change edge pixels by a few units.
+>       assert all(.85 <= actual[k]/old[k] <= 1.15 for k in ('height','width')), (old,actual)
+E       AssertionError: ({'pixels': 764, 'width': 124, 'height': 103}, {'pixels': 378, 'width': 90, 'height': 55})
+E       assert False
+E        +  where False = all(<generator object test_corner_axes_keep_extent.<locals>.<genexpr> at 0x7f4e4ff362f0>)
+
+evidence/repro/test_axis_fidelity.py:19: AssertionError
+_________________ test_corner_axes_keep_extent[True-3-crystal] _________________
+
+scene = 'crystal', factor = 3, smooth = True
+
+    @pytest.mark.parametrize('scene', ['molecule','crystal'])
+    @pytest.mark.parametrize('factor', [1,2,3,4])
+    @pytest.mark.parametrize('smooth', [False,True])
+    def test_corner_axes_keep_extent(scene,factor,smooth):
+        row=scenes[scene]
+        old=row['live']['all']
+        actual=row[f"{factor}x_{'smooth' if smooth else 'standard'}"]['all']
+        # Different tessellation / resampling can change edge pixels by a few units.
+>       assert all(.85 <= actual[k]/old[k] <= 1.15 for k in ('height','width')), (old,actual)
+E       AssertionError: ({'pixels': 781, 'width': 124, 'height': 103}, {'pixels': 377, 'width': 90, 'height': 53})
+E       assert False
+E        +  where False = all(<generator object test_corner_axes_keep_extent.<locals>.<genexpr> at 0x7f4e4ff357b0>)
+
+evidence/repro/test_axis_fidelity.py:19: AssertionError
+________________ test_corner_axes_keep_extent[True-4-molecule] _________________
+
+scene = 'molecule', factor = 4, smooth = True
+
+    @pytest.mark.parametrize('scene', ['molecule','crystal'])
+    @pytest.mark.parametrize('factor', [1,2,3,4])
+    @pytest.mark.parametrize('smooth', [False,True])
+    def test_corner_axes_keep_extent(scene,factor,smooth):
+        row=scenes[scene]
+        old=row['live']['all']
+        actual=row[f"{factor}x_{'smooth' if smooth else 'standard'}"]['all']
+        # Different tessellation / resampling can change edge pixels by a few units.
+>       assert all(.85 <= actual[k]/old[k] <= 1.15 for k in ('height','width')), (old,actual)
+E       AssertionError: ({'pixels': 764, 'width': 124, 'height': 103}, {'pixels': 324, 'width': 68, 'height': 62})
+E       assert False
+E        +  where False = all(<generator object test_corner_axes_keep_extent.<locals>.<genexpr> at 0x7f4e4ff36b60>)
+
+evidence/repro/test_axis_fidelity.py:19: AssertionError
+_________________ test_corner_axes_keep_extent[True-4-crystal] _________________
+
+scene = 'crystal', factor = 4, smooth = True
+
+    @pytest.mark.parametrize('scene', ['molecule','crystal'])
+    @pytest.mark.parametrize('factor', [1,2,3,4])
+    @pytest.mark.parametrize('smooth', [False,True])
+    def test_corner_axes_keep_extent(scene,factor,smooth):
+        row=scenes[scene]
+        old=row['live']['all']
+        actual=row[f"{factor}x_{'smooth' if smooth else 'standard'}"]['all']
+        # Different tessellation / resampling can change edge pixels by a few units.
+>       assert all(.85 <= actual[k]/old[k] <= 1.15 for k in ('height','width')), (old,actual)
+E       AssertionError: ({'pixels': 781, 'width': 124, 'height': 103}, {'pixels': 326, 'width': 68, 'height': 59})
+E       assert False
+E        +  where False = all(<generator object test_corner_axes_keep_extent.<locals>.<genexpr> at 0x7f4e4ff357b0>)
+
+evidence/repro/test_axis_fidelity.py:19: AssertionError
+__________ test_top_corner_label_not_clipped_in_live_view[molecule-Z] __________
+
+scene = 'molecule', letter = 'Z'
+
+    @pytest.mark.parametrize('scene,letter',[('molecule','Z'),('crystal','c')])
+    def test_top_corner_label_not_clipped_in_live_view(scene,letter):
+        row=labels[scene]['letters'][letter]
+>       assert row['original']['height'] >= .8*row['inset_control']['height'], row
+E       AssertionError: {'original': {'x': 118, 'y': 480, 'width': 8, 'height': 5, ...}, 'inset_control': {'x': 118, 'y': 487, 'width': 7, 'height': 11, ...}}
+E       assert 5 >= (0.8 * 11)
+
+evidence/repro/test_axis_fidelity.py:24: AssertionError
+__________ test_top_corner_label_not_clipped_in_live_view[crystal-c] ___________
+
+scene = 'crystal', letter = 'c'
+
+    @pytest.mark.parametrize('scene,letter',[('molecule','Z'),('crystal','c')])
+    def test_top_corner_label_not_clipped_in_live_view(scene,letter):
+        row=labels[scene]['letters'][letter]
+>       assert row['original']['height'] >= .8*row['inset_control']['height'], row
+E       AssertionError: {'original': {'x': 117, 'y': 480, 'width': 9, 'height': 5, ...}, 'inset_control': {'x': 117, 'y': 489, 'width': 9, 'height': 9, ...}}
+E       assert 5 >= (0.8 * 9)
+
+evidence/repro/test_axis_fidelity.py:24: AssertionError
+=========================== short test summary info ============================
+FAILED evidence/repro/test_axis_fidelity.py::test_corner_axes_keep_extent[True-3-molecule]
+FAILED evidence/repro/test_axis_fidelity.py::test_corner_axes_keep_extent[True-3-crystal]
+FAILED evidence/repro/test_axis_fidelity.py::test_corner_axes_keep_extent[True-4-molecule]
+FAILED evidence/repro/test_axis_fidelity.py::test_corner_axes_keep_extent[True-4-crystal]
+FAILED evidence/repro/test_axis_fidelity.py::test_top_corner_label_not_clipped_in_live_view[molecule-Z]
+FAILED evidence/repro/test_axis_fidelity.py::test_top_corner_label_not_clipped_in_live_view[crystal-c]
+6 failed, 12 passed in 0.08s

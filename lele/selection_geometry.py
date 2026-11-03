@@ -98,6 +98,7 @@ def delete_selected_atoms(frame: Frame, selection) -> int:
     if not removed:
         return 0
     kept = [i for i in range(len(frame.symbols)) if i not in removed]
+    frame.info.setdefault('atom_source_order',list(range(len(frame.symbols))))
     new_index = {old: new for new, old in enumerate(kept)}
     if frame.bond_snapshot is not None:
         frame.bond_snapshot = frozenset((new_index[i], new_index[j]) for i, j in frame.bond_snapshot
@@ -118,6 +119,8 @@ def delete_selected_atoms(frame: Frame, selection) -> int:
         frame.info['poscar_groups'] = updated
     frame.symbols = [frame.symbols[i] for i in kept]
     frame.positions = frame.positions[kept].copy()
+    from .site_occupancy import subset_info
+    frame.info=subset_info(frame.info,kept)
     for name in ('bond_added', 'bond_removed'):
         setattr(frame, name, {(new_index[i], new_index[j]) for i, j in getattr(frame, name)
                               if i in new_index and j in new_index})
@@ -130,5 +133,6 @@ def delete_selected_atoms(frame: Frame, selection) -> int:
     # The input energy and the previous plane's atom indices no longer apply.
     frame.energy_ev = None
     frame.info.pop('energy_source', None)
+    frame.info.pop('optimization_converged', None)
     frame.info.pop('plane_alignment', None)
     return len(removed)

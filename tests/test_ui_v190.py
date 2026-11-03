@@ -12,10 +12,10 @@ def test_bottom_measurement_covers_length_angle_dihedral_clear_and_frame_change(
     frame = Frame(['C']*4, [[0,1,0],[0,0,0],[1,0,0],[1,0,1]])
     second = frame.clone();second.positions *= 2
     gui.attach(frame, second_frame=second);w = gui.window
-    gui.select([0,1]);assert 'Bond length' in w.measurement_label.text() and '1.0000 Å' in w.measurement_label.text()
-    w.change_frame(1);assert '2.0000 Å' in w.measurement_label.text()
-    gui.select([0,1,2]);assert 'Bond angle' in w.measurement_label.text() and '90.0000 °' in w.measurement_label.text()
-    gui.select([0,1,2,3]);assert 'Dihedral' in w.measurement_label.text() and '90.0000 °' in w.measurement_label.text()
+    gui.select([0,1]);assert 'Bond length' in w.measurement_label.text() and w.measurement_value.text() == '1.0000 Å'
+    w.change_frame(1);assert w.measurement_value.text() == '2.0000 Å'
+    gui.select([0,1,2]);assert 'Bond angle' in w.measurement_label.text() and w.measurement_value.text() == '90.0000 °'
+    gui.select([0,1,2,3]);assert 'Dihedral' in w.measurement_label.text() and w.measurement_value.text() == '90.0000 °'
     assert 'Short contacts' in w.short_contacts_button.text()
     w.resize(1600,900);w.show();gui.app.processEvents()
     assert w.measurement_label.isVisible()
@@ -44,4 +44,4 @@ def test_orca_button_curve_and_frequency_reference_use_current_document(gui):
     assert w._active_vibration == (w.current_doc,0,0)
     assert w.doc.vibrations[0].modes[0].number == 6
     np.testing.assert_array_equal(w.frame.positions,w.doc.frames[1].positions)
-    gui.select([0,1]);assert '0.9600 Å' in w.measurement_label.text()
+    gui.select([0,1]);assert w.measurement_value.text() == '0.9600 Å'

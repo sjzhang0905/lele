@@ -1,0 +1,25 @@
+&GLOBAL
+ PROJECT example
+ RUN_TYPE GEO_OPT
+&END
+&FORCE_EVAL
+ METHOD QS
+ &DFT
+  CHARGE 1
+  MULTIPLICITY 2
+  &XC
+   &XC_FUNCTIONAL PBE
+   &END
+  &END
+ &END
+ &SUBSYS
+  &CELL
+   ABC [angstrom] 8 9 10
+   PERIODIC XY
+  &END
+  &COORD
+   O 0 0 0
+   H 0 0 1
+  &END
+ &END
+&END

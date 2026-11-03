@@ -3,8 +3,8 @@ import re
 import numpy as np
 from .gaussian_properties import DipoleRecord, ElectronicSpectrum, Transition, TransitionContribution, AU_TO_DEBYE, N
 from .gaussian_vibrations import _number
-from .orca_results import COORDINATES, reference_at
-from .output_text import read_output_lines
+from .orca_results import COORDINATES, reference_at, ReferenceIndex
+from .output_text import read_output_lines, load_progress
 from .spectra import HC_EV_NM
 
 STATE = re.compile(rf'^\s*STATE\s+(\d+):\s*E=\s*({N})\s*au\s+({N})\s*eV', re.I)
@@ -40,6 +40,9 @@ def _table_rows(lines, start):
 
 def read_orca_properties(path, results):
     lines = read_output_lines(path)
+    if not any('DIPOLE' in line.upper() or 'SPECTRUM' in line.upper() or 'STATE' in line.upper() for line in lines):return [], []
+    index=ReferenceIndex(results)
+    progress=load_progress('ORCA: dipoles and excited states',len(lines))
     dipoles, spectra, batch = [], [], []
     spectrum = last = None
     spin = 'Excited state'
@@ -48,9 +51,9 @@ def read_orca_properties(path, results):
     numerical=[(e.source_line,e.end_line or len(lines)) for e in results.hessians if e.kind.startswith('Numerical exact')]
 
     def new_spectrum(line, description):
-        job = next((j for j in reversed(results.jobs) if j.start_line <= line), None)
+        job = index.job_at(line)
         label = 'ORCA '+description+('' if job is None else f' · job {job.index+1}')
-        value = ElectronicSpectrum(reference_at(results, line), source_line=line, label=label)
+        value = ElectronicSpectrum(reference_at(results, line,index), source_line=line, label=label)
         spectra.append(value)
         batch.append(value)
         return value
@@ -87,23 +90,24 @@ def read_orca_properties(path, results):
 
     i = 0
     while i < len(lines):
+        progress(i)
         line = lines[i]
         upper = line.upper()
         if any(start<=i+1<=end for start,end in numerical):
             i+=1
             continue
-        if i in job_starts or COORDINATES.search(line):
+        if i in job_starts or ('CARTESIAN COORDINATES' in upper and COORDINATES.search(line)):
             batch = []
             spectrum = last = None
             spin = 'Excited state'
             dipole_state = None
-        header = re.search(r'(?:TD-?DFT|SF-TDA|CIS|TDA|ROCIS).*EXCITED STATES', upper)
+        header = re.search(r'(?:TD-?DFT|SF-TDA|CIS|TDA|ROCIS).*EXCITED STATES', upper) if 'EXCITED STATES' in upper else None
         if header:
             spin = 'Singlet' if 'SINGLETS' in upper else 'Triplet' if 'TRIPLETS' in upper else 'Excited state'
             if any(spin in s.label for s in batch):
                 batch = []
             spectrum = last = None
-        state = STATE.match(line)
+        state = STATE.match(line) if 'STATE' in upper else None
         if state:
             number, energy = int(state[1]), _number(state[3])
             if energy > 0:
@@ -118,7 +122,7 @@ def read_orca_properties(path, results):
                     spectrum = new_spectrum(i+1, description.split('-', 1)[0])
                 last = Transition(number, description, energy, HC_EV_NM/energy, None, source_line=i+1)
                 spectrum.transitions.append(last)
-        contribution = CONTRIBUTION.match(line)
+        contribution = CONTRIBUTION.match(line) if last is not None else None
         if contribution and last is not None:
             last.contributions.append(TransitionContribution(int(contribution[1]), int(contribution[4]),
                 None if contribution[7] is None else _number(contribution[7]), contribution[2].upper(),
@@ -135,7 +139,7 @@ def read_orca_properties(path, results):
                 if row:
                     root = int(row[1])
                     vector = np.asarray([_number(row[k]) for k in (3,4,5)]) * AU_TO_DEBYE
-                    dipoles.append(DipoleRecord(reference_at(results, j+1), vector, _number(row[6]), j+1,
+                    dipoles.append(DipoleRecord(reference_at(results, j+1,index), vector, _number(row[6]), j+1,
                         density, root if root else None, 'excited permanent' if root else 'permanent'))
                     seen = True
                 elif seen:
@@ -146,10 +150,10 @@ def read_orca_properties(path, results):
             last = None
             i = max(i+1, j)
             continue
-        explicit_state = re.search(r'(?:EXCITED STATE PROPERTIES(?: FOR)?(?: STATE)?|DIPOLE MOMENT.*STATE)\s*[:=]?\s*(\d+)', upper)
+        explicit_state = re.search(r'(?:EXCITED STATE PROPERTIES(?: FOR)?(?: STATE)?|DIPOLE MOMENT.*STATE)\s*[:=]?\s*(\d+)', upper) if 'STATE' in upper else None
         if explicit_state:
             dipole_state = int(explicit_state[1])
-        dipole = re.match(rf'^\s*Total Dipole Moment(?:\s*\(([^)]+)\))?\s*:\s*({N})\s+({N})\s+({N})', line, re.I)
+        dipole = re.match(rf'^\s*Total Dipole Moment(?:\s*\(([^)]+)\))?\s*:\s*({N})\s+({N})\s+({N})', line, re.I) if 'TOTAL DIPOLE MOMENT' in upper else None
         if dipole:
             vector = np.asarray([_number(dipole[k]) for k in (2,3,4)])
             if not dipole[1] or 'debye' not in dipole[1].lower():
@@ -160,7 +164,7 @@ def read_orca_properties(path, results):
                 if norm:
                     total = _number(norm[1])
                     break
-            dipoles.append(DipoleRecord(reference_at(results, i+1), vector, total, i+1, 'ORCA', dipole_state,
+            dipoles.append(DipoleRecord(reference_at(results, i+1,index), vector, total, i+1, 'ORCA', dipole_state,
                                         'permanent' if dipole_state is None else 'excited permanent'))
             dipole_state = None
         table = None
@@ -199,4 +203,5 @@ def read_orca_properties(path, results):
             i = max(i+1, j)
             continue
         i += 1
+    progress(len(lines))
     return dipoles, spectra

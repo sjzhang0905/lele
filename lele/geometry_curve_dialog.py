@@ -8,6 +8,8 @@ from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QFormLayout,
     QTableWidgetItem, QAbstractItemView, QHeaderView, QFileDialog, QMessageBox)
 
 from .trajectory_analysis import GeometryParameter, PARAMETER_KINDS, parameter_values
+from .operations import run_data_task,gui_operation,ui_checkpoint
+from .output_text import progress_items
 
 
 def parse_atoms(text):
@@ -98,17 +100,14 @@ class GeometryCurveDialog(QDialog):
         groups = [(label, tuple(current))]
         # A computed job's stages stay separate. NEB profiles and per-image
         # histories are selected by the NEB browser and captured above.
-        keys = []
+        indexed = {}
         for i, frame in enumerate(self.document.frames):
             key = ('series', frame.info['series_key']) if 'series_key' in frame.info else (
                 ('stage', frame.info['stage_index']) if 'stage_index' in frame.info else
                 (('job', frame.info['calculation_index']) if 'calculation_index' in frame.info else ('other', 0)))
-            if key not in keys: keys.append(key)
-        for key in keys:
-            indices = tuple(i for i, f in enumerate(self.document.frames)
-                            if (('series', f.info['series_key']) if 'series_key' in f.info else
-                                (('stage', f.info['stage_index']) if 'stage_index' in f.info else
-                                 (('job', f.info['calculation_index']) if 'calculation_index' in f.info else ('other', 0)))) == key)
+            indexed.setdefault(key,[]).append(i)
+        for key,indices in indexed.items():
+            indices=tuple(indices)
             if indices == tuple(current): continue
             frame = self.document.frames[indices[0]]
             label = frame.info.get('series_label', 'Geometry trajectory')
@@ -122,12 +121,19 @@ class GeometryCurveDialog(QDialog):
         self.redraw()
 
     def add_parameter(self, parameter):
-        parameter.validate(len(self.symbols))
+        frame=self.window.frame
+        if self.window.doc is not self.document or frame is None:
+            self.note.setText('Select atoms in a compatible frame of this file.');return
+        parameter.validate(len(parameter.reference_symbols) if parameter.reference_symbols else len(frame.symbols))
+        from dataclasses import replace
+        from .atom_indices import source_order
+        if not parameter.reference_order:
+            parameter=replace(parameter,reference_order=source_order(frame),reference_symbols=tuple(frame.symbols))
         if parameter not in self.parameters: self.parameters.append(parameter)
         self.redraw()
 
     def add_selection(self):
-        if self.window.doc is not self.document or self.window.frame is None or tuple(self.window.frame.symbols) != self.symbols:
+        if self.window.doc is not self.document or self.window.frame is None:
             self.note.setText('Select atoms in a compatible frame of this file.'); return
         atoms = tuple(self.window.selection)
         if len(atoms) not in (2, 3, 4):
@@ -145,16 +151,19 @@ class GeometryCurveDialog(QDialog):
         row = self.table.currentRow()
         if 0 <= row < len(self.parameters): self.parameters.pop(row); self.redraw()
 
+    @gui_operation('Preparing geometry curves')
     def redraw(self, *_):
         self.sequence = tuple(self.sequence_combo.currentData() or ())
-        self.values = [parameter_values(self.document, self.sequence, parameter, self.symbols,
-                       unwrap=self.unwrap_check.isChecked()) for parameter in self.parameters]
+        unwrap=self.unwrap_check.isChecked();parameters=tuple(self.parameters);sequence=self.sequence
+        self.values = run_data_task(self,'Calculating geometry curves',lambda:[
+            parameter_values(self.document,sequence,p,self.symbols,unwrap=unwrap) for p in parameters]) if parameters else []
         self.figure.clear(); self.line_frames = {}
         units = list(dict.fromkeys(p.unit for p in self.parameters)) or ['Å']
         axes = {unit: self.figure.add_subplot(len(units), 1, i+1) for i, unit in enumerate(units)}
         self.table.setRowCount(len(self.parameters))
         colors = ('#1675b8', '#d64c3b', '#339768', '#9653b8', '#ba861f', '#2b9baa')
         for row, (parameter, values) in enumerate(zip(self.parameters, self.values)):
+            ui_checkpoint('Plotting geometry monitors',row,len(self.parameters))
             valid = values[np.isfinite(values)]
             stats = [f'{func(valid):.5f} {parameter.unit}' if len(valid) else '—'
                      for func in (np.min, np.max, np.mean, np.std)]
@@ -183,13 +192,14 @@ class GeometryCurveDialog(QDialog):
             self.window._jump_to_result_sequence(self.document, sequence[k], sequence, self.sequence_combo.currentText())
             self.redraw()
 
+    @gui_operation('Exporting geometry data')
     def write_csv(self, path):
         with open(path, 'w', encoding='utf-8-sig', newline='') as stream:
             writer = csv.writer(stream)
             writer.writerow(['trajectory_position', 'source_frame_1based', 'stage_index', 'neb_iteration', 'neb_image',
                              *[p.label + ' (' + p.unit + ')' + (' [unwrapped]' if self.unwrap_check.isChecked() and p.kind == 'Dihedral' else '')
                                for p in self.parameters]])
-            for k, index in enumerate(self.sequence):
+            for k, index in enumerate(progress_items(self.sequence,'Writing geometry CSV')):
                 info = self.document.frames[index].info
                 writer.writerow([k+1, index+1, info.get('stage_index'), info.get('neb_iteration'), info.get('neb_image'),
                                  *[float(values[k]) if np.isfinite(values[k]) else None for values in self.values]])

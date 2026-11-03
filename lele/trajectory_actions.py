@@ -51,7 +51,8 @@ class TrajectoryAnalysisActions:
         self.renderer.mode_vectors = None
         if self._active_vibration is not None and self.vibration_controls.arrows_check.isChecked():
             _, analysis, mode = self._active_vibration
-            self.renderer.mode_vectors = self.doc.vibrations[analysis].modes[mode].displacements
+            selected_mode=self.doc.vibrations[analysis].modes[mode]
+            self.renderer.mode_vectors = selected_mode.arrow_vectors() if hasattr(selected_mode,'arrow_vectors') else selected_mode.displacements
             self.renderer.mode_vector_length = self.vibration_controls.arrow_length.value()
             self.renderer.mode_vector_indices = tuple(self.selection) if self.vibration_controls.selected_arrows_check.isChecked() else None
 

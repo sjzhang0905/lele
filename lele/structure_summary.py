@@ -44,5 +44,6 @@ def spin_summary(info):
 
 
 def summary_text(frame):
+    from .site_occupancy import composition
     system = 'Cell composition' if any(frame.pbc) else 'Formula'
-    return f'{system}: {molecular_formula(frame.symbols)}    |    Unpaired electrons: {spin_summary(frame.info)}'
+    return f'{system}: {composition(frame)}    |    Unpaired electrons: {spin_summary(frame.info)}'

@@ -1,0 +1,6 @@
+Processing ./axes_fix/build/lele_explorer-2.13.6-py3-none-any.whl
+Installing collected packages: lele-explorer
+Successfully installed lele-explorer-2.13.6
+
+[notice] A new release of pip is available: 25.0.1 -> 26.3
+[notice] To update, run: python -m pip install --upgrade pip

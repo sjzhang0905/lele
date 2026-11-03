@@ -1,0 +1,63 @@
+{
+  "Atomic": {
+    "radii_A": {
+      "H": 0.46,
+      "C": 0.77,
+      "O": 0.74,
+      "Cu": 1.28
+    },
+    "colors": {
+      "H": "#C7C7C7",
+      "C": "#727272",
+      "O": "#FF4040",
+      "Cu": "#FF8000"
+    }
+  },
+  "Ionic": {
+    "radii_A": {
+      "H": 0.2,
+      "C": 0.15,
+      "O": 1.4,
+      "Cu": 0.73
+    },
+    "colors": {
+      "H": "#C7C7C7",
+      "C": "#727272",
+      "O": "#FF4040",
+      "Cu": "#FF8000"
+    }
+  },
+  "van der Waals": {
+    "radii_A": {
+      "H": 1.2,
+      "C": 1.7,
+      "O": 1.52,
+      "Cu": 1.88
+    },
+    "colors": {
+      "H": "#C7C7C7",
+      "C": "#727272",
+      "O": "#FF4040",
+      "Cu": "#FF8000"
+    }
+  },
+  "source_sha256": {
+    "bonds5.bin": "dba2525a02d73ba331912626a553fc47f51e7a56ca732e2f4ee54a62dd3e9add",
+    "gv.bin": "95741984c7bd91a9e49df88d5b2ee638819ba9fa18b064ca9ef64f58bea10ee2",
+    "elements.ini": "e77dd5dafe975347cf587d553bd26067961f9b954efd08e6bc33745b39104d99"
+  },
+  "coverage": {
+    "chemcraft_species": 105,
+    "chemcraft_ordinary_pairs": 5559,
+    "compat_palette_species": 106,
+    "vesta_rows": 97
+  },
+  "ordinary_maximum_A": {
+    "C-C": 1.89226636602779,
+    "H-C": 1.36721907534967,
+    "O-H": 1.43,
+    "Ti-O": 2.6811844397579216,
+    "Fe-O": 2.526271561016353,
+    "Cu-Cu": 3.2650868288607575
+  }
+}

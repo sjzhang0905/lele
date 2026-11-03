@@ -1,18 +1,47 @@
 """Printed ORCA 4/5/6 geometry, job metadata and molecular orbital tables."""
 import re
+from bisect import bisect_right
 import numpy as np
-from ase.data import chemical_symbols
+from ase.data import chemical_symbols,atomic_numbers
 from ase.units import Bohr, Hartree
 from .core import Frame
 from .calculation_results import (CalculationJob, CalculationResults, CalculationStep, Orbital, OrbitalSet,
                                   CalculationStage, HessianEvent, NUMBER)
 from .gaussian_vibrations import _number
-from .output_text import read_output_lines
+from .output_text import read_output_lines, check_load_cancelled, load_progress
 
 JOB = re.compile(r'^\s*(?:\*+\s*)?(?:JOB NUMBER\s*[:=]?\s*\d+|COMPOUND JOB\s+\d+)\b', re.I)
 COORDINATES = re.compile(r'CARTESIAN COORDINATES\s*\((ANGSTROEM|ANGSTROM|A\.U\.|BOHR)\)', re.I)
 FREQUENCY = re.compile(rf'^\s*(\d+)\s*:\s*({NUMBER})\s+cm(?:\*\*|\^)?-1', re.I)
 BASIS = re.compile(r'^(?:ma-def2-|def2-|(?:d-)?aug-|cc-p|[3-6]-\d|sto-|pc(?:seg)?-|sarc|x2c|ano|dhf|lanl|[dtq]zp)', re.I)
+CONVERGENCE=re.compile(r'^\s*(MAX|RMS)\s+(gradient|step|displacement)\s+('+NUMBER+r')\s+('+NUMBER+r')',re.I)
+NAMED_STAGES={'REACTANT OPTIMIZATION':('Reactant preoptimization','reactant'),
+    'PRODUCT OPTIMIZATION':('Product preoptimization','product'),
+    'NEB OPTIMIZATION':('NEB path optimization','neb'),
+    'TS OPTIMIZATION':('Transition-state optimization','ts')}
+
+
+class ReferenceIndex:
+    """Completed-result source-line lookup without scanning every later step."""
+    def __init__(self,results):
+        self.jobs=results.jobs;self.starts=[j.start_line for j in results.jobs]
+        groups={}
+        for step in results.steps:
+            if step.geometry is not None:groups.setdefault(step.job_index,[]).append(step)
+        self.steps={};self.lines={}
+        for job,steps in groups.items():
+            self.steps[job]=sorted(steps,key=lambda s:s.source_line)
+            self.lines[job]=[s.source_line for s in self.steps[job]]
+
+    def job_at(self,line):
+        k=bisect_right(self.starts,line)-1
+        return None if k<0 else self.jobs[k]
+
+    def step_at(self,line):
+        job=self.job_at(line)
+        if job is None:return None
+        k=bisect_right(self.lines.get(job.index,()),line)-1
+        return None if k<0 else self.steps[job.index][k]
 
 
 def job_ranges(lines):
@@ -20,8 +49,11 @@ def job_ranges(lines):
     starts = [0]
     terminated = False
     content = False
+    progress=load_progress('ORCA: identifying calculation jobs',len(lines))
     for i, line in enumerate(lines):
-        if re.match(r'^\s*\|\s*\d+>', line):
+        if i%4096==0:
+            check_load_cancelled();progress(i)
+        if line.lstrip().startswith('|') and re.match(r'^\s*\|\s*\d+>', line):
             continue
         if JOB.match(line):
             if content:
@@ -33,20 +65,22 @@ def job_ranges(lines):
         if terminated and (re.search(r'O\s+R\s+C\s+A', line) or 'INPUT FILE' == line.strip()):
             starts.append(i)
             content = terminated = False
-        if COORDINATES.search(line) or 'FINAL SINGLE POINT ENERGY' in line:
+        if ('CARTESIAN COORDINATES' in line.upper() and COORDINATES.search(line)) or 'FINAL SINGLE POINT ENERGY' in line:
             content = True
         if 'ORCA TERMINATED NORMALLY' in line.upper() or 'ORCA finished by error termination' in line:
             terminated = True
+    progress(len(lines))
     return [(start, starts[i+1] if i+1 < len(starts) else len(lines)) for i, start in enumerate(starts)]
 
 
-def reference_at(results, line):
+def reference_at(results, line, index=None):
     """No geometry or property can leak from an earlier calculation job."""
-    job = next((j for j in reversed(results.jobs) if j.start_line <= line), None)
-    if job is None:
-        return None
-    step = next((s for s in reversed(results.steps)
-                 if s.job_index == job.index and s.source_line <= line and s.geometry is not None), None)
+    if index is not None:step=index.step_at(line)
+    else:
+        job = next((j for j in reversed(results.jobs) if j.start_line <= line), None)
+        if job is None:return None
+        step = next((s for s in reversed(results.steps)
+                     if s.job_index == job.index and s.source_line <= line and s.geometry is not None), None)
     if step is None:
         return None
     frame = step.geometry.clone()
@@ -54,9 +88,37 @@ def reference_at(results, line):
     return frame
 
 
-def _coordinates(lines, start):
+def _coordinates(lines, start, force_angstrom=False):
+    from .trajectory_io import numeric_array
+    heading=COORDINATES.search(lines[start])
+    au=False if force_angstrom else heading[1].upper() in ('A.U.','BOHR')
+    symbols=[];rows=[];j=start+1
+    for j in range(start+1,len(lines)):
+        fields=lines[j].split()
+        if not fields or set(lines[j].strip())=={'-'}:
+            if symbols:break
+            continue
+        if au and fields[0].upper() in ('NO','NR'):continue
+        if au:
+            if not fields[0].isdigit() or len(fields)<5:break
+            symbol,xyz=fields[1],fields[-3:]
+        else:
+            if len(fields)!=4:break
+            symbol,xyz=fields[0],fields[1:]
+        symbol=symbol.title()
+        if symbol not in atomic_numbers:break
+        symbols.append(symbol);rows.append(xyz)
+    if not symbols:return None,j
+    try:
+        positions=numeric_array(rows)
+        if not np.isfinite(positions).all():raise ValueError('Nonfinite coordinates')
+    except ValueError:return _coordinates_legacy(lines,start,force_angstrom)
+    return Frame(symbols,positions*(Bohr if au else 1.)),j
+
+
+def _coordinates_legacy(lines, start, force_angstrom=False):
     heading = COORDINATES.search(lines[start])
-    au = heading[1].upper() in ('A.U.', 'BOHR')
+    au = False if force_angstrom else heading[1].upper() in ('A.U.', 'BOHR')
     symbols, positions = [], []
     j = start + 1
     for j in range(start+1, len(lines)):
@@ -147,8 +209,11 @@ def _orbitals(lines, start, job, step_index):
 
 def read_orca_results(path):
     lines = read_output_lines(path)
+    ranges=job_ranges(lines)
+    progress=load_progress('ORCA: geometry, energies and orbitals',len(lines))
     result = CalculationResults('ORCA', force_unit='Hartree/Bohr', displacement_unit='Bohr')
-    for start, end in job_ranges(lines):
+    for start, end in ranges:
+        first_step=len(result.steps);first_hessian=len(result.hessians)
         job = CalculationJob(len(result.jobs), start+1)
         result.jobs.append(job)
         step = None
@@ -175,26 +240,28 @@ def read_orca_results(path):
         route_parts = []
         i = start
         while i < end:
+            check_load_cancelled()
+            progress(i)
             line = lines[i]
+            stripped=line.lstrip()
+            # Numeric SCF iterations and separators cannot start any of the
+            # metadata sections below. Coordinate/orbital/frequency tables are
+            # consumed by their own readers, without visiting every row here.
+            if not stripped or stripped[0].isdigit() or not stripped.strip('-= '):
+                i+=1;continue
             lower = line.lower()
-            route = re.match(r'^\s*(?:\|\s*\d+>\s*)?!\s*([^!].*)$', line)
+            route = re.match(r'^\s*(?:\|\s*\d+>\s*)?!\s*([^!].*)$', line) if stripped[0] in '|!' else None
             if route and not (route[1].rstrip().endswith('!') or (not re.match(r'^\s*\|',line) and stage is not None)):
                 route_parts.append(route[1].split('#', 1)[0].strip())
                 _route(job, route_parts)
-            if re.search(r'\b(?:FAST-|LOOSE-)?NEB(?:-TS)?\b', job.route, re.I):
-                job.tasks.add('NEB-TS' if 'NEB-TS' in job.route.upper() else 'NEB')
+                if re.search(r'\b(?:FAST-|LOOSE-)?NEB(?:-TS)?\b', job.route, re.I):
+                    job.tasks.add('NEB-TS' if 'NEB-TS' in job.route.upper() else 'NEB')
             heading_text = line.strip().strip('*').strip()
-            named = {'REACTANT OPTIMIZATION':('Reactant preoptimization','reactant'),
-                     'PRODUCT OPTIMIZATION':('Product preoptimization','product'),
-                     'NEB OPTIMIZATION':('NEB path optimization','neb'),
-                     'TS OPTIMIZATION':('Transition-state optimization','ts')}
-            if heading_text in named:
-                start_stage(*named[heading_text], i)
+            if heading_text in NAMED_STAGES:
+                start_stage(*NAMED_STAGES[heading_text], i)
             if heading_text == 'SADDLE POINT (ANGSTROEM)':
-                fake = list(lines[i:])
-                fake[0] = 'CARTESIAN COORDINATES (ANGSTROEM)'
-                saddle, _ = _coordinates(fake, 0)
-            iteration = re.search(r'GEOMETRY OPTIMIZATION CYCLE\s+(\d+)', line)
+                saddle, _ = _coordinates(lines,i,force_angstrom=True)
+            iteration = re.search(r'GEOMETRY OPTIMIZATION CYCLE\s+(\d+)', line) if 'GEOMETRY OPTIMIZATION CYCLE' in line else None
             if iteration:
                 if stage is None:
                     is_ts = bool(re.search(r'\bOptTS\b', job.route, re.I))
@@ -215,7 +282,7 @@ def read_orca_results(path):
                 hessian = HessianEvent(i+1, None if stage is None else stage.index, cycle,
                     'Numerical exact' if 'NUMERICAL' in heading_text else 'Analytical exact', reference)
                 result.hessians.append(hessian)
-            stored_initial=re.search(r'Initial Hessian will be stored in\s*\.+\s*(\S+)',line)
+            stored_initial=re.search(r'Initial Hessian will be stored in\s*\.+\s*(\S+)',line) if 'Initial Hessian will' in line else None
             if stored_initial:initial_hessian_file=stored_initial[1]
             if 'Initial Hessian' in line and 'InHess' in line:
                 if stage is None:
@@ -225,42 +292,42 @@ def read_orca_results(path):
                 if initial_hessian_file.endswith('.appr.hess'):kind+=' (approximate model)'
                 hessian=HessianEvent(i+1,stage.index,cycle,kind,filename=initial_hessian_file)
                 result.hessians.append(hessian)
-            update = re.search(r'Updating the Hessian\s*\(([^)]+)\)',line)
+            update = re.search(r'Updating the Hessian\s*\(([^)]+)\)',line) if 'Updating the Hessian' in line else None
             if update:
                 hessian = HessianEvent(i+1,None if stage is None else stage.index,cycle,'Update '+update[1],
                                       None if step is None else step.geometry.clone())
                 result.hessians.append(hessian)
-            negative = re.search(r'Hessian has\s+(\d+)\s+negative eigenvalues',line)
+            negative = re.search(r'Hessian has\s+(\d+)\s+negative eigenvalues',line) if 'Hessian has' in line else None
             if negative and hessian is not None:
                 hessian.negative_eigenvalues = int(negative[1])
-            stored = re.search(r'Actual Hessian File stored as\s+(\S+)',line)
+            stored = re.search(r'Actual Hessian File stored as\s+(\S+)',line) if 'Actual Hessian File' in line else None
             if stored:
                 if hessian is not None:
                     hessian.filename=stored[1]
                     hessian.end_line=i+1
                 hessian_active=False
-            xyz = re.search(r'\*\s*xyz(?:file)?\s+([-+]?\d+)\s+(\d+)', line, re.I)
+            xyz = re.search(r'\*\s*xyz(?:file)?\s+([-+]?\d+)\s+(\d+)', line, re.I) if 'xyz' in lower else None
             if xyz:
                 job.charge, job.multiplicity = int(xyz[1]), int(xyz[2])
-            charge = re.search(r'Total Charge\s+(?:Charge\s+)?[.:=]+\s*([-+]?\d+)\s*$', line, re.I)
-            mult = re.search(r'^\s*Multiplicity\s+(?:Mult\s+)?[.:=]+\s*(\d+)\s*$', line, re.I)
+            charge = re.search(r'Total Charge\s+(?:Charge\s+)?[.:=]+\s*([-+]?\d+)\s*$', line, re.I) if 'total charge' in lower else None
+            mult = re.search(r'^\s*Multiplicity\s+(?:Mult\s+)?[.:=]+\s*(\d+)\s*$', line, re.I) if 'multiplicity' in lower else None
             if charge:
                 job.charge = int(charge[1])
             if mult:
                 job.multiplicity = int(mult[1])
-            basis = re.search(r'Your calculation utilizes the basis:\s*(.+)', line, re.I)
+            basis = re.search(r'Your calculation utilizes the basis:\s*(.+)', line, re.I) if 'utilizes the basis:' in lower else None
             if basis and (not job.basis or step is None):
                 job.basis = basis[1].strip()
-            solvent = re.search(r'(?:SMDsolvent\s+|Solvent\s*(?:[.:=]+)\s*)["\']?([\w-]+)', line, re.I)
+            solvent = re.search(r'(?:SMDsolvent\s+|Solvent\s*(?:[.:=]+)\s*)["\']?([\w-]+)', line, re.I) if 'solvent' in lower else None
             if solvent and solvent[1].lower() not in ('true','false','name','model'):
                 job.solvent = solvent[1]
-            if re.search(r'%tddft\b|TD-?DFT.*EXCITED STATES|CIS.*EXCITED STATES|SF-TDA', line, re.I):
+            if ('tddft' in lower or 'td-dft' in lower or 'cis' in lower or 'sf-tda' in lower) and re.search(r'%tddft\b|TD-?DFT.*EXCITED STATES|CIS.*EXCITED STATES|SF-TDA', line, re.I):
                 job.tasks.add('Excited states')
-            if re.search(r'\bscan\b', line, re.I) and ('%' in line or '>' in line or 'surface' in lower):
+            if 'scan' in lower and re.search(r'\bscan\b', line, re.I) and ('%' in line or '>' in line or 'surface' in lower):
                 job.tasks.add('Scan')
             if 'trajectory step' in lower:
                 job.tasks.add('Scan')
-            heading = COORDINATES.search(line)
+            heading = COORDINATES.search(line) if 'cartesian coordinates' in lower else None
             if heading:
                 geometry, j = _coordinates(lines, i)
                 if hessian_active:
@@ -279,23 +346,21 @@ def read_orca_results(path):
                     if hessian is not None and hessian.kind.startswith('Initial:') and hessian.reference is None:hessian.reference=geometry.clone()
                 i = max(i+1, j)
                 continue
-            energy = re.search(rf'FINAL SINGLE POINT ENERGY\s+({NUMBER})', line)
+            energy = re.search(rf'FINAL SINGLE POINT ENERGY\s+({NUMBER})', line) if 'FINAL SINGLE POINT ENERGY' in line else None
             if energy and not hessian_active:
                 job.energy_ev = _number(energy[1]) * Hartree
                 if step is not None:
                     step.energy_ev = job.energy_ev
-            cycles = re.search(r'SCF CONVERGED AFTER\s+(\d+)\s+CYCLES', line, re.I)
+            cycles = re.search(r'SCF CONVERGED AFTER\s+(\d+)\s+CYCLES', line, re.I) if 'scf converged after' in lower else None
             if cycles:
                 job.scf_cycles = int(cycles[1])
-            spin = re.search(rf'Expectation value of <S\*\*2>\s*:\s*({NUMBER})', line)
+            spin = re.search(rf'Expectation value of <S\*\*2>\s*:\s*({NUMBER})', line) if 'Expectation value of' in line else None
             if spin:
                 job.spin_squared = _number(spin[1])
-            for label, key in [('MAX gradient','max_force'),('RMS gradient','rms_force'),
-                               ('MAX step','max_displacement'),('RMS step','rms_displacement'),
-                               ('MAX displacement','max_displacement'),('RMS displacement','rms_displacement')]:
-                match = re.match(rf'\s*{label}\s+({NUMBER})\s+({NUMBER})', line, re.I)
-                if match and step is not None:
-                    step.convergence[key] = (_number(match[1]), _number(match[2]))
+            match=CONVERGENCE.match(line) if stripped[:3].upper() in ('MAX','RMS') else None
+            if match and step is not None:
+                key=match[1].lower()+('_force' if match[2].lower()=='gradient' else '_displacement')
+                step.convergence[key]=(_number(match[3]),_number(match[4]))
             if 'optimization cycle' in lower or 'geometry optimization' in lower:
                 job.tasks.add('Optimization')
             if heading_text in ('THE OPTIMIZATION HAS CONVERGED','THE TS OPTIMIZATION HAS CONVERGED'):
@@ -339,14 +404,15 @@ def read_orca_results(path):
             job.tasks.add('Single point / properties')
         if JOB.match(lines[start]) and job.termination.startswith('Incomplete') and len(result.steps):
             job.termination = 'Compound segment; termination not printed'
-        for record in (s for s in result.steps if s.job_index == job.index):
+        for record in result.steps[first_step:]:
             if job.charge is not None:
                 record.geometry.info['converter_charge'] = job.charge
             if job.multiplicity is not None:
                 record.geometry.info['converter_mult'] = job.multiplicity
-        for event in result.hessians:
+        for event in result.hessians[first_hessian:]:
             if event.reference is not None and event.stage_index is not None and result.stages[event.stage_index].job_index==job.index:
                 if job.charge is not None:event.reference.info['converter_charge']=job.charge
                 if job.multiplicity is not None:event.reference.info['converter_mult']=job.multiplicity
         if stage is not None:stage.end_line=end
+    progress(len(lines))
     return result

@@ -177,7 +177,7 @@ class StyleQtWorkflowTests(unittest.TestCase):
     def test_edit_save_restart_and_custom_restore_keep_element_colour(self):
         window = self.window
         original_defaults = dict(ELEMENT_COLORS)
-        self.assertEqual(self.edit_oxygen(window, '#123456'), colour('O').lower())
+        self.assertEqual(self.edit_oxygen(window, '#123456'), '#e92525')
         self.assertEqual(window.preset_combo.currentData(), CUSTOM_KEY)
         saved_custom = snapshot(window.render_options)
         self.choose(window, 'Soft pastel')
@@ -203,7 +203,7 @@ class StyleQtWorkflowTests(unittest.TestCase):
         self.choose(window, 'Pale oxygen')
         self.assertEqual(self.oxygen_colour(window), '#abcdef')
         self.choose(window, 'Classic ball and stick')
-        self.assertEqual(self.oxygen_colour(window), colour('O'))
+        self.assertEqual(self.oxygen_colour(window), '#E92525')
 
     def test_legacy_presets_load_alongside_new_presets(self):
         legacy = deepcopy(BUILTIN_PRESETS['Soft pastel'])

@@ -1,0 +1,69 @@
+{
+  "POSCAR1": {
+    "atom_count": 100,
+    "before_flags": {
+      "fully_fixed": 96,
+      "partially_fixed": 0
+    },
+    "source_order": [
+      "Co",
+      "Se",
+      "S",
+      "Li"
+    ],
+    "axis": 2,
+    "source_gap_A": 19.28880564640378,
+    "split": false,
+    "unchanged": {
+      "after_flags": {
+        "fully_fixed": 96,
+        "partially_fixed": 0
+      },
+      "order": [
+        "Co",
+        "Se",
+        "S",
+        "Li"
+      ],
+      "same_row_symbols_as_edited": true,
+      "in_memory_max_cart_delta": 0.0
+    },
+    "vacuum": {
+      "after_flags": {
+        "fully_fixed": 96,
+        "partially_fixed": 0
+      },
+      "order": [
+        "Co",
+        "Se",
+        "S",
+        "Li"
+      ],
+      "same_row_symbols_as_edited": true,
+      "in_memory_max_cart_delta": 0.0
+    },
+    "reindex": {
+      "after_flags": {
+        "fully_fixed": 96,
+        "partially_fixed": 0
+      },
+      "order": [
+        "Co",
+        "Se",
+        "S",
+        "Li"
+      ],
+      "same_row_symbols_as_edited": true,
+      "in_memory_max_cart_delta": 5.173648911492469
+    }
+  },
+  "22.cif": {
+    "declares_occupancy": false,
+    "original": "OK",
+    "one_tag_control": {
+      "atom_count": 434,
+      "composition": "C4H6F4Mn140O280"
+    },
+    "synthetic_only_symops": "OK"
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "baseline": "2.9.0",
+  "version": "2.10.0",
+  "added": [
+    "docs/FEATURES_v2.10.0_CN.md",
+    "docs/VALIDATION_v2.10.0.md",
+    "docs/qa_v2.10.0/full_v2100.xml",
+    "docs/qa_v2.10.0/qe_non_gamma_preview.gif",
+    "docs/qa_v2.10.0/qe_non_gamma_preview.png",
+    "docs/qa_v2.10.0/release_changes.json",
+    "docs/qa_v2.10.0/supplied_qe_acceptance.json",
+    "lele/qe_phonons.py",
+    "lele/qe_reference_dialog.py",
+    "lele/qe_results.py",
+    "tests/test_qe_v2100.py",
+    "tools/validate_qe_examples.py"
+  ],
+  "changed": [
+    "CHANGELOG.md",
+    "README.md",
+    "README_CN.md",
+    "lele/__init__.py",
+    "lele/animation_export.py",
+    "lele/app.py",
+    "lele/boundary.py",
+    "lele/core.py",
+    "lele/formats.py",
+    "lele/legacy_converter.py",
+    "lele/project_file.py",
+    "lele/qe_trajectory.py",
+    "lele/renderer.py",
+    "lele/result_availability.py",
+    "lele/trajectory_actions.py",
+    "lele/trajectory_analysis.py",
+    "lele/vibration_analysis_dialog.py"
+  ],
+  "removed": []
+}

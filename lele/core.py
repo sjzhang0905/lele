@@ -13,8 +13,10 @@ import math
 import numpy as np
 from .atom_appearance import AtomAppearance
 
-# CPK-inspired colours. Unlisted species get a neutral medium grey.
-ELEMENT_COLORS = {
+from .display_reference import GAUSSVIEW_COMPAT_COLORS
+
+# Retained for explicit legacy colour selection and old saved user presets.
+LEGACY_ELEMENT_COLORS = {
     "H": "#F8F9FA", "He": "#D9FFFF", "Li": "#CC80FF", "Be": "#C2FF00",
     "B": "#FFB5B5", "C": "#747980", "N": "#3366CC", "O": "#E43C3C",
     "F": "#8DDC58", "Ne": "#B3E3F5", "Na": "#AB5CF2", "Mg": "#86D85D",
@@ -28,6 +30,7 @@ ELEMENT_COLORS = {
     "Pb": "#626B7A", "Ru": "#2489B6", "Rh": "#0F93A7", "Pd": "#4BACC3",
     "La": "#70BFFF", "Ce": "#FFFFC7", "U": "#008FFF",
 }
+ELEMENT_COLORS = GAUSSVIEW_COMPAT_COLORS
 
 # Covalent-radius approximations in Angstrom.  Used for drawing only, never
 # for determining actual bond order or chemical validity.
@@ -176,6 +179,12 @@ class NormalMode:
         peak = float(np.linalg.norm(self.displacements, axis=1).max())
         return reference.positions + self.displacements * (amplitude * math.sin(phase) / peak)
 
+    def preview_frame(self,reference,phase,amplitude,cutoff=1.):
+        frame=reference.clone()
+        freeze_bonds(frame,cutoff)
+        frame.positions=self.positions_at(reference,phase,amplitude)
+        return frame
+
 
 @dataclass
 class VibrationalAnalysis:
@@ -208,6 +217,8 @@ class Document:
     neb_runs: list = field(default_factory=list)
     conformer_ensembles: list = field(default_factory=list)
     soc_results: list = field(default_factory=list)
+    source_preview: Optional[str] = None
+    project_original_path: Optional[str] = None
 
     def __post_init__(self):
         if not self.frames:
@@ -223,15 +234,21 @@ def canonical_pair(i: int, j: int) -> tuple[int, int]:
     return (min(i, j), max(i, j))
 
 
-def visible_bonds(frame: Frame, multiplier: float = 1.18) -> list[tuple[int, int]]:
+def visible_bonds(frame: Frame, multiplier: float = 1.0) -> list[tuple[int, int]]:
     """Distance-estimated bonds with frame-local manually added/removed links."""
     pairs = set(find_bonds(frame, multiplier) if frame.bond_snapshot is None else frame.bond_snapshot)
     pairs.difference_update(frame.bond_removed)
     pairs.update(frame.bond_added)
+    if frame.periodic_bond_snapshot is not None:
+        # Image representatives may change during crystal reorientation. Draw
+        # only zero-shift edges here; Boundary renders translated-image edges.
+        captured={(i,j) for i,j,_ in frame.periodic_bond_snapshot}
+        local={(i,j) for i,j,s in frame.periodic_bond_snapshot if not any(s)}
+        pairs.difference_update(captured-local)
     return sorted(pairs)
 
 
-def freeze_bonds(frame: Frame, multiplier: float = 1.18):
+def freeze_bonds(frame: Frame, multiplier: float = 1.0):
     """Capture both display and periodic connectivity before changing positions."""
     if frame.bond_snapshot is not None:
         return
@@ -255,7 +272,7 @@ def _set_manual_periodic_paths(frame, pairs):
     frame.periodic_bond_snapshot = tuple(sorted(edges))
 
 
-def toggle_selected_bonds(frame: Frame, selected, multiplier: float = 1.18) -> tuple[str, int]:
+def toggle_selected_bonds(frame: Frame, selected, multiplier: float = 1.0) -> tuple[str, int]:
     """Two atoms toggle unconditionally; 3+ toggle all internal visible bonds.
 
     If any internal links currently exist, remove *all* of them. Otherwise
@@ -348,15 +365,12 @@ def rotation_between_vectors(source, target) -> np.ndarray:
 
 
 def align_pair_to_axis(frame: Frame, first: int, second: int, axis: str) -> tuple[np.ndarray, np.ndarray, bool]:
-    """Rotate the atomic positions around the first atom, keeping the cell fixed.
+    """Align a pair, co-rotating the periodic cell for Cartesian XYZ targets.
 
-    Both XYZ (Cartesian) and abc (lattice direction) alignments update only
-    frame.positions; frame.cell always remains unchanged. This is a real
-    geometry edit relative to a periodic lattice, not a camera rotation or
-    a change of basis for the complete infinite crystal.
-
-    Returns (column-vector rotation matrix, pivot, cell_rotated=False).
-    The final False retains the public return shape of earlier versions.
+    XYZ uses the nearest periodic pair direction and rotates the entire crystal.
+    a/b/c retains the explicitly fixed-cell relative-geometry edit; it cannot
+    change the bond/lattice angle by co-rotating both. The pivot stays fixed.
+    Returns (column-vector rotation matrix, pivot, cell_rotated).
     """
     if not (0 <= first < len(frame.symbols) and 0 <= second < len(frame.symbols)) or first == second:
         raise ValueError('Select two different atoms')
@@ -371,35 +385,50 @@ def align_pair_to_axis(frame: Frame, first: int, second: int, axis: str) -> tupl
         raise ValueError('Axis must be X, Y, Z, a, b or c')
     pivot = frame.positions[first].copy()
     vector = frame.positions[second] - pivot
+    periodic=any(frame.pbc) and valid_lattice(frame)
+    if periodic and axis.lower() in ('x','y','z'):
+        from .periodic_geometry import minimum_image
+        vector,_=minimum_image(vector,frame)
     R = rotation_between_vectors(vector, target)
+    if periodic and axis.lower() in ('x','y','z'):
+        from .coordinate_reorientation import transform_complete_frame
+        transform_complete_frame(frame,R,pivot-pivot@R.T,
+                                 details={'selection':[first,second],'target_axis':axis.upper()})
+        return R,pivot,True
     frame.positions = (frame.positions - pivot) @ R.T + pivot
     return R, pivot, False
 
 
-def find_bonds(frame: Frame, multiplier: float = 1.18, *, max_bonds: int = 60000) -> list[tuple[int, int]]:
+def find_bonds(frame: Frame, multiplier: float = 1.0, *, max_bonds: int = 60000) -> list[tuple[int, int]]:
     """Distance-based bonds between atoms as drawn in the *visible* cell.
 
     In a periodic model, bonds that need a translated image atom are omitted
     deliberately, rather than drawing an invalid long diagonal across cell.
-    Periodic-image expansion is scheduled for a later version.
+    Translated-image bonds are handled separately by periodic_bonds.
     """
     from scipy.spatial import cKDTree
+    from .element_rules import frame_rules, pair_decision, search_radius
+    from .display_reference import bond_limits, pair_limit
 
     xyz = frame.positions
     if len(xyz) < 2:
         return []
-    r = np.asarray([radius(s) for s in frame.symbols], dtype=float)
-    search_range = min(float(r.max()) * 2.0 * multiplier, 6.5)
+    limits = bond_limits(frame.symbols, multiplier, frame.info.get('bond_model', 'Chemcraft pair ranges'))
+    rules, only = frame_rules(frame)
+    search_range = search_radius(rules, max(limits.values(), default=0.), only=only)
+    if search_range <= 0:return []
     pairs = cKDTree(xyz).query_pairs(r=search_range, output_type="ndarray")
-    result = []
+    result = [];explicit = []
     for a, b in pairs:
         distance = np.linalg.norm(xyz[a] - xyz[b])
-        if .2 < distance <= min(6.5, (r[a] + r[b]) * multiplier):
-            result.append((int(a), int(b)))
-            if len(result) >= max_bonds:
+        include, matched = pair_decision(rules, frame.symbols[a], frame.symbols[b], distance,
+            .2 < distance <= pair_limit(limits, frame.symbols[a], frame.symbols[b]), only=only)
+        if include:
+            (explicit if matched else result).append((int(a), int(b)))
+            if len(result)+len(explicit) >= max_bonds:
                 break
     from .bond_filter import prune_occluded
-    return [(a, b) for a, b, _ in prune_occluded(xyz, [(a,b,(0,0,0)) for a,b in result])]
+    return sorted(set(explicit) | {(a, b) for a, b, _ in prune_occluded(xyz, [(a,b,(0,0,0)) for a,b in result])})
 
 
 def unit_cell_edges(cell: np.ndarray) -> list[tuple[np.ndarray, np.ndarray]]:
@@ -494,6 +523,7 @@ def axis_vectors(frame: Frame, basis='XYZ', length=2.5, *, corner=False):
     XYZ are true Cartesian axes; abc use the actual three cell row vectors.
     The corner overlay preserves lattice angles while normalizing arrow lengths.
     """
+    if basis == 'Auto':basis = 'abc' if valid_lattice(frame) else 'XYZ'
     if basis == 'abc':
         if not valid_lattice(frame):
             return []

@@ -20,6 +20,8 @@ class CalculationOverview(QDialog):
             (' · '+('Periodic structure' if any(document.frames[0].pbc) else 'Isolated structure') if document.frames else ''))
         self.table=QTableWidget(len(self.jobs),10)
         self.table.setHorizontalHeaderLabels(['Job','Task','Method','Basis','Charge','Multiplicity','Energy (eV)','Termination','Last SCF cycles','Imaginary modes'])
+        if self.results is not None and self.results.program == 'VASP':
+            self.table.horizontalHeaderItem(6).setText('E0 (eV)')
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         layout.addWidget(self.table,1)
@@ -58,7 +60,13 @@ class CalculationOverview(QDialog):
         last=next((s for s in reversed(steps) if s.convergence),None)
         if last:
             lines.append('Last printed geometry convergence:')
-            lines += [f'  {key}: {value:g} / threshold {threshold:g}' for key,(value,threshold) in last.convergence.items()]
+            lines += [f'  {key}: {value:g}'+(' / threshold '+f'{threshold:g}' if threshold is not None else ' (threshold not printed)')
+                      for key,(value,threshold) in last.convergence.items()]
+        if self.results.program == 'VASP':
+            from .vasp_results import energy_lines
+            last_energy = next((s for s in reversed(steps) if s.energy_ev is not None), None)
+            if last_energy is not None:lines += energy_lines(last_energy.info)
+            lines.append(self.document.note)
         if self.results.program=='xTB':
             lines += [f'Optimization / trajectory records: {len(steps)}',self.document.note]
         self.details.setPlainText('\n'.join(lines))
