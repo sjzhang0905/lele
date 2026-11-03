@@ -1,0 +1,29 @@
+{
+  "orca_1500.out": {
+    "bytes": 2356994,
+    "frames": 1500,
+    "dipoles": 1500,
+    "baseline_seconds": 1.3090352150002218,
+    "current_seconds": 0.30089804100043693,
+    "speedup": 4.350427841430583,
+    "complete_document_identical": true
+  },
+  "orca_6000.out": {
+    "bytes": 9430994,
+    "frames": 6000,
+    "dipoles": 6000,
+    "baseline_seconds": 5.522683309000058,
+    "current_seconds": 1.1171253919992523,
+    "speedup": 4.943655697518828,
+    "complete_document_identical": true
+  },
+  "orca_12000.out": {
+    "bytes": 18864995,
+    "frames": 12000,
+    "dipoles": 12000,
+    "baseline_seconds": 12.808598849999726,
+    "current_seconds": 2.4023841689995606,
+    "speedup": 5.3316197364610876,
+    "complete_document_identical": true
+  }
+}

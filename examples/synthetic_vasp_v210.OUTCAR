@@ -1,0 +1,25 @@
+vasp.6.3.0
+ POTCAR: PAW_PBE N 08Apr2002
+ POTCAR: PAW_PBE H 08Apr2002
+ ions per type = 1 1
+ NIONS = 2
+ IBRION = 5
+ POMASS = 14.0 1.0
+ direct lattice vectors reciprocal lattice vectors
+ 8.0 0.0 0.0 0 0 0
+ 0.0 9.0 0.0 0 0 0
+ 0.0 0.0 10.0 0 0 0
+ POSITION TOTAL-FORCE (eV/Angst)
+ ------------------
+ 0.0 0.0 0.0 0.1 0.0 -0.2
+ 0.0 0.0 1.0 0.0 0.3 0.0
+ ------------------
+ FREE ENERGIE OF THE ION-ELECTRON SYSTEM (eV)
+ free energy TOTEN = -10.2 eV
+ energy without entropy = -10.0 energy(sigma->0) = -10.1
+ Eigenvectors and eigenvalues of the dynamical matrix
+ ----------------------------------
+ 1 f/i= 1.0 THz 6.0 2PiTHz 33.356 cm-1 4.0 meV
+ X Y Z dx dy dz
+ 0.0 0.0 0.0 1.0 0.0 0.0
+ 0.0 0.0 1.0 -1.0 0.0 0.0

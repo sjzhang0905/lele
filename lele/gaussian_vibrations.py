@@ -8,6 +8,7 @@ Gaussian also prints the ordinary atom/XYZ table, which is read exactly once.
 from __future__ import annotations
 
 from pathlib import Path
+from .output_text import read_output_lines, check_load_cancelled
 import re
 
 import numpy as np
@@ -67,13 +68,18 @@ def _orientation(lines, start, info):
 
 def read_gaussian_vibrations(path: str | Path):
     """Return analyses and reader notices, keeping complete modes in partial logs."""
-    lines = Path(path).read_text(errors='replace').splitlines()
+    lines = read_output_lines(path)
+    if not any('Frequencies' in line for line in lines):return [], ''
+    from .output_text import load_progress
+    progress=load_progress('Gaussian: vibrational modes',len(lines))
     analyses, notices = [], []
     current = None
     analysis = None
     info = {}
     i = 0
     while i < len(lines):
+        check_load_cancelled()
+        progress(i)
         line = lines[i]
         # A combined Opt+Freq file can contain independently terminated jobs.
         # Never reuse an earlier job's orientation if a later one omits it.
@@ -174,4 +180,5 @@ def read_gaussian_vibrations(path: str | Path):
                 symmetry=symmetry[column],
                 **{key: prop[column] for key, prop in properties.items()}))
         i = max(i + 1, j)
+    progress(len(lines))
     return [a for a in analyses if a.modes], ' '.join(dict.fromkeys(notices))

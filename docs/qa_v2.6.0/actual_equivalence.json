@@ -1,0 +1,49 @@
+{
+  "versions": [
+    "2.5.0",
+    "2.6.0"
+  ],
+  "all_eight_complete_documents_identical": true,
+  "files": {
+    "cp2k.inp": {
+      "frames": 1,
+      "records": 1,
+      "complete_document_sha256": "81e8b483362aaa28075d51c4bdfccd2f3cf23be4d3b9720313b477ee565fca8e"
+    },
+    "cp2k.out": {
+      "frames": 1,
+      "records": 135,
+      "complete_document_sha256": "0021c8c7d965bc40d7928566a50ce8894aefbd8108bb6d142ec126da29aecb15"
+    },
+    "Phenylhydrazine-pos-1.xyz": {
+      "frames": 134,
+      "records": 134,
+      "complete_document_sha256": "eed2f2282cee22a7a0c1d48463f1e278a92c5605e22261dbe35b57e3ae609da3"
+    },
+    "Phenylhydrazine-1.restart": {
+      "frames": 1,
+      "records": 1,
+      "complete_document_sha256": "6116a722b8b157717798a2c281f01254693dca2498b7de96c0526ad062affa6d"
+    },
+    "cp2k.out_tddft": {
+      "frames": 2,
+      "records": 2,
+      "complete_document_sha256": "3820c4d0d37cee69f5168aa33025054c966f458f6eb963bb246e91d0484716df"
+    },
+    "OUTCAR_opt": {
+      "frames": 20,
+      "records": 20,
+      "complete_document_sha256": "116418722fe0550da145b79347c0b56ee62d30a314f2fac8b30d6adb784b7a25"
+    },
+    "OUTCAR_freq": {
+      "frames": 25,
+      "records": 25,
+      "complete_document_sha256": "4a64b7c21b9bef431a125abf9fd88f5088558f466f2363a10df35cc779bb78c6"
+    },
+    "XDATCAR": {
+      "frames": 20,
+      "records": 20,
+      "complete_document_sha256": "9f973267f27766df95ffa92fe685e160a43be7fddbc6e3ba019f687b3f783a70"
+    }
+  }
+}

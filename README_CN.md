@@ -2,6 +2,83 @@
 
 **Local Environment and Lattice Explorer — 局域环境与晶格探索工具**
 
+**v3.0.0**：保存 PNG 默认采用 **4 倍分辨率 + Smooth edges（平滑边缘）**。见[发布验证记录](docs/VALIDATION_v3.0.0.md)。
+
+v2.13.6 修复验收报告中的两项坐标轴问题：原画布的 **Z/c 等角落字母被裁切**，以及 **3×/4× 平滑 PNG 中坐标轴截短**。见[修复与验证记录](docs/VALIDATION_v2.13.6.md)。
+
+v2.13.5 将默认 Ball and stick 的 **Bond thickness 改为 7**，Default 配色的 **H 显示半径增加 15%**，当前默认元素色再混入 **5% 白色**。保存 PNG 增加分辨率和边缘平滑选项，默认 **3 倍输出 + 平滑边缘**。见[使用与验证记录](docs/VALIDATION_v2.13.5.md)。
+
+v2.13.4 将 Atom colours 中的 **Sibyl** 更名为 **Default**；整套默认元素色混入 10% 白色，默认 Atom size 从 60% 降至 50%，Bond thickness 从 11 降至 9。见[验证记录](docs/VALIDATION_v2.13.4.md)。
+
+v2.13.3 修复选中原子后测量输入框撑高底栏、挤压画布的问题；选中或清空选择时底栏与画布高度保持一致。默认背景统一为纯白 **#FFFFFF**。见[验证记录](docs/VALIDATION_v2.13.3.md)。
+
+v2.13.2 修复全量验收中的 **PQR 元素误读/拒绝导入**和 **负网格计数 CUBE 无法打开**。
+PQR 的元素和坐标采用一致的空白字段或固定列宽记录；CUBE 的原子、原点、体素和晶胞共享单位处理。
+见[修复说明](docs/FIX_PQR_CUBE_v2.13.2_CN.md)和[复验记录](docs/VALIDATION_v2.13.2.md)。
+
+v2.13.1 修复增量验收中的 **全部五项问题**：斜晶胞 CIF 晶面坐标、高精度占据率往返、追加原子后的既有身份、重复 POSCAR 元素块，以及混占 CIF 的原始组分行顺序。见[修复说明](docs/FIX_DELTA_v2.13.1_CN.md)和[复验记录](docs/VALIDATION_v2.13.1.md)。
+
+v2.13.0 默认采用 **Sibyl.tcl 配色和 Glossy 光泽**；移除欢迎页的打开按钮及拖放提示；周期结构自动显示 **abc 晶矢**，非周期分子显示 XYZ。各结构导出格式均保留当前原子顺序，新增原子按添加顺序追加到末尾，旧转换接口也不再按元素排序。见[使用说明](docs/FEATURES_v2.13.0_CN.md)和[验证记录](docs/VALIDATION_v2.13.0.md)。
+
+v2.12.1 修复独立验收中的 **A1–A3、B1–B4 全部七项问题**：等价晶位混占组分、POSCAR 固定标记及原子顺序、跨帧原子身份、真空未变及小真空回读、底部自动对齐和 Chemcraft 恒等操作 CIF 导入。见[修复说明](docs/FIX_A1_B4_v2.12.1_CN.md)和[复验记录](docs/VALIDATION_v2.12.1.md)。
+
+v2.12.0 增加 **CIF 分数占据扇区显示、右击原子重编号/交换编号、保持笛卡尔坐标的 slab 真空层修改**；底部摘要左侧与 Coordinates 窗口对齐，选中原子改为绿色粗虚线外轮廓。见[使用说明](docs/FEATURES_v2.12.0_CN.md)和[验证记录](docs/VALIDATION_v2.12.0.md)。
+
+v2.11.0 修复周期结构重设方向：**XYZ 对齐同步旋转原子与晶胞**。新增 **Edit → Reorient complete structure / crystal…**，可一次设置原点、X 提示和 Z 方向，自动生成正交旋转矩阵，也可粘贴分析脚本的行向量矩阵。支持最近周期像、体数据同步变换、撤销和项目保存。见[使用说明](docs/FEATURES_v2.11.0_CN.md)和[验证记录](docs/VALIDATION_v2.11.0.md)。
+
+v2.10.1 修复独立验收发现的 **A1–A3**：QE 优化状态必须有明确收敛证据；CP2K 晶胞扩展与原子重复分别读取；支持 `ANGLES` 别名及显式角度单位，保留斜晶胞。见[修复说明](docs/FIX_A1_A3_v2.10.1_CN.md)和[复验记录](docs/VALIDATION_v2.10.1.md)。
+
+v2.10.0 完善 **QE 输入、PWSCF 变胞优化、PHONON 频率及 matdyn 模式导入**。模式文件可明确关联参考结构和 alat，支持非 Γ 点的周期振动相位、箭头、GIF、q 点 CSV 和项目保存。见[QE 使用说明](docs/FEATURES_v2.10.0_CN.md)和[验证报告](docs/VALIDATION_v2.10.0.md)。
+
+v2.9.0 默认使用 **GaussView 风格配色（取自 Chemcraft 兼容预设）**、**Chemcraft 普通键距离上限**及 **VESTA space-filling 半径**。Space-filling 默认 Atomic、100%，可切换 Ionic / van der Waals，尺寸独立保存。配色尚未取得 Gaussian 原始完整 RGB 表；成键采用默认表提取的距离，不承诺复现其他软件的完整算法。见[参数来源和范围](docs/display_reference_data.md)。
+详见 [v2.9 使用说明](docs/FEATURES_v2.9.0_CN.md)和[验证报告](docs/VALIDATION_v2.9.0.md)。
+
+v2.8.0 增加 **CP2K/Molden `.mol` 振动导入**，支持模式选择、动画、箭头及 GIF，保留固定原子的零位移。
+**View → Atom legend…** 改为独立图例窗口，画布仅显示各元素样本和符号，可单独保存 PNG。
+详见 [使用说明](docs/FEATURES_v2.8.0_CN.md)和[验证报告](docs/VALIDATION_v2.8.0.md)。
+
+v2.7.0 检查并改进各类多步输出读取，修复 CP2K、xTB、Quantum ESPRESSO、NWChem 的重复扫描；
+处理/导出/项目操作增加延迟进度框。优化成功的对应帧显示 **converged**，
+**View → Atom legend** 可添加随 PNG/GIF 导出的元素球图例，欢迎页并列显示两个邮箱。
+详见 [使用说明（含 CP2K 频率输出组织）](docs/FEATURES_v2.7.0_CN.md)和[验证记录](docs/VALIDATION_v2.7.0.md)。
+
+v2.6.0 更新：Bond cutoff 扩大到 0.10–5.00，支持精确输入并立即重新识别自动键；
+底部信息行下移，扩大画布。选中 2/3/4 个原子后，可直接输入键长/键角/二面角，
+按 Enter 或 Set 移动最后选中原子所在的末端片段，支持撤销；环或周期网络限制移动时弹窗提示。
+ORCA 优化输出加速解析，输出文件后台加载，长加载弹窗显示阶段、阶段百分比、耗时并支持取消。
+详见 [使用说明](docs/FEATURES_v2.6.0_CN.md)和[验证记录](docs/VALIDATION_v2.6.0.md)。
+
+v2.5.0 取消程序固定帧数上限，并优化长轨迹加载：CP2K/普通 XYZ、XDATCAR 逐帧读取，
+同一次导入的分析共用已解码输出；目录树按需展开，大文件后台解析并支持取消。
+保留全部结构帧和能量记录。详见 [长文件使用说明](docs/FEATURES_v2.5.0_CN.md)和
+[性能对比与验证](docs/VALIDATION_v2.5.0.md)。
+
+v2.4.0 增加 **CP2K 独立读取**：输入/文本 restart、标准输出和 XYZ 轨迹均可单独打开。
+支持已有结构、能量、优化收敛指标、按 k 点/自旋分组的轨道，以及 TDDFPT 跃迁、光谱和 CSV。
+不搜索配套文件；没有结构或能量时保留实际可用的数据。详见
+[CP2K 使用说明](docs/FEATURES_v2.4.0_CP2K_CN.md)和[验证记录](docs/VALIDATION_v2.4.0.md)。
+
+v2.3.1 调整：VASP 结果、曲线和 CSV **只使用 E0**，即 OSZICAR 的 `E0=`、OUTCAR 的
+`energy(sigma->0)`。没有 E0 时留空。详见 [说明与验证](docs/VASP_E0_v2.3.1_CN.md)。
+
+v2.3.0 更新：加入三个最高优先级功能：**按元素对设置成键/配位规则**、
+**多面体定量分析与轨迹曲线/CSV**、**.lele 项目保存与恢复**。
+入口分别为 Crystal → Pair rules、Analysis → Coordination / polyhedron analysis…、
+File → Save/Open project…。项目保留已加载的结构与计算结果、编辑后的键、逐原子样式、
+各文件视角、HKL 切面和显示参数。详见 [v2.3.0 说明](docs/FEATURES_v2.3.0_CN.md)与
+[验证记录](docs/VALIDATION_v2.3.0.md)。
+
+v2.2.0 更新：增加 **(hkl) 晶面显示裁切**和 **Polyhedral 配位多面体样式**。
+通过 **Crystal → HKL planes** 设置晶面、位置、保留方向和薄层厚度；支持多个切面、
+斜晶胞和沿晶面法向观察。通过 **Crystal → Polyhedra** 设置中心/配位元素、距离、
+透明度和棱线，补全跨晶胞配位，并保留各文件自己的显示设置。
+详见 [v2.2.0 说明](docs/FEATURES_v2.2.0_CN.md)和[验证记录](docs/VALIDATION_v2.2.0.md)。
+
+v2.1.0 更新：增加 **VASP OUTCAR / XDATCAR / OSZICAR** 独立读取，支持优化/MD
+轨迹、离子步能量、力曲线、振动模式与虚频动画（自 v2.3.1 起只使用 E0）。只有能量时显示结果页，只有结构时
+保留轨迹浏览，无需同目录其他文件。详见 [v2.1.0 说明](docs/FEATURES_v2.1.0_CN.md)
+和[验证记录](docs/VALIDATION_v2.1.0.md)。
+
 v2.0.3 更新：增加 **Ctrl+H**，在两个选中原子之间添加/移除虚线氢键，支持撤销；
 Ctrl+B 继续操作普通键。切换已打开的文件时，各文件保留自己的视角、缩放、平移、
 投影、配色及其他显示设置；频率和纯能量节点也使用同一恢复流程。
@@ -51,7 +128,7 @@ v1.7.2 更新：左下角 XYZ/abc 字母持续正对镜头，箭头粗细固定�
 Boundary 现在复制完整晶胞及原子，保留各单胞尺寸并显示内部边框。
 详见 [八项显示与交互更新](docs/DISPLAY_UPDATES_v1.7.2_CN.md)。
 
-当前版本：**2.0.3**。已在 v1.6.0 的真实扩胞功能之上，重新实现 v1.4.0 与 v1.5.0 的功能：高质量 GIF、保存目录、正对镜头的轴字母、能量显示单位、IR/Raman/UV-Vis 模拟光谱、普通/激发态/跃迁偶极与导出、成键修正、复制粘贴、框选、元素组折叠行为及 Boundary。保留先显示窗口再预加载、Gaussian 优化/频率分组、等值面精确输入及逐原子显示控制。项目采用 **MIT 协议**。
+当前版本：**2.13.1**。已在 v1.6.0 的真实扩胞功能之上，重新实现 v1.4.0 与 v1.5.0 的功能：高质量 GIF、保存目录、正对镜头的轴字母、能量显示单位、IR/Raman/UV-Vis 模拟光谱、普通/激发态/跃迁偶极与导出、成键修正、复制粘贴、框选、元素组折叠行为及 Boundary。保留先显示窗口再预加载、Gaussian 优化/频率分组、等值面精确输入及逐原子显示控制。项目采用 **MIT 协议**。
 
 v1.7.1 修复跨晶胞片段选择：**Ctrl+G** 需要相邻晶胞时自动建立可撤销的真实超胞，Coordinates、Atoms 和原子编号同步增加，**Ctrl+I** 对扩胞后的全部原子反选。**Ctrl+Z** 可恢复扩胞前的结构与体数据。详见 [本次修复说明](docs/FIX_PERIODIC_FRAGMENT_v1.7.1_CN.md)。
 
@@ -95,7 +172,7 @@ v1.7.1 修复跨晶胞片段选择：**Ctrl+G** 需要相邻晶胞时自动建�
 
 欢迎页从上到下分为三部分：
 
-1. **LELE / Local Environment and Lattice Explorer / Version 2.0.3**，版本号正下方显示 **sjzhang0905@hotmail.com**。邮箱可选择复制，点击可打开系统邮件客户端；邮箱下方显示可点击、可复制的仓库地址 **https://github.com/sjzhang0905/lele**。
+1. **LELE / Local Environment and Lattice Explorer / Version 2.6.0**，版本号正下方显示 **sjzhang0905@hotmail.com**。邮箱可选择复制，点击可打开系统邮件客户端；邮箱下方显示可点击、可复制的仓库地址 **https://github.com/sjzhang0905/lele**。
 2. **鹦鹉“乐乐”**：从原始帧图中使用前四帧，以“**站立→左腿→站立→右腿**”重复，不再使用末尾多余的站立帧。每 **0.8 秒**姿态与横向位置同步瞬间切换，帧间保持不动；四帧步态周期为 **3.2 秒**，每 **25.6 秒**完成八个完整步态周期、横穿画布并重新从左侧开始。
 3. **目前已支持的快捷键**，按文件编辑、原子与片段、鼠标与导航分组。
 
@@ -113,7 +190,7 @@ v1.7.1 修复跨晶胞片段选择：**Ctrl+G** 需要相邻晶胞时自动建�
 
 1. 使用 64 位 Python 3.12，或 3.11，解压完整源码目录。
 2. 双击 `start_windows.bat`，自动建立环境、安装依赖并启动。
-3. 窗口标题应为 `LELE 2.0.3 - Local Environment and Lattice Explorer`。
+3. 窗口标题应为 `LELE 2.6.0 - Local Environment and Lattice Explorer`。
 4. 首次成功启动后，可运行 `build_windows.bat`。新程序位于 `dist\LELE\LELE.exe`，分发时保留整个 `dist\LELE` 文件夹及其 `_internal`、`LICENSE` 和 `SOURCE_NOTICE.md` 内容。
 
 从已配置好的开发环境也可执行：

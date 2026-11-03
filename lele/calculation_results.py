@@ -6,6 +6,7 @@ silently merged.
 """
 from dataclasses import dataclass, field
 from pathlib import Path
+from .output_text import read_output_lines, check_load_cancelled, load_progress
 import re
 import numpy as np
 from ase.units import Hartree
@@ -124,9 +125,12 @@ class CalculationResults:
     hessians: list = field(default_factory=list)
     note: str = ''
 
-    def frames(self, max_frames=750):
+    def frames(self, max_frames=None):
         frames = []
-        for step in self.steps:
+        progress=load_progress('Collecting structure frames',len(self.steps))
+        for record,step in enumerate(self.steps):
+            check_load_cancelled()
+            progress(record)
             if step.geometry is None:
                 continue
             current = step.geometry.clone()
@@ -144,13 +148,15 @@ class CalculationResults:
                     and (current.energy_ev is None or (previous.energy_ev is not None
                          and abs(previous.energy_ev-current.energy_ev)<1.e-7)))
             if not duplicate:
-                if len(frames)>=max_frames:
+                if max_frames is not None and len(frames)>=max_frames:
                     raise ValueError(f'Trajectory exceeds {max_frames} frames')
                 frames.append(current)
             step.frame_index = len(frames)-1
+            if step.converged:frames[-1].info['optimization_converged']=True
         for orbitals in self.orbitals:
             if orbitals.step_index is not None:
                 orbitals.frame_index = self.steps[orbitals.step_index].frame_index
+        progress(len(self.steps))
         return frames
 
 
@@ -167,10 +173,11 @@ def _route(job, text):
 
 
 def read_gaussian_results(path):
-    lines = Path(path).read_text(errors='replace').splitlines()
+    lines = read_output_lines(path)
     result = CalculationResults('Gaussian', force_unit='Hartree/Bohr', displacement_unit='Bohr')
     job = step = None
     i = 0
+    progress=load_progress('Gaussian: geometry, energies and orbitals',len(lines))
 
     def ensure_job(line):
         nonlocal job
@@ -180,6 +187,8 @@ def read_gaussian_results(path):
         return job
 
     while i < len(lines):
+        check_load_cancelled()
+        progress(i)
         line = lines[i]
         if 'Normal termination of Gaussian' in line or 'Error termination' in line:
             if job is not None:job.termination = 'Normal termination' if 'Normal termination' in line else 'Error termination'
@@ -254,6 +263,7 @@ def read_gaussian_results(path):
                 snapshot.channels['Restricted']=rows
             result.orbitals.append(snapshot);i=j;continue
         i+=1
+    progress(len(lines))
     return result
 
 
@@ -263,6 +273,12 @@ def read_orca_results(path):
 
 
 def read_calculation_results(path, kind):
+    if kind == 'vasp_out':
+        from .vasp_results import read_vasp_results
+        return read_vasp_results(path)
+    if kind == 'vasp_oszicar':
+        from .vasp_results import read_oszicar
+        return read_oszicar(path)
     if kind=='gaussian_out':return read_gaussian_results(path)
     if kind=='orca_out':return read_orca_results(path)
     if kind in ('xtb_out','xtb_trj'):

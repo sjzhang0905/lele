@@ -1,0 +1,183 @@
+{
+  "version": "2.7.0",
+  "synthetic": true,
+  "repeat": 2,
+  "cases": {
+    "cp2k_1000.out": {
+      "bytes": 284972,
+      "frames": 1000,
+      "steps": 1000,
+      "seconds": [
+        0.10180513500017696,
+        0.1085984470009862
+      ],
+      "median_seconds": 0.10520179100058158,
+      "document_digest": "8fd5c3747a487eac85029b0e7e52404f29882a5e26ab6654a2c68a0457ba9a1a"
+    },
+    "cp2k_4000.out": {
+      "bytes": 1142972,
+      "frames": 4000,
+      "steps": 4000,
+      "seconds": [
+        0.3998600949998945,
+        0.44867467999938526
+      ],
+      "median_seconds": 0.4242673874996399,
+      "document_digest": "65d74a0e31426b8964fa156acadba0c3c59217343a745a5c0544f14ec369556c"
+    },
+    "xtb_1000.out": {
+      "bytes": 151914,
+      "frames": 0,
+      "steps": 1000,
+      "seconds": [
+        0.056232515000374406,
+        0.03641450200120744
+      ],
+      "median_seconds": 0.04632350850079092,
+      "document_digest": "5769cd3c2fc4199b40bf43f16b2e83251beb49dceb60aaab90518dbebe4ed915"
+    },
+    "xtb_4000.out": {
+      "bytes": 610914,
+      "frames": 0,
+      "steps": 4000,
+      "seconds": [
+        0.1515185560001555,
+        0.15299088999927335
+      ],
+      "median_seconds": 0.15225472299971443,
+      "document_digest": "b2bfe11bd9bd1fa053ba90fd9b1637ae6aa700ff5286006c062a7fc32af8aa61"
+    },
+    "qe_1000.pwo": {
+      "bytes": 89254,
+      "frames": 1000,
+      "steps": 0,
+      "seconds": [
+        0.02834547800011933,
+        0.02351740899939614
+      ],
+      "median_seconds": 0.025931443499757734,
+      "document_digest": "aa16ca558961cd734b8d9298c0e7ba99170a16bb57072e49364f971a61d8cc9c"
+    },
+    "qe_4000.pwo": {
+      "bytes": 356254,
+      "frames": 4000,
+      "steps": 0,
+      "seconds": [
+        0.09711205900021014,
+        0.09944335900036094
+      ],
+      "median_seconds": 0.09827770900028554,
+      "document_digest": "73d75eb4ff2ac12c8461ede58d5933101057638c1f28b75d37b17303b403280b"
+    },
+    "vasp_1000.out": {
+      "bytes": 205172,
+      "frames": 1000,
+      "steps": 1000,
+      "seconds": [
+        0.06698353799947654,
+        0.06423130300026969
+      ],
+      "median_seconds": 0.06560742049987311,
+      "document_digest": "8e3d46896c991113fcec2b3fc92e17606e0e04daab4ba6a0009735b4d6f6449c"
+    },
+    "vasp_4000.out": {
+      "bytes": 820172,
+      "frames": 4000,
+      "steps": 4000,
+      "seconds": [
+        0.2590196109995304,
+        0.2760772920009913
+      ],
+      "median_seconds": 0.26754845150026085,
+      "document_digest": "82b6303e0e5c5bbf99f8dc93c4c3624449709dd6712ce0eb6a93222a46dc332f"
+    },
+    "siesta_1000.out": {
+      "bytes": 94060,
+      "frames": 1000,
+      "steps": 0,
+      "seconds": [
+        0.03649487000075169,
+        0.026186054999925545
+      ],
+      "median_seconds": 0.03134046250033862,
+      "document_digest": "c768fd04c9e5f0b4e72b5e17718bcd9cb7d76d7ddc133d3f181fed4da66e5341"
+    },
+    "siesta_4000.out": {
+      "bytes": 376060,
+      "frames": 4000,
+      "steps": 0,
+      "seconds": [
+        0.11005913700137171,
+        0.11761694800043188
+      ],
+      "median_seconds": 0.11383804250090179,
+      "document_digest": "fe1422d471e8a0c7967155ad0599f201fa0a3b22f27bc3ee266463e69afcea69"
+    },
+    "gaussian_1000.out": {
+      "bytes": 475073,
+      "frames": 1000,
+      "steps": 1000,
+      "seconds": [
+        0.13355778499862936,
+        0.13323308500002895
+      ],
+      "median_seconds": 0.13339543499932915,
+      "document_digest": "a1c308857537e53708252b455f39487154f29074951c9237f3c219a7d8adbc2f"
+    },
+    "gaussian_4000.out": {
+      "bytes": 1900073,
+      "frames": 4000,
+      "steps": 4000,
+      "seconds": [
+        0.48411044999920705,
+        0.5313699300004373
+      ],
+      "median_seconds": 0.5077401899998222,
+      "document_digest": "bfd69e6fd6a051c959becff2408eca0d562d947788f21475fd77a777ffa52174"
+    },
+    "xyz_1000.xyz": {
+      "bytes": 35893,
+      "frames": 1000,
+      "steps": 0,
+      "seconds": [
+        0.035360683999897446,
+        0.020931627001118613
+      ],
+      "median_seconds": 0.02814615550050803,
+      "document_digest": "ad4e1a052061093eeecfec0385a49bc890db5b64378ade19753484584ad2a192"
+    },
+    "xyz_4000.xyz": {
+      "bytes": 146893,
+      "frames": 4000,
+      "steps": 0,
+      "seconds": [
+        0.0807380229998671,
+        0.08247763100007433
+      ],
+      "median_seconds": 0.08160782699997071,
+      "document_digest": "45d2f71287aa8690f98703d835fd632fc97410d7e38ec7b8686e969b1a593a9a"
+    },
+    "xdatcar_1000.xdatcar": {
+      "bytes": 46921,
+      "frames": 1000,
+      "steps": 1000,
+      "seconds": [
+        0.030896883999957936,
+        0.030539143001078628
+      ],
+      "median_seconds": 0.030718013500518282,
+      "document_digest": "97f873136c8ec48daffd6b96d4c7119be768ad9a749bc0432fd772342bf77ec8"
+    },
+    "xdatcar_4000.xdatcar": {
+      "bytes": 190921,
+      "frames": 4000,
+      "steps": 4000,
+      "seconds": [
+        0.11400449500069954,
+        0.11907951900138869
+      ],
+      "median_seconds": 0.11654200700104411,
+      "document_digest": "335559597958118f4c6901186203960edb4249a8fda35f55c7ebdb3f050fc893"
+    }
+  }
+}

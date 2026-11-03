@@ -1,5 +1,254 @@
 # Changelog
 
+## 3.0.0 — 2026-11-03
+
+- Default PNG saving to 4× canvas resolution with Smooth edges enabled.
+- Update application and package version to 3.0.0.
+
+## 2.13.6 — 2026-11-03
+
+- Fix high-resolution PNG corner axes shrinking or clipping at 3×/4× with smooth edges. Capture independent overlay renderers, actors and text properties so orientation-widget callbacks cannot reframe tiled exports or corrupt live billboard caches.
+- Fit complete XYZ/abc corner labels inside their viewport with glyph-based pixel margins. Re-evaluate after camera rotation, font changes and canvas resizing, while keeping arrow geometry and scene bounds independent of text layout.
+- Add rendered-image regressions for all 1×–4×/smoothing combinations, label margins at multiple fonts/rotations, and overlay restoration after failure.
+
+## 2.13.5 — 2026-11-03
+
+- Set default Ball and stick bond thickness to 7 and enlarge Default-palette H display radii by 15%, sharing the same radius between glyphs, labels, picking, selection and the legend.
+- Mix a further 5% white into the current Default colors (approximately 14.5% white relative to the original palette).
+- Add PNG resolution choices of 1×/2×/3×/4× or a custom width, with 3× and smooth edges enabled by default. Use supersampling, Lanczos downsampling, finer export meshes and scaled annotations. Restore the live scene after capture and replace an existing file only after a successful save.
+
+## 2.13.4 — 2026-11-03
+
+- Rename the Atom colours palette from Sibyl to Default and soften its source colors by mixing in 10% white, consistently across atoms, element-colored bonds, legends and the color editor. Keep the original reference RGB table intact and accept the former palette name in saved presets and projects.
+- Reduce default ball-and-stick atom size from 60% to 50% and bond thickness from 11 to 9; initialize sliders from the render options. Keep pure-white background and Glossy lighting.
+
+## 2.13.3 — 2026-11-03
+
+- Keep the footer at its native editor height while measurement controls are hidden, so selecting two to four atoms or clearing selection never changes the canvas size. Derive the height from polished Qt control size hints for the active font/style.
+- Use pure white (#FFFFFF) for new render options, the default Classic ball and stick preset, and the Light background button.
+
+## 2.13.2 — 2026-11-03
+
+- Parse PQR ATOM/HETATM whitespace fields consistently, with optional chain IDs, tabs, large coordinates and a separate fixed-column fallback. Preserve elements and coordinates from the same record layout; report malformed atom rows instead of silently losing atoms. Distinguish common biomolecular atom labels from ion element names.
+- Share normalized CUBE header input between legacy atom conversion and native field loading. Support all-negative Angstrom grid counts without rewriting source files; use consistent units for atoms, origin, voxel vectors and cell. Preserve scalar field values, signed atom-count labels, ASE field ordering and CASTEP boundary-plane handling.
+- Retain valid CUBE geometry when the field is incomplete, too large or multi-channel, with an explicit availability note. Reject invalid/mixed grid units and propagate cancellation.
+- Add PQR/CUBE regression and export/project checks; retain the full-acceptance independent assertions. See docs/VALIDATION_v2.13.2.md for current results and reproduction.
+
+## 2.13.1 — 2026-11-03
+
+- Fix skew-cell CIF import at periodic faces: keep wrapped matching coordinates strictly inside the KD-tree's half-open [0,1) box when floating-point remainder rounds to 1. Do not move source Cartesian coordinates.
+- Write native CIF site components with double-precision round-trip occupancies and coordinates. Preserve minority-component source row order, including interleaved rows, and append new component rows after existing ones. Keep strict overoccupancy validation and P1 symmetry-expanded export.
+- Preserve surviving atom identities on paste; assign fresh identities to added atoms and supercell replicas. Geometry monitors and appearance synchronization use partial validated identity mappings so an unrelated deleted/replaced atom does not redirect an O–H monitor. Selected alignment/vibration/coordination atoms use the same mapping, while missing identities remain unavailable.
+- Preserve original per-atom POSCAR block membership when reindexing; independent adjacent blocks of the same element stay separate. Carry block and CIF component-row metadata through projects, deletion, reindexing, clipboard operations and supercells.
+- Retain the independent 11-case delta acceptance unchanged and add 31 regressions. Full Linux suite: 912 tests and 78 subtests pass with private examples enabled. Recheck production Qt/VTK defaults, axes, index dialogs, vacuum, footer and selection outlines.
+
+## 2.13.0 — 2026-11-02
+
+- Default to Glossy lighting and the 111-element H–Rg palette extracted from the supplied Sibyl.tcl. Share palette lookup between native atom/bond rendering, legends and the color editor, including before a 3D view exists. Keep existing explicitly saved palettes, finishes and atom overrides.
+- Remove the welcome-page Open a file / Ctrl+O button and the drop-a-structure hint. Retain File → Open, Ctrl+O, drag/drop, the parrot animation and shortcut table.
+- Add an automatic axes basis, defaulting to true abc cell vectors for valid periodic structures and XYZ for molecules or invalid cells. Support explicit choices, per-document switching, native render exports and project persistence.
+- Preserve current atom order in all five structure export formats and remove element sorting from both legacy POSCAR writers. Appended atoms retain addition order; explicit reindexing still defines the current row order. Preserve the prior selective-dynamics and species-block fixes.
+- Add 18 regressions and update startup/style assertions for the requested UI/default changes. Full suite: 870 tests plus 78 subtests pass with private examples enabled. Verify actual startup, periodic/molecular axis switching, the supplied RGB values and export order with the production Qt/VTK path.
+
+## 2.12.1 — 2026-11-02
+
+- Fix A1: rebuild CIF site probabilities from each input species' unique symmetry orbit, merging periodic aliases and equivalent orbit representatives without losing minority species or double-counting redundant representatives. Preserve compositions and probabilities on CIF round trips; reject conflicting equivalent occupancies.
+- Fix A2: retain per-atom, per-axis VASP selective-dynamics flags through import, edits, reindexing and projects. Write both Direct and Cartesian POSCAR without sorting atoms, preserving consecutive species blocks and constraints.
+- Fix A3: share validated source-identity mappings across geometry curves, appearance synchronization, display alignment, vibration selections, coordination trajectories and dipole fitting. New monitors capture their reference identities in projects; unmappable targets leave gaps or are skipped.
+- Fix B1: confirming the existing vacuum is a true no-op, preserving energy, convergence and undo history. Keep the original precision when the dialog's rounded value is untouched.
+- Fix B2: retain confirmed slab surface projections after changing vacuum, so an external gap smaller than internal layer spacings can be reopened and edited. Store this evidence in projects and recognize matching v2.12.0 vacuum records.
+- Fix B3: queue summary alignment from actual window/status-bar layout events and apply pending layout geometry before calculating corrections.
+- Fix B4: infer P1 when an unnamed CIF explicitly supplies only identity operations, including Chemcraft input without occupancy columns. Report unnamed nonidentity symmetry without guessing a group.
+- Retain the independent 12-case acceptance assertions and add 34 regressions. Full Linux suite: 852 tests and 78 subtests pass with the supplied private examples; native window/click/dialog checks pass. Preserve the unfilled green dashed selection outline.
+
+## 2.12.0 — 2026-11-02
+
+- Preserve CIF fractional and mixed-site occupancies through symmetry expansion, projects, Boundary, supercells, deletion and the native clipboard. Render species-proportional sphere sectors and a pale vacancy sector; include minority species in the legend, weighted composition and an unknown integer-electron parity. Preserve occupancy in CIF export and reject silent conversion to fully occupied calculation inputs.
+- Add right-click atom index dialogs with 1-based move-to-index and two-selection index swap. Reorder coordinates, species, occupancies, force vectors, appearance and ordinary/hydrogen-bond indices together; preserve current-frame scalar results and atom order in POSCAR export. Empty-space right-click still clears selection; right-drag still rolls the camera.
+- Detect slab outermost atomic planes and the largest periodic vacuum gap along the three cell normals. Adjust only the chosen cell vector's normal component, preserving all Cartesian coordinates, in-plane components and the other two cell vectors. Reject boundary-split slabs that cannot meet the fixed-coordinate requirement; support undo and clear invalidated calculation data.
+- Dynamically align the bottom summary with the coordinate-pane left edge as the window layout changes.
+- Replace the selected-atom wire mesh with an unfilled, thick green dashed camera-facing outline. Preserve atom colors and center labels; use explicit line gaps across native VTK backends.
+
+## 2.11.0 — 2026-11-02
+
+- Fix periodic XYZ pair alignment: use the nearest periodic bond and rotate coordinates and lattice together. Keep the first atom fixed and co-rotate attached volume grids. Clearly label a/b/c as fixed-cell relative-geometry edits.
+- Add origin/X/Z crystal reorientation with automatic proper rotation and Z-priority Gram–Schmidt axes matching the supplied rotation script. Accept a pasted row-vector rotation matrix, preview its values and reject collinear axes, scale, shear and reflection.
+- Center periodic atom representatives around the selected origin with the complete lattice metric; remap frozen ordinary/hydrogen-bond image shifts, preserve scalar energies and convergence for rigidly equivalent periodic structures, and rotate available QE force vectors.
+- Preserve reorientation matrices in frame information and projects, support undo of cell/coordinates/grids, process nearest-image centering with background progress, and preserve atom order in reoriented POSCAR exports.
+- Add synthetic geometry, live GUI, project/export round-trip, supplied-script convention and actual POSCAR1/POSCAR2 compatibility regressions. Retain the v2.10.1 acceptance fixes.
+
+## 2.10.1 — 2026-11-02
+
+- Fix A1: require explicit QE BFGS convergence, with failed/max-step/error exits taking priority within their PWSCF job. Keep normal process completion separate from optimization status and retain convergence only on matching final-coordinate reprints.
+- Fix A2: independently read CP2K CELL and TOPOLOGY MULTIPLE_UNIT_CELL. Use the original unit cell for fractional coordinates and replica translations; preserve CP2K's X-fastest replica order, atom kinds and periodic axes. Explain mismatched repeated-topology input compatibility in the import note.
+- Fix A3: support CP2K ANGLES as an ALPHA_BETA_GAMMA alias, including explicit degree/radian units. Report invalid angles instead of silently showing an orthogonal or degenerate cell.
+- Retain the independent acceptance expectations as permanent regressions, correct the old QE success fixture, and extend coverage to failure priority, separate jobs, oblique cells, unequal repeats, invalid geometry and project round trips.
+
+## 2.10.0 — 2026-10-30
+
+- Add dedicated QE PW input/results objects. Preserve parsed namelists, species, cells and source Rydberg energies; retain variable-cell ionic histories and distinct final SCF evaluations, Cartesian force summaries and confirmed geometry convergence. Keep ASE-compatible unit conversion and the existing linear trajectory API.
+- Recognize PHONON stdout independently of PWSCF, including nonstandard suffixes; retain each q-point frequency set and its available reference without inventing displacement vectors. Keep frequency-only results usable when geometry is absent.
+- Import normalized matdyn .modes as standalone results. Add explicit reference-structure, frame and alat association. Keep all q-point occurrences and complex vector components, without additional mass weighting. Do not merge PHONON and matdyn frequency sets.
+- Animate phonons with Bloch phase across Boundary cells; support polarization arrows, participation analysis, q-labeled frequency trees/CSV, project persistence and native PNG/GIF export. Keep reference coordinates and source results intact.
+- Add synthetic and supplied-file coverage. Do not redistribute the four private input files; include their acceptance record and production rendering.
+
+## 2.9.0 — 2026-10-30
+
+- Use Chemcraft's built-in GaussView-style compatibility palette as the new default, with its actual source named in the UI. A Gaussian-authored full RGB table remains unavailable; no claim of exact native GaussView matching is made.
+- Use ordinary-bond upper limits extracted from Chemcraft b816bt, excluding hydrogen-bond records. Share pair lookup across finite and periodic connectivity, fragment operations and edits. Default distance multiplier is 1.00; explicit pair rules, manual bonds and frozen edited graphs remain authoritative. Offer the earlier covalent-radius model separately.
+- Use VESTA 3.5.8 Atomic radii for space filling, with Ionic and van der Waals alternatives. Space-filling size is independent of ball-and-stick size and defaults to 100%. Store these choices per document and in projects/presets; restore legacy projects with their previous covalent-radius search model.
+- Document numeric provenance, coverage and the limits of compatibility. Distribute extracted numeric facts and a reproducible extractor, without upstream application binaries or configuration files.
+
+## 2.8.0 — 2026-10-30
+
+- Import independent CP2K-compatible Molden vibration files by content, preserving reference coordinate units, mode numbers/frequencies and frozen zero vectors. Integrate animation, mode arrows, selection participation, GIF and project persistence. Keep standard MDL .mol reading separate.
+- Replace the main-canvas atom-legend overlay with a nonmodal window containing only unbonded element samples and labels; add independent PNG export and explicit refresh from the current structure. Legacy project flags remain readable without restoring the overlay.
+- Preserve source units for optional Molden INT values and use the actual intensity unit in frequency tooltips.
+
+## 2.7.0 — 2026-10-30
+
+- Remove repeated history scans in CP2K, xTB, Quantum ESPRESSO and geometry-free NWChem module continuations; retain complete frame and scientific records. Add parsing/cancellation phases for other supported outputs and streaming trajectories.
+- Add delayed progress for project I/O, structure/CSV/PNG export, spectra, geometry curves, mode/coordination analysis and large view/table updates. Keep Qt/VTK work on the GUI thread with cooperative checkpoints.
+- Show converged on identified successful geometry optimization frames; clear stale status after structural edits and retain it through undo.
+- Add View → Atom legend: one unbonded visible sample per element, fixed camera overlay, PNG/GIF support and per-document/project persistence.
+- List both contact emails side by side on the welcome page. Document CP2K primary/replica logs and Molden vibration output organization.
+
+## 2.6.0 — 2026-10-30
+
+- Bond cutoff now supports 0.10–5.00 with a precise numeric field. Explicit changes rebuild automatic/frozen bonds for the active document, retaining manual ordinary/dashed overrides and element-pair rules.
+- Move the atom/composition/contact summary and selection measurement into one bottom status strip; use the freed space for the structure canvas.
+- Edit selected distances, angles and dihedrals numerically (Enter/Set). Move the last-selected terminal bonded fragment rigidly; reject rings, extra fixed-atom paths and infinite periodic networks without partial edits. Preserve image shifts and support undo; clear stale non-rigid geometry energies.
+- Parse scientific outputs in a cancellable worker even below 4 MiB. Long imports display phase, phase percentage and elapsed time; structure/view attachment stays on the GUI thread.
+- Speed up long ORCA optimizations with gated metadata matching, block coordinate conversion, indexed source-line/geometry lookup, optional-section checks and shared load-local source text. Retain all frames and original scientific values.
+
+## 2.5.0 — 2026-10-30
+
+- Remove the default 750-frame cap across native CP2K, VASP, Gaussian/ORCA,
+  xTB, SIESTA and generic multi-image imports. Also remove cumulative xTB/NEB
+  trajectory-record limits. Explicit caller-supplied API limits remain optional;
+  the application supplies none. All loaded frames remain editable in memory.
+- Stream native CP2K/plain XYZ and XDATCAR blocks with array-based numeric
+  conversion. Preserve variable cells, Fortran exponents, incomplete-tail
+  handling, source record mapping and extended-XYZ metadata through ASE.
+- Share decoded output lines only within one load; skip absent optional
+  property sections. Scan VASP tags/species once and avoid repeated regex work
+  on irrelevant CP2K SCF rows. Keep VASP E0-only and CP2K FORCE_EVAL policies.
+- Replace per-leaf copies/hashes of whole frame sequences with shared indexes.
+  Build long frame/energy tree entries on expansion in 256-record pages,
+  retaining numeric navigation, playback, stage/NEB sequences and projects.
+- Parse scientific files of 4 MiB or larger in a cancellable background worker.
+  GUI/VTK updates remain on the main thread; queued files retain their order,
+  and cancelled imports do not attach partial documents.
+- Add 22 long-file regressions. Full Linux suite: 605 tests plus 78 subtests
+  pass. Eight supplied CP2K/VASP documents remain value-for-value identical to
+  2.4.0. Include reproducible synthetic parser benchmarks and validation notes.
+
+## 2.4.0 — 2026-10-30
+
+- Add independent CP2K input/text-restart, stdout and standard XYZ readers.
+  Read inline coordinates, cells/units/periodicity, KIND aliases, charge and
+  multiplicity. Preserve settings-only inputs when coordinates are external
+  or unsupported; do not open referenced files or evaluate executable input.
+- Retain all printed FORCE_EVAL energies and optimization gradients/steps with
+  their thresholds and source units. Link only available coordinates; keep
+  geometry-free energy/gradient records and structure-only records. Separate
+  concatenated CP2K runs. Do not infer trajectory cells from adjacent files.
+- Convert standard CP2K XYZ E comments from Hartree to internal eV, preserving
+  printed step/time metadata. Keep the last printed MO table per SCF evaluation,
+  with separate k-point/spin channels rather than merged orbital indices.
+- Add final TDDFPT energies, oscillator strengths, printed moment form, optional
+  excitation amplitudes and raw k-point auxiliary fields. Component magnitudes
+  from KERNEL NONE output remain magnitudes: no invented arrows, phase or
+  excitation coefficients. Preserve unknown/Berry forms as labeled source data.
+- Add CP2K record curves and CSV, source-aware transition tables/CSV, results-only
+  spectrum/export controls and portable project serialization for CP2K results.
+- Add synthetic fixtures/project, inspected Qt previews and 32 CP2K regressions.
+  Full Linux validation: 583 tests and 78 subtests passed. The five supplied
+  files pass isolated single-file loads, GUI/CSV and project round-trip checks.
+  VASP E0-only behavior and prior features remain covered.
+
+## 2.3.1 — 2026-10-30
+
+- Use only VASP E0: OSZICAR E0= and OUTCAR energy(sigma->0). Remove fallback
+  to TOTEN/F or energy without entropy, and remove energy-kind selection.
+- Label result pages, overview columns and curves as E0. Curve CSV contains one
+  energy column, energy_E0_eV, alongside frame/source-line and force fields.
+  Missing E0 remains blank in CSV and a gap in the plotted curve. A structure
+  without E0 keeps its geometry and any available force records.
+- Open old .lele snapshots using the same E0-only policy, including saved mode
+  references. Preserve energies already cleared by geometry editing. Retain
+  original output text and source metadata independently of displayed energy.
+- Add 9 E0 regressions; full Linux validation: 551 tests and 78 subtests passed.
+  See docs/VASP_E0_v2.3.1_CN.md for actual-file and project-roundtrip checks.
+
+## 2.3.0 — 2026-10-29
+
+- Add Crystal → Pair rules: element-specific minimum/maximum distances,
+  wildcards, enabled rows, separate ordinary-bond and directed coordination
+  controls, and an optional only-listed mode. More specific rows win, then the
+  last row. Explicit Apply rebuilds all document frames, keeps manual bond
+  overrides and supports undo; geometry editing still preserves frozen bonds.
+- Add coordination/polyhedron analysis: CN, periodic ligand distances/image
+  shifts, hull volume, Baur distortion, Hoppe ECoN, and applicable tetrahedral/
+  octahedral quadratic elongation and angle variance. Export summaries, ligands
+  and frame-linked trajectory curves to CSV, retaining zero coordination and
+  gaps when atom sequences or metric applicability differ.
+- Add portable .lele project snapshots with all loaded structures and parsed
+  scientific results, edited topology, atom appearance, per-document display
+  options/cameras, cuts, alignment, geometry parameters and paused active modes.
+  Retain source-text previews up to 180 KB. Source files are optional on restore.
+  Open appends restored documents, preserving work already in the session.
+- Use atomic writes and a fixed data-class registry with JSON and numeric NPY
+  arrays; loading does not use pickle or extract files. Validate before updating
+  the open session. Preserve existing PNG shortcuts.
+- Fix transient out-of-range frame access during settings synchronization when
+  changing from a long trajectory to a shorter file; keep the text preview in
+  sync for programmatic document changes.
+- Add a portable two-document example, native/Qt previews and 45 regressions.
+  Full Linux validation: 542 tests and 78 subtests passed. Actual VASP snapshot
+  checks preserve all coordinates, cells, energies and modes without source
+  files; the synthetic saved/restored native view is pixel-identical.
+
+## 2.2.0 — 2026-10-29
+
+- Add Crystal → HKL planes with Miller indices, signed offsets in d or Å,
+  below/above cuts, finite-thickness slabs, multiple-plane intersections,
+  translucent plane faces/edges, automatic centering and normal camera views.
+- Use reciprocal-cell normals for skew lattices. Clip atom glyphs, ordinary
+  bonds, polyhedra and scalar isosurfaces in the same display coordinates,
+  including Boundary copies and trajectory alignment. Filter labels and atom
+  selection by the retained center region. Source coordinates/exports stay intact.
+- Add Polyhedral style and a VESTA-inspired preset. Search explicit central/
+  ligand elements using covalent radii or a distance range; complete periodic
+  ligand shells and repeat center polyhedra with Boundary. Render translucent
+  hull faces, true face edges and optional corner atoms with original atom IDs.
+- Render planar ligand shells as polygons; omit collinear shells. Exclude
+  coplanar triangulation diagonals from edges. Use center atom colours and retain
+  ordinary manual/frozen bonds in every style, independently of coordination rules.
+- Keep crystal controls Qt-only until preload. Restore cut and polyhedron
+  settings per open document, and include them in PNG/GIF rendering.
+- Add synthetic SrTiO3 examples, native preview images and 32 crystal regressions.
+  Full Linux validation: 497 tests and 78 subtests passed. See the validation
+  report for real-input checks and Windows acceptance limitations.
+
+## 2.1.0 — 2026-10-29
+
+- Add standalone VASP OUTCAR, XDATCAR and OSZICAR readers, including renamed
+  OUTCAR_opt/OUTCAR_freq files. Do not read neighbouring calculation files.
+- Retain ionic structures, cells, species blocks (including repeated elements),
+  Cartesian force metrics, σ→0 energies, TOTEN and energies without entropy.
+  Exclude electronic SCF summaries from ionic records and preserve source lines.
+- Open energy-only output in the results page, preserve geometry-only navigation,
+  and never match missing coordinates/energies to unrelated records.
+- Read real and imaginary VASP modes with their printed reference geometry.
+  Convert dynamical-matrix eigenvectors using POMASS; prefer the already divided
+  table when printed. Distinguish finite-displacement structures from optimization.
+- Add an energy-definition selector and CSV export retaining all three VASP
+  energy values, source records and optional geometry links. Support variable-cell
+  XDATCAR headers and retain complete frames from partially written files.
+- Add 28 dedicated parser/UI regressions and synthetic example files. Validate
+  the three supplied real files against ASE independently; see validation notes.
+
 ## 2.0.3 — 2026-10-29
 
 - Add Ctrl+H and Edit-page/menu controls for an undoable dashed hydrogen bond

@@ -1,0 +1,168 @@
+{
+  "version": "2.13.5",
+  "source": "/workspace/scratch/944a3a3c4a4d/render_fix/source/LELE/lele/__init__.py",
+  "background": "#FFFFFF",
+  "selection_states": [
+    {
+      "selected": [],
+      "window": [
+        1380,
+        850
+      ],
+      "canvas": [
+        1022,
+        620
+      ],
+      "footer": 23,
+      "status": 28,
+      "panels": [
+        620,
+        179
+      ]
+    },
+    {
+      "selected": [
+        0
+      ],
+      "window": [
+        1380,
+        850
+      ],
+      "canvas": [
+        1022,
+        620
+      ],
+      "footer": 23,
+      "status": 28,
+      "panels": [
+        620,
+        179
+      ]
+    },
+    {
+      "selected": [
+        0,
+        1
+      ],
+      "window": [
+        1380,
+        850
+      ],
+      "canvas": [
+        1022,
+        620
+      ],
+      "footer": 23,
+      "status": 28,
+      "panels": [
+        620,
+        179
+      ]
+    },
+    {
+      "selected": [
+        0,
+        1,
+        2
+      ],
+      "window": [
+        1380,
+        850
+      ],
+      "canvas": [
+        1022,
+        620
+      ],
+      "footer": 23,
+      "status": 28,
+      "panels": [
+        620,
+        179
+      ]
+    },
+    {
+      "selected": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "window": [
+        1380,
+        850
+      ],
+      "canvas": [
+        1022,
+        620
+      ],
+      "footer": 23,
+      "status": 28,
+      "panels": [
+        620,
+        179
+      ]
+    },
+    {
+      "selected": [],
+      "window": [
+        1380,
+        850
+      ],
+      "canvas": [
+        1022,
+        620
+      ],
+      "footer": 23,
+      "status": 28,
+      "panels": [
+        620,
+        179
+      ]
+    },
+    {
+      "selected": [
+        0,
+        1
+      ],
+      "window": [
+        1380,
+        850
+      ],
+      "canvas": [
+        1022,
+        620
+      ],
+      "footer": 23,
+      "status": 28,
+      "panels": [
+        620,
+        179
+      ]
+    },
+    {
+      "selected": [],
+      "window": [
+        1380,
+        850
+      ],
+      "canvas": [
+        1022,
+        620
+      ],
+      "footer": 23,
+      "status": 28,
+      "panels": [
+        620,
+        179
+      ]
+    }
+  ],
+  "numeric_edit_and_undo": true,
+  "render_corner_rgb": [
+    255,
+    255,
+    255
+  ],
+  "light_button_and_default_preset": true,
+  "ok": true
+}

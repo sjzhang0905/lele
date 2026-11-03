@@ -1,0 +1,59 @@
+{
+  "version": "2.12.0",
+  "date": "2026-11-02",
+  "full_regression": {
+    "passed": 806,
+    "subtests_passed": 78,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "junit_tests_field": 884,
+    "seconds": 73.484
+  },
+  "targeted_regression": {
+    "passed": 97,
+    "subtests_passed": 3,
+    "failures": 0,
+    "skipped": 0
+  },
+  "native_render": {
+    "native_render_size": [
+      900,
+      520
+    ],
+    "selection_center_patch_max_channel_difference": 0,
+    "green_outline_pixels": 1632,
+    "occupancy_sectors": [
+      0.6,
+      0.4,
+      0.5,
+      0.5
+    ],
+    "highlight_line_cells": 32
+  },
+  "private_source_files_redistributed": false,
+  "windows_executable_built_or_run": false,
+  "fractional_cif_cases": "synthetic P1 and P-1",
+  "changed_baseline_files": [
+    "CHANGELOG.md",
+    "README.md",
+    "README_CN.md",
+    "lele/__init__.py",
+    "lele/app.py",
+    "lele/atom_clipboard.py",
+    "lele/atom_legend.py",
+    "lele/atom_panel.py",
+    "lele/boundary.py",
+    "lele/chemical_analysis.py",
+    "lele/crystal_rendering.py",
+    "lele/formats.py",
+    "lele/interaction.py",
+    "lele/renderer.py",
+    "lele/selection_geometry.py",
+    "lele/structure_summary.py",
+    "lele/supercell.py",
+    "lele/welcome.py",
+    "tests/test_native_interaction.py"
+  ],
+  "baseline_files_preserved": 482
+}

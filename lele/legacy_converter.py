@@ -53,6 +53,8 @@ SUPPORTED_SUFFIXES = {
     ".pdb",
     ".pqr",
     ".mol",
+    ".molden",
+    ".mld",
     ".mol2",
     ".sdf",
     ".xsf",
@@ -147,15 +149,28 @@ def detect_format(path: Path) -> Detection:
     name = path.name
     upper_name = name.upper()
     suffix = path.suffix.lower()
+    # .mol is shared by MDL structures and CP2K Molden vibration files.
+    # Read the actual header before dispatching an ordinary suffix reader.
+    if suffix in ('.mol','.molden','.mld'):
+        from .output_text import decode_output
+        with path.open('rb') as probe:header=decode_output(probe.read(4096))
+        if re.match(r'^\s*\[Molden\s+Format\]',header,re.I):
+            return Detection('molden_vib','Molden vibrations (CP2K compatible)')
 
-    if upper_name == "OUTCAR":
+    if re.match(r'^OUTCAR(?:$|[._ -])', upper_name) or suffix == '.outcar':
         return Detection("vasp_out", "VASP OUTCAR")
+    if re.match(r'^OSZICAR(?:$|[._ -])', upper_name) or suffix == '.oszicar':
+        return Detection("vasp_oszicar", "VASP OSZICAR")
+    if re.match(r'^XDATCAR(?:$|[._ -])', upper_name) or suffix == '.xdatcar':
+        return Detection("vasp_xdatcar", "VASP XDATCAR")
     if upper_name in {"POSCAR", "CONTCAR"}:
         return Detection("vasp_in", f"VASP {upper_name}")
     if suffix == ".ani":
         return Detection("siesta_ani", "SIESTA ANI trajectory")
     if suffix == ".xyz":
         probe=read_probe(path)
+        if re.search(r'(?m)^\s*i\s*=\s*\d+\s*,',probe):
+            return Detection('cp2k_xyz','CP2K XYZ trajectory')
         if looks_like_xtb_trajectory(probe,name):
             return Detection("xtb_trj", "xTB optimization trajectory")
         return Detection("xyz", "XYZ / XYZ trajectory")
@@ -173,23 +188,31 @@ def detect_format(path: Path) -> Detection:
         return Detection("vasp_in", "VASP structure")
     if upper_name == "VASPRUN.XML":
         return Detection("ase_generic", "VASP vasprun.xml", "vasp-xml")
-    if upper_name == "XDATCAR":
-        return Detection("ase_generic", "VASP XDATCAR", "vasp-xdatcar")
     if suffix in GENERIC_SUFFIX_READERS:
         label, ase_format = GENERIC_SUFFIX_READERS[suffix]
         return Detection("ase_generic", label, ase_format)
 
     text = read_probe(path)
     upper = text.upper()
+    if re.match(r'^\s*\[Molden\s+Format\]',text,re.I):
+        return Detection('molden_vib','Molden vibrations (CP2K compatible)')
+
+    if re.search(r'(?m)^\s*\d+\s*\n\s*i\s*=\s*\d+\s*,',text):
+        return Detection('cp2k_xyz','CP2K XYZ trajectory')
 
     if looks_like_xtb_trajectory(text,name):
         return Detection("xtb_trj", "xTB optimization trajectory")
     if re.search(r"(?mi)^\s*\*?\s*xtb version\s+\d",text):
         return Detection("xtb_out", "xTB output")
 
+    if 'PROGRAM PHONON' in upper:
+        return Detection('qe_phonon','Quantum ESPRESSO PHONON output')
+    if re.search(r'(?mi)^\s*q\s*=',text) and re.search(r'(?mi)^\s*(?:freq|omega)\s*\(',text):
+        return Detection('qe_modes','Quantum ESPRESSO normalized phonon modes')
     if "PROGRAM PWSCF" in upper or "QUANTUM ESPRESSO" in upper and "JOB DONE" in upper:
         return Detection("qe_out", "Quantum ESPRESSO output")
-    if "CP2K| VERSION STRING" in upper or "MODULE QUICKSTEP: ATOMIC COORDINATES" in upper:
+    if ("CP2K| VERSION STRING" in upper or "MODULE QUICKSTEP: ATOMIC COORDINATES" in upper
+            or re.search(r'ENERGY\|\s*Total FORCE_EVAL|TDDFPT\|',text)):
         return Detection("cp2k_out", "CP2K output")
     if "ORCA TERMINATED NORMALLY" in upper or "O   R   C   A" in upper or "ORCA VERSION" in upper:
         return Detection("orca_out", "ORCA output")
@@ -199,8 +222,14 @@ def detect_format(path: Path) -> Detection:
         return Detection("gaussian_out", "Gaussian output")
     if "OUTCOOR:" in upper or "SIESTA: ATOMIC COORDINATES" in upper or "WELCOME TO SIESTA" in upper:
         return Detection("siesta_out", "SIESTA output")
-    if "VASp".upper() in upper and "POSITION" in upper and "TOTAL-FORCE" in upper:
+    if (re.search(r'(?mi)^\s*vasp\.\d', text) or
+            'FREE ENERGIE OF THE ION-ELECTRON SYSTEM' in upper or
+            'EIGENVECTORS AND EIGENVALUES OF THE DYNAMICAL MATRIX' in upper):
         return Detection("vasp_out", "VASP output")
+    if re.search(r'(?mi)^\s*(Direct|Cartesian)\s+configuration\s*=\s*\d+', text):
+        return Detection("vasp_xdatcar", "VASP XDATCAR")
+    if re.search(r'(?m)^\s*\d+\s+(?:F|T)\s*=.*\bE0\s*=', text):
+        return Detection("vasp_oszicar", "VASP OSZICAR")
 
     if re.search(r"(?mi)^\s*&GLOBAL\b", text) or re.search(r"(?mi)^\s*&FORCE_EVAL\b", text):
         return Detection("cp2k_in", "CP2K input")
@@ -895,42 +924,8 @@ def parse_mol2(path: Path) -> Atoms:
 
 
 def parse_pqr(path: Path) -> Atoms:
-    symbols: list[str] = []
-    positions: list[list[float]] = []
-    for raw in path.read_text(encoding="utf-8", errors="replace").splitlines():
-        if not raw.startswith(("ATOM  ", "HETATM")):
-            continue
-        try:
-            x = _to_float(raw[30:38].strip())
-            y = _to_float(raw[38:46].strip())
-            z = _to_float(raw[46:54].strip())
-        except (ValueError, IndexError):
-            parts = raw.split()
-            if len(parts) < 8:
-                continue
-            numeric = []
-            for token in parts:
-                try:
-                    numeric.append(_to_float(token))
-                except ValueError:
-                    pass
-            if len(numeric) < 5:
-                continue
-            x, y, z = numeric[-5:-2]
-
-        element_field = raw[76:78].strip() if len(raw) >= 78 else ""
-        atom_name = raw[12:16].strip() if len(raw) >= 16 else ""
-        try:
-            symbol = normalize_element(element_field) if element_field else normalize_element(atom_name)
-        except ConversionError:
-            cleaned = re.sub(r"^[0-9]+", "", atom_name)
-            symbol = normalize_element(cleaned)
-        symbols.append(symbol)
-        positions.append([x, y, z])
-
-    if not positions:
-        raise ConversionError("No ATOM/HETATM coordinates were found in PQR file")
-    return Atoms(symbols=symbols, positions=positions)
+    from .pqr_input import read_pqr_atoms
+    return read_pqr_atoms(path)
 
 
 def integerize_cif_occupancies(atoms: Atoms) -> tuple[Atoms, list[str]]:
@@ -1048,6 +1043,8 @@ def read_structure(path: Path, detection: Optional[Detection] = None) -> tuple[A
             atoms = ase_read(str(path), index=-1, format="vasp")
         elif kind == "vasp_out":
             atoms = ase_read(str(path), index=-1, format="vasp-out")
+        elif kind == "vasp_xdatcar":
+            atoms = ase_read(str(path), index=-1, format="vasp-xdatcar")
         elif kind == "gaussian_in":
             atoms = ase_read(str(path), index=-1, format="gaussian-in")
         elif kind == "gaussian_out":
@@ -1056,6 +1053,10 @@ def read_structure(path: Path, detection: Optional[Detection] = None) -> tuple[A
             atoms = parse_orca_input(path)
         elif kind == "orca_out":
             atoms = ase_read(str(path), index=-1, format="orca-output")
+        elif kind == 'molden_vib':
+            from .molden_vibrations import read_molden_vibrations
+            frame,_,_,_=read_molden_vibrations(path)
+            atoms=Atoms(frame.symbols,positions=frame.positions,cell=frame.cell,pbc=frame.pbc,info=dict(frame.info))
         elif kind in ("xtb_out","xtb_trj"):
             from .xtb_results import read_xtb_results
             result=read_xtb_results(path,trajectory=kind=="xtb_trj")
@@ -1082,6 +1083,9 @@ def read_structure(path: Path, detection: Optional[Detection] = None) -> tuple[A
             atoms = parse_mol2(path)
         elif kind == "pqr":
             atoms = parse_pqr(path)
+        elif detection.ase_format == 'cube':
+            from .cube_input import read_cube_file
+            atoms=read_cube_file(path,read_data=False)['atoms']
         elif kind == "ase_generic":
             if not detection.ase_format:
                 raise ConversionError("Generic ASE reader has no format identifier")
@@ -1091,6 +1095,8 @@ def read_structure(path: Path, detection: Optional[Detection] = None) -> tuple[A
     except ConversionError:
         raise
     except Exception as exc:
+        from .output_text import LoadCancelled
+        if isinstance(exc,LoadCancelled):raise
         raise ConversionError(f"Reader failed for {detection.label}: {exc}") from exc
 
     if isinstance(atoms, list):
@@ -1225,9 +1231,9 @@ def write_target(path: Path, atoms: Atoms, target: str, source_name: str, gaussi
         elif target == "cif":
             ase_write(str(path), atoms, format="cif")
         elif target == "poscar-direct":
-            ase_write(str(path), atoms, format="vasp", direct=True, sort=True, vasp5=True)
+            ase_write(str(path), atoms, format="vasp", direct=True, sort=False, vasp5=True)
         elif target == "poscar-cartesian":
-            ase_write(str(path), atoms, format="vasp", direct=False, sort=True, vasp5=True)
+            ase_write(str(path), atoms, format="vasp", direct=False, sort=False, vasp5=True)
         else:
             raise ConversionError(f"Unknown target format: {target}")
     except ConversionError:

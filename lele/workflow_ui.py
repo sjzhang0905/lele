@@ -9,41 +9,166 @@ def populate_energy_steps(window, index, doc, head):
     from math import isfinite
     from ase.units import Hartree
     from .energy_units import EV_TO_KCAL_MOL
-    results = doc.calculation_results
-    if results is None: return
-    groups = {}
-    for i, step in enumerate(results.steps):
-        if step.energy_ev is None or not isfinite(step.energy_ev): continue
-        if doc.frames and step.frame_index is not None: continue
-        key = (step.job_index, step.stage_index)
-        if key not in groups:
-            stage = next((s for s in results.stages if s.index == step.stage_index), None)
-            label = stage.name if stage is not None else f'Job {step.job_index+1}'
-            parent = QTreeWidgetItem([label + ' · energies without coordinates'])
-            parent.setData(0, Qt.ItemDataRole.UserRole, (index, 0)); head.addChild(parent)
-            parent.setExpanded(True); groups[key] = parent
-        cycle = step.cycle if step.cycle is not None else i+1
-        value = step.energy_ev * EV_TO_KCAL_MOL
-        child = QTreeWidgetItem([f'Step {cycle} · {value:.8f} kcal/mol'])
-        child.setData(0, Qt.ItemDataRole.UserRole, (index, 'energy', i))
-        child.setToolTip(0, f'Energy: {step.energy_ev/Hartree:.12f} Eh\n'
-                           f'{step.energy_ev:.9f} eV\n{value:.8f} kcal/mol\n'
-                           f'Source line: {step.source_line}\nNo structure for this record.')
-        groups[key].addChild(child)
+    results=doc.calculation_results
+    if results is None:return
+    groups={};stages={s.index:s for s in results.stages}
+    for i,step in enumerate(results.steps):
+        if step.energy_ev is None or not isfinite(step.energy_ev):continue
+        if doc.frames and step.frame_index is not None:continue
+        groups.setdefault((step.job_index,step.stage_index),[]).append(i)
+    def fill(parent,indices):
+        children=[]
+        for i in indices:
+            step=results.steps[i];cycle=step.cycle if step.cycle is not None else i+1
+            unit='eV' if results.program=='VASP' else 'kcal/mol'
+            value=step.energy_ev if unit=='eV' else step.energy_ev*EV_TO_KCAL_MOL
+            energy_label='E0 ' if results.program=='VASP' else ''
+            child=QTreeWidgetItem([f'Step {cycle} · {energy_label}{value:.8f} {unit}'])
+            child.setData(0,Qt.ItemDataRole.UserRole,(index,'energy',i))
+            child.setToolTip(0,f'{"E0 (σ→0)" if results.program=="VASP" else "Energy"}: {step.energy_ev/Hartree:.12f} Eh\n'
+                f'{step.energy_ev:.9f} eV\n{step.energy_ev*EV_TO_KCAL_MOL:.8f} kcal/mol\n'
+                f'Source line: {step.source_line}\nNo structure for this record.')
+            children.append(child)
+        parent.addChildren(children)
+    for (job,stage),indices in groups.items():
+        stage=stages.get(stage);label=stage.name if stage is not None else f'Job {job+1}'
+        parent=QTreeWidgetItem([label+' · energies without coordinates'])
+        parent.setData(0,Qt.ItemDataRole.UserRole,(index,0));head.addChild(parent);parent.setExpanded(True)
+        if len(indices)<=PAGE_SIZE:fill(parent,indices)
+        else:
+            for start in range(0,len(indices),PAGE_SIZE):
+                stop=min(start+PAGE_SIZE,len(indices));chunk=indices[start:stop]
+                page=QTreeWidgetItem([f'Records {start+1}–{stop}'])
+                page.setData(0,Qt.ItemDataRole.UserRole,(index,'energy',chunk[0]));parent.addChild(page)
+                _defer(page,lambda p=page,ids=chunk:fill(p,ids))
+
+
+class FrameSequence:
+    """One shared sequence with constant-time membership and frame lookup."""
+    def __init__(self, values):
+        self.values=values if isinstance(values,range) else tuple(values)
+        self.positions=None if isinstance(self.values,range) else {v:i for i,v in enumerate(self.values)}
+        self.key=id(self)
+
+    def __len__(self):return len(self.values)
+    def __iter__(self):return iter(self.values)
+    def __getitem__(self, key):return self.values[key]
+    def __contains__(self, value):return value in (self.values if self.positions is None else self.positions)
+    def __eq__(self, other):return list(self.values)==list(other)
+    def index(self, value):
+        if self.positions is None:return self.values.index(value)
+        try:return self.positions[value]
+        except KeyError:raise ValueError(value) from None
+
+
+def _sequence_state(window,doc):
+    if not hasattr(window,'_sequence_cache'):window._sequence_cache={}
+    key=id(doc);state=window._sequence_cache.get(key)
+    if state is not None and state['frames'] is doc.frames and state['count']==len(doc.frames):return state
+    all_frames=FrameSequence(range(len(doc.frames)))
+    stages={};series={};other=[]
+    for i,f in enumerate(doc.frames):
+        if 'stage_index' in f.info:stages.setdefault(f.info['stage_index'],[]).append(i)
+        if 'series_key' in f.info:series.setdefault(f.info['series_key'],[]).append(i)
+        if 'stage_index' not in f.info and 'series_key' not in f.info:other.append(i)
+    make=lambda ids:all_frames if len(ids)==len(doc.frames) else FrameSequence(ids)
+    state=dict(frames=doc.frames,count=len(doc.frames),all=all_frames,
+        stages={k:make(v) for k,v in stages.items()},series={k:make(v) for k,v in series.items()},
+        other=make(other),custom={},context=None)
+    window._sequence_cache[key]=state
+    return state
+
+
+def shared_sequence(window,doc,values):
+    if isinstance(values,FrameSequence):return values
+    state=_sequence_state(window,doc);values=tuple(values)
+    if not values:return FrameSequence(())
+    info=doc.frames[values[0]].info
+    candidates=[state['all'],state['stages'].get(info.get('stage_index')),state['series'].get(info.get('series_key')),state['other']]
+    for candidate in candidates:
+        if candidate is not None and len(candidate)==len(values) and all(a==b for a,b in zip(candidate,values)):
+            return candidate
+    if values not in state['custom']:state['custom'][values]=FrameSequence(values)
+    return state['custom'][values]
 
 
 def sequence_for(window, index=None):
     doc=window.doc
     if doc is None or not doc.frames or window.frame is None:return []
     index=window.frame_index if index is None else index
+    state=_sequence_state(window,doc)
     context=getattr(window,'_result_sequence',None)
-    if context is not None and context[0] is doc and index in context[1]:return list(context[1])
+    if context is not None and context[0] is doc:
+        if state['context'] is not context:
+            state['context']=context;state['context_sequence']=shared_sequence(window,doc,context[1])
+        sequence=state['context_sequence']
+        if index in sequence:return sequence
     info=doc.frames[index].info
-    if 'series_key' in info:return [i for i,f in enumerate(doc.frames) if f.info.get('series_key')==info['series_key']]
-    if 'stage_index' in info:return [i for i,f in enumerate(doc.frames) if f.info.get('stage_index')==info['stage_index']]
-    if doc.neb_runs or doc.conformer_ensembles:
-        return [i for i,f in enumerate(doc.frames) if 'stage_index' not in f.info and 'series_key' not in f.info]
-    return list(range(len(doc.frames)))
+    if 'series_key' in info:return state['series'][info['series_key']]
+    if 'stage_index' in info:return state['stages'][info['stage_index']]
+    return state['other'] if doc.neb_runs or doc.conformer_ensembles else state['all']
+
+
+PAGE_SIZE=256
+LAZY_ROLE=int(Qt.ItemDataRole.UserRole)+17
+
+
+def expand_tree_item(item):
+    maker=item.data(0,LAZY_ROLE)
+    if maker is not None:
+        item.setData(0,LAZY_ROLE,None)
+        maker()
+        item.setChildIndicatorPolicy(QTreeWidgetItem.ChildIndicatorPolicy.DontShowIndicatorWhenChildless)
+
+
+def _defer(item,maker):
+    item.setData(0,LAZY_ROLE,maker)
+    item.setChildIndicatorPolicy(QTreeWidgetItem.ChildIndicatorPolicy.ShowIndicator)
+
+
+def add_frame_items(window,index,doc,parent,indices,*,label='',item_labels=None,series=False):
+    """Retain every frame while creating only expanded pages of tree widgets."""
+    from .energy_units import display_energy
+    sequence=shared_sequence(window,doc,indices)
+    if not hasattr(window,'_tree_sequences'):window._tree_sequences={}
+    if not hasattr(window,'_sequence_pages'):window._sequence_pages={}
+    window._tree_sequences[sequence.key]=sequence
+    def data(k):
+        return (index,'series',sequence.key,k,label) if series else (index,sequence[k])
+    def fill(target,start,stop):
+        children=[]
+        for k in range(start,stop):
+            fi=sequence[k];f=doc.frames[fi]
+            title=(item_labels[k] if item_labels is not None else
+                   f'Step {f.info.get("optimization_cycle") or k+1}' if series else f'Frame {fi+1}')
+            energy,unit=display_energy(f,doc.format_name)
+            if energy is not None:title+=f' · {energy:.5f} {unit}'
+            if f.info.get('optimization_converged'):title+=' · converged'
+            child=QTreeWidgetItem([title]);child.setData(0,Qt.ItemDataRole.UserRole,data(k));children.append(child)
+            window._series_tree_items[index,sequence.key,fi]=child
+            window._frame_tree_items.setdefault((index,fi),child)
+        target.addChildren(children)
+    if len(sequence)<=PAGE_SIZE:
+        fill(parent,0,len(sequence))
+    else:
+        pages=[]
+        for start in range(0,len(sequence),PAGE_SIZE):
+            stop=min(start+PAGE_SIZE,len(sequence))
+            page=QTreeWidgetItem([f'{"Steps" if series else "Frames"} {start+1}–{stop}'])
+            page.setData(0,Qt.ItemDataRole.UserRole,data(start));parent.addChild(page);pages.append(page)
+            _defer(page,lambda p=page,a=start,b=stop:fill(p,a,b))
+        window._sequence_pages[index,sequence.key]=pages
+    return sequence
+
+
+def frame_tree_item(window,index,sequence,frame_index,head):
+    item=getattr(window,'_series_tree_items',{}).get((index,getattr(sequence,'key',None),frame_index))
+    if item is None:
+        pages=getattr(window,'_sequence_pages',{}).get((index,getattr(sequence,'key',None)))
+        if pages is not None:
+            page=pages[sequence.index(frame_index)//PAGE_SIZE];expand_tree_item(page);page.setExpanded(True)
+            item=window._series_tree_items.get((index,sequence.key,frame_index))
+    return item if item is not None else window._frame_tree_items.get((index,frame_index),head)
 
 
 def populate_tree(window,index,doc,head):
@@ -60,20 +185,14 @@ def populate_tree(window,index,doc,head):
         indices=[i for i in indices if i is not None]
         if not indices:return None
         group=QTreeWidgetItem([label+f' ({len(indices)} structures)']);parent.addChild(group)
-        group.setData(0,Qt.ItemDataRole.UserRole,(index,'series',tuple(indices),0,label))
-        for k,frame_index in enumerate(indices):
-            f=doc.frames[frame_index]
-            title=item_labels[k] if item_labels is not None else f'Step {f.info.get("optimization_cycle") or k+1}'
-            from .energy_units import display_energy
-            energy,unit=display_energy(f,doc.format_name)
-            if energy is not None:title+=f' · {energy:.5f} {unit}'
-            child=QTreeWidgetItem([title]);child.setData(0,Qt.ItemDataRole.UserRole,(index,'series',tuple(indices),k,label));group.addChild(child)
-            window._series_tree_items[index,tuple(indices),frame_index]=child
-            window._frame_tree_items.setdefault((index,frame_index),child);covered.add(frame_index)
+        sequence=add_frame_items(window,index,doc,group,indices,label=label,item_labels=item_labels,series=True)
+        group.setData(0,Qt.ItemDataRole.UserRole,(index,'series',sequence.key,0,label))
+        covered.update(indices)
         return group
 
+    state=_sequence_state(window,doc)
     for s in stages:
-        ids=[i for i,f in enumerate(doc.frames) if f.info.get('stage_index')==s.index]
+        ids=state['stages'].get(s.index,())
         if s.kind=='neb':continue
         parent=series(head,s.name+' · '+s.status,ids)
         if parent is None:

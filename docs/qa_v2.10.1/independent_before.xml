@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="4" skipped="0" tests="10" time="1.016" timestamp="2026-11-02T10:17:35.633490+08:00" hostname="6f87f0cb47f9"><testcase classname="acceptance.LELE_v2.10.0_acceptance.test_independent_acceptance" name="test_qe_optimization_status[A1_maxsteps_is_not_converged]" time="0.016"><failure message="AssertionError: assert True is False&#10; +  where True = bool(True)&#10; +    where True = &lt;built-in method get of dict object at 0x7f247bc84680&gt;('optimization_converged')&#10; +      where &lt;built-in method get of dict object at 0x7f247bc84680&gt; = {'qe_alat_ang': 5.291772083535413, 'source_kind': 'qe_out', 'qe_total_energy_ry': -2.0, 'energy_source': 'QE ! total energy (Ry)', ...}.get&#10;[+1 more line; full report in element text]">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_qe_optimization_status_A10')
+ending = 'The maximum number of steps has been reached.\nEnd of BFGS Geometry Optimization\nJOB DONE.\n'
+expected = False
+
+    @pytest.mark.parametrize('ending,expected', [
+        ('The maximum number of steps has been reached.\nEnd of BFGS Geometry Optimization\nJOB DONE.\n', False),
+        ('bfgs converged in 2 scf cycles and 1 bfgs steps\nEnd of BFGS Geometry Optimization\nJOB DONE.\n', True),
+        ('JOB DONE.\n', False),
+    ], ids=['A1_maxsteps_is_not_converged', 'positive_convergence', 'normal_exit_only'])
+    def test_qe_optimization_status(tmp_path, ending, expected):
+        doc = load_document(write(tmp_path, 'qe_status.pwo', QE_HEADER + ending))
+&gt;       assert bool(doc.frames[-1].info.get('optimization_converged')) is expected
+E       AssertionError: assert True is False
+E        +  where True = bool(True)
+E        +    where True = &lt;built-in method get of dict object at 0x7f247bc84680&gt;('optimization_converged')
+E        +      where &lt;built-in method get of dict object at 0x7f247bc84680&gt; = {'qe_alat_ang': 5.291772083535413, 'source_kind': 'qe_out', 'qe_total_energy_ry': -2.0, 'energy_source': 'QE ! total energy (Ry)', ...}.get
+E        +        where {'qe_alat_ang': 5.291772083535413, 'source_kind': 'qe_out', 'qe_total_energy_ry': -2.0, 'energy_source': 'QE ! total energy (Ry)', ...} = Frame(symbols=['H', 'H'], positions=array([[0.        , 0.        , 0.        ],\n       [0.        , 0.        , 1.058...emoved=set(), atom_appearance={}, bond_snapshot=None, periodic_bond_snapshot=None, hbond_added={}, hbond_removed=set()).info
+
+../../acceptance/LELE_v2.10.0_acceptance/test_independent_acceptance.py:39: AssertionError</failure></testcase><testcase classname="acceptance.LELE_v2.10.0_acceptance.test_independent_acceptance" name="test_qe_optimization_status[positive_convergence]" time="0.001" /><testcase classname="acceptance.LELE_v2.10.0_acceptance.test_independent_acceptance" name="test_qe_optimization_status[normal_exit_only]" time="0.001" /><testcase classname="acceptance.LELE_v2.10.0_acceptance.test_independent_acceptance" name="test_cp2k_cell_and_coordinate_repetitions_are_independent[A2_cell_only]" time="0.014"><failure message="AssertionError: assert 2 == 1&#10; +  where 2 = len(['He', 'He'])&#10; +    where ['He', 'He'] = Frame(symbols=['He', 'He'], positions=array([[1., 1., 1.],\n       [5., 1., 1.]]), cell=array([[8., 0., 0.],\n       [0....emoved=set(), atom_appearance={}, bond_snapshot=None, periodic_bond_snapshot=None, hbond_added={}, hbond_removed=set()).symbols">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_cp2k_cell_and_coordinate_0')
+cell_repeat = 'MULTIPLE_UNIT_CELL 2 1 1', topology_repeat = '', natoms = 1
+cell_x = 8
+
+    @pytest.mark.parametrize('cell_repeat,topology_repeat,natoms,cell_x', [
+        ('MULTIPLE_UNIT_CELL 2 1 1', '', 1, 8),
+        ('', 'MULTIPLE_UNIT_CELL 2 1 1', 2, 4),
+        ('MULTIPLE_UNIT_CELL 2 1 1', 'MULTIPLE_UNIT_CELL 2 1 1', 2, 8),
+        ('', '', 1, 4),
+    ], ids=['A2_cell_only', 'A2_topology_only', 'both_repeat', 'no_repeat'])
+    def test_cp2k_cell_and_coordinate_repetitions_are_independent(tmp_path, cell_repeat, topology_repeat, natoms, cell_x):
+        doc = load_document(write(tmp_path, 'repeat.inp', cp2k_input(cell_repeat, topology_repeat)))
+        frame = doc.frames[0]
+&gt;       assert len(frame.symbols) == natoms
+E       AssertionError: assert 2 == 1
+E        +  where 2 = len(['He', 'He'])
+E        +    where ['He', 'He'] = Frame(symbols=['He', 'He'], positions=array([[1., 1., 1.],\n       [5., 1., 1.]]), cell=array([[8., 0., 0.],\n       [0....emoved=set(), atom_appearance={}, bond_snapshot=None, periodic_bond_snapshot=None, hbond_added={}, hbond_removed=set()).symbols
+
+../../acceptance/LELE_v2.10.0_acceptance/test_independent_acceptance.py:74: AssertionError</failure></testcase><testcase classname="acceptance.LELE_v2.10.0_acceptance.test_independent_acceptance" name="test_cp2k_cell_and_coordinate_repetitions_are_independent[A2_topology_only]" time="0.002"><failure message="AssertionError: assert 1 == 2&#10; +  where 1 = len(['He'])&#10; +    where ['He'] = Frame(symbols=['He'], positions=array([[1., 1., 1.]]), cell=array([[4., 0., 0.],\n       [0., 4., 0.],\n       [0., 0., ...emoved=set(), atom_appearance={}, bond_snapshot=None, periodic_bond_snapshot=None, hbond_added={}, hbond_removed=set()).symbols">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_cp2k_cell_and_coordinate_1')
+cell_repeat = '', topology_repeat = 'MULTIPLE_UNIT_CELL 2 1 1', natoms = 2
+cell_x = 4
+
+    @pytest.mark.parametrize('cell_repeat,topology_repeat,natoms,cell_x', [
+        ('MULTIPLE_UNIT_CELL 2 1 1', '', 1, 8),
+        ('', 'MULTIPLE_UNIT_CELL 2 1 1', 2, 4),
+        ('MULTIPLE_UNIT_CELL 2 1 1', 'MULTIPLE_UNIT_CELL 2 1 1', 2, 8),
+        ('', '', 1, 4),
+    ], ids=['A2_cell_only', 'A2_topology_only', 'both_repeat', 'no_repeat'])
+    def test_cp2k_cell_and_coordinate_repetitions_are_independent(tmp_path, cell_repeat, topology_repeat, natoms, cell_x):
+        doc = load_document(write(tmp_path, 'repeat.inp', cp2k_input(cell_repeat, topology_repeat)))
+        frame = doc.frames[0]
+&gt;       assert len(frame.symbols) == natoms
+E       AssertionError: assert 1 == 2
+E        +  where 1 = len(['He'])
+E        +    where ['He'] = Frame(symbols=['He'], positions=array([[1., 1., 1.]]), cell=array([[4., 0., 0.],\n       [0., 4., 0.],\n       [0., 0., ...emoved=set(), atom_appearance={}, bond_snapshot=None, periodic_bond_snapshot=None, hbond_added={}, hbond_removed=set()).symbols
+
+../../acceptance/LELE_v2.10.0_acceptance/test_independent_acceptance.py:74: AssertionError</failure></testcase><testcase classname="acceptance.LELE_v2.10.0_acceptance.test_independent_acceptance" name="test_cp2k_cell_and_coordinate_repetitions_are_independent[both_repeat]" time="0.002" /><testcase classname="acceptance.LELE_v2.10.0_acceptance.test_independent_acceptance" name="test_cp2k_cell_and_coordinate_repetitions_are_independent[no_repeat]" time="0.001" /><testcase classname="acceptance.LELE_v2.10.0_acceptance.test_independent_acceptance" name="test_cp2k_angle_alias_preserves_cell[ALPHA_BETA_GAMMA]" time="0.001" /><testcase classname="acceptance.LELE_v2.10.0_acceptance.test_independent_acceptance" name="test_cp2k_angle_alias_preserves_cell[ANGLES]" time="0.001"><failure message="assert np.float64(90.0) == 120.0 ± 1.2e-04&#10;  &#10;  comparison failed&#10;  Obtained: 90.0&#10;  Expected: 120.0 ± 1.2e-04">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_cp2k_angle_alias_preserve1')
+keyword = 'ANGLES'
+
+    @pytest.mark.parametrize('keyword', ['ALPHA_BETA_GAMMA', 'ANGLES'])
+    def test_cp2k_angle_alias_preserves_cell(tmp_path, keyword):
+        doc = load_document(write(tmp_path, 'angles.inp', cp2k_input(angles=f'{keyword} 90 90 120')))
+        a, b, c = doc.frames[0].cell
+        gamma = np.degrees(np.arccos(np.dot(a,b) / np.linalg.norm(a) / np.linalg.norm(b)))
+&gt;       assert gamma == pytest.approx(120.)
+E       assert np.float64(90.0) == 120.0 ± 1.2e-04
+E         
+E         comparison failed
+E         Obtained: 90.0
+E         Expected: 120.0 ± 1.2e-04
+
+../../acceptance/LELE_v2.10.0_acceptance/test_independent_acceptance.py:83: AssertionError</failure></testcase><testcase classname="acceptance.LELE_v2.10.0_acceptance.test_independent_acceptance" name="test_siesta_inline_fractional_input" time="0.001" /></testsuite></testsuites>

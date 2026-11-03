@@ -1,0 +1,48 @@
+{
+  "source_name": "COF2_O2_a_freq-VIBRATIONS-1.mol",
+  "source_sha256": "6697fab213a9b8ba13513b897992ea8b90894cbab21e0e96e407c07cbde42cc7",
+  "atoms": 124,
+  "mode_count": 6,
+  "frequencies_cm1": [
+    239.777289,
+    252.259862,
+    312.216834,
+    318.175319,
+    324.214973,
+    1548.77492
+  ],
+  "source_coordinates": "[FR-COORD] AU",
+  "internal_coordinates": "Angstrom",
+  "source_vectors": "[FR-NORM-COORD] Bohr",
+  "internal_vectors": "Angstrom (uniform conversion, no further mass weighting)",
+  "nonzero_atoms_1based": [
+    [
+      123,
+      124
+    ],
+    [
+      123,
+      124
+    ],
+    [
+      123,
+      124
+    ],
+    [
+      123,
+      124
+    ],
+    [
+      123,
+      124
+    ],
+    [
+      123,
+      124
+    ]
+  ],
+  "all_animate": true,
+  "ir_intensities_available": false,
+  "periodicity_assumed": false,
+  "user_geometry_redistributed": false
+}

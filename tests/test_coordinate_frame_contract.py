@@ -11,7 +11,7 @@ from lele.fragment import apply_fragment_rotation, apply_fragment_translation
 
 
 class CoordinateFrameContractTests(unittest.TestCase):
-    def test_every_axis_preserves_skew_periodic_cell(self):
+    def test_xyz_rotates_complete_crystal_and_abc_is_explicit_fixed_cell_edit(self):
         cell = np.array([[4., 0., 0.], [1., 5., 0.], [0.5, 0.7, 6.]])
         points = np.array([[2., 1., 1.], [3., 3., 2.], [3., 4., 6.]])
         for axis in ('X', 'Y', 'Z', 'a', 'b', 'c'):
@@ -20,8 +20,8 @@ class CoordinateFrameContractTests(unittest.TestCase):
                           (True, True, True))
                 old = f.clone()
                 rot, pivot, changed_cell = align_pair_to_axis(f, 0, 1, axis)
-                self.assertFalse(changed_cell)
-                np.testing.assert_array_equal(f.cell, old.cell)
+                self.assertEqual(changed_cell,axis.isupper())
+                np.testing.assert_allclose(f.cell,old.cell@rot.T if axis.isupper() else old.cell,atol=1.e-11)
                 np.testing.assert_array_equal(f.positions[0], pivot)
                 self.assertAlmostEqual(np.linalg.det(rot), 1., places=12)
                 self.assertAlmostEqual(np.linalg.norm(f.positions[2]-f.positions[1]),

@@ -3,6 +3,7 @@ from copy import deepcopy
 from itertools import product
 from math import prod
 from numbers import Integral
+from uuid import uuid4
 
 import numpy as np
 
@@ -72,7 +73,7 @@ def _repeat_bond_overrides(frame, repeats, tiles, floors, cutoff):
 
 
 def make_supercell(frame: Frame, repeats, *, wrap=True, max_atoms=MAX_SUPERCELL_ATOMS,
-                   bond_cutoff=1.18) -> Frame:
+                   bond_cutoff=1.0) -> Frame:
     """Return a new frame; atoms are ordered by tile, then original atom index.
 
     The new lattice rows are n_a*a, n_b*b, n_c*c. Periodicity and per-atom
@@ -94,10 +95,20 @@ def make_supercell(frame: Frame, repeats, *, wrap=True, max_atoms=MAX_SUPERCELL_
     styles = {k * n + i: style for k in range(factor) for i, style in frame.atom_appearance.items()}
     added, removed = _repeat_bond_overrides(frame, repeats, tiles, floors, bond_cutoff)
     info = deepcopy(frame.info)
+    for key in ('site_occupancies','vasp_fixed_axes'):
+        if key in info:info[key]=info[key]*factor
+    from .atom_indices import source_order
+    info['atom_source_order']=list(source_order(frame))+['replica:'+uuid4().hex for _ in range(n*(factor-1))]
+    if 'cif_row_order' in info:
+        info['cif_row_order']=[(i+k*n,s) for k in range(factor) for i,s in frame.info['cif_row_order']]
+    info.pop('optimization_converged',None)
     # POSCAR groups describe consecutive blocks, including intentionally
     # repeated species headers. Tile-major ordering repeats those same blocks.
     if 'poscar_groups' in info:
         info['poscar_groups'] = info['poscar_groups'] * factor
+        info.pop('poscar_block_ids',None)
+        from .poscar_labels import block_ids
+        info['poscar_block_ids']=block_ids(info,frame.symbols*factor)
     from .chemical_analysis import known_net_charge
     charge = known_net_charge(frame)
     if charge is not None:
@@ -140,7 +151,7 @@ def make_supercell(frame: Frame, repeats, *, wrap=True, max_atoms=MAX_SUPERCELL_
     return result
 
 
-def make_fragment_supercell(frame: Frame, preview, *, bond_cutoff=1.18):
+def make_fragment_supercell(frame: Frame, preview, *, bond_cutoff=1.0):
     """Build the cells needed by a finite fragment and map its image atom IDs.
 
     The fragment search uses shifts relative to the original lattice. A new

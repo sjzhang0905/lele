@@ -64,19 +64,19 @@ class EditorTests(unittest.TestCase):
                                    original_positions[2] - original_positions[0])
         np.testing.assert_allclose(f.cell, original_cell)
 
-    def test_xyz_alignment_preserves_distances_and_keeps_lattice(self):
+    def test_xyz_alignment_preserves_distances_and_rotates_lattice(self):
         cell = np.array([[3., 0., 0.], [1., 4., 0.], [0., 0., 5.]])
         f = Frame(['O', 'C', 'H'], [[2, 3, 1], [2, 4, 1], [3, 5, 6]],
                   cell=cell, pbc=(True, True, True))
         original = f.positions.copy()
         pivot_before = f.positions[0].copy()
         R, pivot, rotated_cell = align_pair_to_axis(f, 0, 1, 'X')
-        self.assertFalse(rotated_cell)
+        self.assertTrue(rotated_cell)
         np.testing.assert_allclose(pivot, pivot_before)
         np.testing.assert_allclose(f.positions[0], pivot_before)
         np.testing.assert_allclose((f.positions[1] - f.positions[0]) / 1., [1., 0., 0.], atol=1e-11)
         self.assertAlmostEqual(np.linalg.det(R), 1., places=11)
-        np.testing.assert_array_equal(f.cell, cell)
+        np.testing.assert_allclose(f.cell, cell@R.T,atol=1.e-12)
         self.assertAlmostEqual(np.linalg.norm(f.positions[2] - f.positions[1]),
                                np.linalg.norm(original[2] - original[1]))
 

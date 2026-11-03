@@ -7,7 +7,7 @@ from ase.units import Hartree
 from .calculation_results import NUMBER
 from .gaussian_vibrations import _number
 from .orca_neb import read_xyz_records, companion_prefix
-from .output_text import read_output_lines
+from .output_text import read_output_lines, load_progress
 
 KCAL_PER_EV=23.0605478306
 
@@ -43,6 +43,8 @@ class ConformerEnsemble:
 
 def read_goat_ensembles(path):
     path=Path(path);lines=read_output_lines(path);ensembles=[];temperature=None
+    if not path.name.endswith('.finalensemble.xyz') and not any('Final ensemble info' in s for s in lines):return []
+    progress=load_progress('ORCA: GOAT ensembles',len(lines))
     prefix=companion_prefix(path,lines)
     if path.name.endswith('.finalensemble.xyz'):
         records=read_xyz_records(path,bare_energy=True)
@@ -53,6 +55,7 @@ def read_goat_ensembles(path):
         return [e] if records else []
     i=0
     while i<len(lines):
+        progress(i)
         line=lines[i]
         temp=re.search(rf'Ensemble temperature\s*\.+\s*({NUMBER})',line,re.I)
         if temp:temperature=_number(temp[1])
@@ -84,6 +87,7 @@ def read_goat_ensembles(path):
             if ensemble.conformers:ensembles.append(ensemble)
             i=j
         i+=1
+    progress(len(lines))
     return ensembles
 
 

@@ -24,6 +24,19 @@ def display_energy(frame, format_name=''):
 def rigid_equivalent(old,new):
     if old.symbols!=new.symbols:return False
     if not len(old.symbols):return True
+    if old.pbc!=new.pbc:return False
+    if any(old.pbc):
+        if min(abs(np.linalg.det(old.cell)),abs(np.linalg.det(new.cell)))<1.e-9:return False
+        rotation=np.linalg.solve(old.cell,new.cell)
+        if (not np.allclose(rotation@rotation.T,np.eye(3),atol=1.e-8,rtol=0)
+                or not np.isclose(np.linalg.det(rotation),1.,atol=1.e-8,rtol=0)):return False
+        # Translation is common modulo periodic lattice vectors. This remains
+        # valid when atoms are recentered into different nearest images.
+        delta=(new.positions-old.positions@rotation)@np.linalg.inv(new.cell)
+        delta=delta-delta[0]
+        axes=np.asarray(old.pbc,dtype=bool)
+        delta[:,axes]-=np.rint(delta[:,axes])
+        return np.allclose(delta@new.cell,0,atol=2.e-5,rtol=0)
     a=old.positions-old.positions.mean(axis=0);b=new.positions-new.positions.mean(axis=0)
     u,_,vt=np.linalg.svd(a.T@b);d=np.eye(3);d[-1,-1]=np.linalg.det(u@vt);r=u@d@vt
     return (np.allclose(a@r,b,atol=2e-5,rtol=0) and

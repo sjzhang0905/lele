@@ -1,0 +1,126 @@
+{
+  "01_vc-relax.in": {
+    "sha256": "1b02498af7049e3d2bc849c3efd95e84b1f489e8f6bcac71cb49e4df00bb9419",
+    "atoms": 4,
+    "frames": 1,
+    "qpoints": [],
+    "mode_counts": []
+  },
+  "job.out": {
+    "sha256": "0a825b33f0b7ccfb27401ee6179adb0231c8ae88616d40523225b3d80a9802e8",
+    "atoms": 4,
+    "frames": 5,
+    "qpoints": [],
+    "mode_counts": [],
+    "energies_ry": [
+      -659.9558689,
+      -659.95597679,
+      -659.9559922,
+      -659.9559922,
+      -659.95599528
+    ],
+    "final_volume_A3": 56.0357202256568,
+    "last_converged": true
+  },
+  "job.out03": {
+    "sha256": "ad5cbee2e791754bf35ac7810e8c0e16b652fc030ee1aa70e4ae5f2815dfd4a1",
+    "atoms": 4,
+    "frames": 1,
+    "qpoints": [
+      [
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.333333333
+      ],
+      [
+        0.0,
+        0.333333333,
+        0.333333333
+      ],
+      [
+        0.333333333,
+        0.333333333,
+        0.333333333
+      ]
+    ],
+    "mode_counts": [
+      12,
+      12,
+      12,
+      12
+    ]
+  },
+  "matdyn.modes": {
+    "sha256": "63d3a80931a120f6f70f689f0a8088ac200901a613f5936795f1ddf41de6e8ec",
+    "atoms": null,
+    "frames": 0,
+    "qpoints": [
+      [
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.5,
+        0.0,
+        0.0
+      ],
+      [
+        0.5,
+        0.5,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.5,
+        0.5,
+        0.5
+      ]
+    ],
+    "mode_counts": [
+      12,
+      12,
+      12,
+      12,
+      12
+    ]
+  },
+  "bound_modes": {
+    "analyses": 5,
+    "animatable": 60,
+    "q_units": "Cartesian 2pi/alat",
+    "alat_A": 3.826676189171548,
+    "preview_frequency_cm1": 53.358059,
+    "preview_q": [
+      0.5,
+      0.0,
+      0.0
+    ],
+    "preview_fractional_q": [
+      0.5,
+      0.0,
+      0.0
+    ],
+    "complex_imaginary_components_preserved": true
+  },
+  "native_scene": {
+    "display_atoms": 8,
+    "displacement_arrows": 4
+  },
+  "native_gif": {
+    "frames": 8,
+    "size": [
+      480,
+      320
+    ]
+  }
+}

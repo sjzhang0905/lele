@@ -1,0 +1,11 @@
+{
+  "ok": true,
+  "colors_checked": 119,
+  "additional_white": 0.05,
+  "total_white_approx": 0.145,
+  "H_radius_before": 0.155,
+  "H_radius_after": 0.17825,
+  "H_radius_factor": 1.15,
+  "bond_thickness": 7,
+  "default_color_consistency": true
+}

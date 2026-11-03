@@ -1,0 +1,200 @@
+{
+  "baseline_archive": "LELE_v2.12.0_20261102.zip",
+  "baseline_sha256": "e24cbf92c0c425556335ca402b91670465ba0d3f899f3949f95ff3130cabf073",
+  "original_files": 498,
+  "missing_files": [],
+  "changed_original_files": [
+    {
+      "path": "CHANGELOG.md",
+      "before_sha256": "256e31d94cd0c4ee6294ddccc94bc6f6bcf05f10547163907730cddd8c9052f8",
+      "after_sha256": "6a7984357c2434fe2e6fc61408f179efc84384cdd7b94f44241caa833146e503"
+    },
+    {
+      "path": "README.md",
+      "before_sha256": "f7c10e58bad2786dd29c6849f4274e4f54c43f6a3b76425ca253fe3c6f645fc3",
+      "after_sha256": "c175fb89a141afbf3d8a3afeb2297c893b7ca52fe8e32bf358a58f37177e5bc2"
+    },
+    {
+      "path": "README_CN.md",
+      "before_sha256": "607558a73b8417ddab3206027233d8961855315f67b19f2faf9b618d69b8618c",
+      "after_sha256": "fc03aa6e821ef57fd7c9e249bd66face9fe5e98c4581dc761ecdd7ddf4d7d599"
+    },
+    {
+      "path": "lele/__init__.py",
+      "before_sha256": "a7ce73e74754d1829ab32cb2f6252e4e1ee271f9e865f14aba04ec48a07535c9",
+      "after_sha256": "4cf6e3745309530facba96f766ebf36e6c7c53fdaa453ae338696431997e764e"
+    },
+    {
+      "path": "lele/app.py",
+      "before_sha256": "89ff8ffcfd82c3d9dfeb7d474075176b2545be4a380f78b1829b30a9bb2db13f",
+      "after_sha256": "a51fd852aa8c88fab18bb7151f780e90925fd20bd1ca1d9a28dc49bc4e1f0ad9"
+    },
+    {
+      "path": "lele/appearance_workflow.py",
+      "before_sha256": "5e78fa8e44f6e1eb78e9d362273ee0540f43fa995274ae297bb215c26c1ef355",
+      "after_sha256": "52e342fdcc0ce741f8d0a3bfbcb3bafaa1f412350cd1a09951493ae921a37cac"
+    },
+    {
+      "path": "lele/atom_clipboard.py",
+      "before_sha256": "add62c869af88e629b12ccbaac21f60d95b33eea613cf9af6d53a41b8cb24eec",
+      "after_sha256": "5c330273c6779da89ef547c92dc675c53738a897c693c2bc66fe837a3ffd7f2e"
+    },
+    {
+      "path": "lele/atom_indices.py",
+      "before_sha256": "c2abd07c00e64c95486be2d35299af5d5216126e2068f98caca760c3276ca929",
+      "after_sha256": "6d580308e5948a1c6fbf7e839435b7a470ecbd1e26564da0f7980ce50a44ca94"
+    },
+    {
+      "path": "lele/formats.py",
+      "before_sha256": "6abdbb18d524b51a2331e2fc6942404f6b0394cdedaac2ec8db42bb03ba1c3e3",
+      "after_sha256": "395890b3437321d72634ddce6c39fd805df8468260fb503715fb049bf23b8794"
+    },
+    {
+      "path": "lele/gaussian_properties.py",
+      "before_sha256": "d9a494fbd7a5e0728abbf13225b02ade11c725bf872b74f0579bb00e6740ba99",
+      "after_sha256": "0f8711d366c907eca05ca9d7fd052856298cc3304b4f12d71891012fa476c3a3"
+    },
+    {
+      "path": "lele/geometry_curve_dialog.py",
+      "before_sha256": "c7dc40069e54ee2ed11de7c1400f66d66b222ef01e13d6ba33f9aecfa7aebbc5",
+      "after_sha256": "c959d33e0b2aef92a9ab82c3ff0296a0dc9fd8d220a4df161354afab7381aa91"
+    },
+    {
+      "path": "lele/polyhedron_analysis.py",
+      "before_sha256": "862b5947baf693e56069dabfebd25330f68bbb6c5eba8d7bb8ebb2ab46780afb",
+      "after_sha256": "3ec1da9ecae9e68c928747766b115242ecc7ccb799fbf30fcb34f5ae348293ef"
+    },
+    {
+      "path": "lele/polyhedron_dialog.py",
+      "before_sha256": "69d266a78de20879e83463f387a2d3f543d931d7d51b324dce23a179b8f51d75",
+      "after_sha256": "66a945a846a3185b207b61832afa6f717e56b824665a9ceec27f18b185555cd3"
+    },
+    {
+      "path": "lele/selection_geometry.py",
+      "before_sha256": "69bfc837e49c08a3cf5d4586956a201e6ab7f6f6288ff60833363f1c85c09a9b",
+      "after_sha256": "cea725f5761945334cbde320ca1436325d37bf9871e5acaa066b2b37c052ba03"
+    },
+    {
+      "path": "lele/site_occupancy.py",
+      "before_sha256": "deecc3f74234e1b31470839930f1d91489a25fe791fd9f43b0d8695dcb937c54",
+      "after_sha256": "8e09973a0b082f75f2fa27447f6112906d8216775b716a99cdf1e4db41a40288"
+    },
+    {
+      "path": "lele/structure_edit_dialogs.py",
+      "before_sha256": "c3319def81b815ad821ffb09081ebc213cff8871d700686a3aac452ed0802751",
+      "after_sha256": "f335c7af18912c7e920b7598d605f34b1e9ed757bd842aa1249851f8cf089cb8"
+    },
+    {
+      "path": "lele/supercell.py",
+      "before_sha256": "bb5e87a33c2c927173facb6a320a87f443483de9f5c0d4e1b64b1d5056aa704c",
+      "after_sha256": "af7034f7417a1f9e20cafd83d253428463e2d9baf58b19b00fdc9e8f51612db0"
+    },
+    {
+      "path": "lele/trajectory_analysis.py",
+      "before_sha256": "f99b0ea78d8db70be3c72a51f874ad4d1d544b84cad3ad63612388321cd4ea09",
+      "after_sha256": "17dddb12f41c9e75ada119c1d2495163d31b8b0e0a55cbbc286ac9305f971d10"
+    },
+    {
+      "path": "lele/vacuum.py",
+      "before_sha256": "af2453ce51013706f8b5f62cf6689f05261ba9aec954207bb719281b6d806033",
+      "after_sha256": "ad8751914ef01cff1f0859b6c5c989338f9619c72c56cbcd16eee2ded2c4437f"
+    },
+    {
+      "path": "lele/vibration_analysis_dialog.py",
+      "before_sha256": "02234bba9c013616970cbf9de8b637bed37a4d1c3203fa3510faedc2862889db",
+      "after_sha256": "63d595fdd2894a16fc5f321f8bc37ea38bb6cbe933f18fc96fc54fd0ae4d0db6"
+    }
+  ],
+  "unchanged_original_files": 478,
+  "added_files": [
+    {
+      "path": "docs/FIX_A1_B4_v2.12.1_CN.md",
+      "sha256": "af39c4f750229e85689df3e4f687f4006f97bb7de8283503249cf69d41d13350"
+    },
+    {
+      "path": "docs/VALIDATION_v2.12.1.md",
+      "sha256": "23237c8699c446b8a907c0f2d4f59524625cbdd8ad9ef585c05d57babe0868cd"
+    },
+    {
+      "path": "docs/qa_v2.12.1/full.log",
+      "sha256": "9f829385a8b0d9cef10de985710acfd2881dea98da11cba217bd7da5d8fecc4d"
+    },
+    {
+      "path": "docs/qa_v2.12.1/full.xml",
+      "sha256": "0bcd8ebc1800e770fa70986bc2b845e738e617393478a7c0249da7e93549e532"
+    },
+    {
+      "path": "docs/qa_v2.12.1/independent_after.log",
+      "sha256": "c6761eb659e35e4b8c9ce4cc68d07b16c3d6e0aac235b1b50e0b8c9add4ccbaf"
+    },
+    {
+      "path": "docs/qa_v2.12.1/independent_after.xml",
+      "sha256": "9390a262b1e05bf0ff3d5b4386574881c1883415d788f583033d58b19e9f76c8"
+    },
+    {
+      "path": "docs/qa_v2.12.1/independent_before.log",
+      "sha256": "0aa0447ed7b9d33fdef30d701ca51a1536b2631095981d7e97efb69998d8af24"
+    },
+    {
+      "path": "docs/qa_v2.12.1/independent_before.xml",
+      "sha256": "dafb826b6184cc95e06637eea286042145f5c9735f6e864dfd6ee128a5da22d3"
+    },
+    {
+      "path": "docs/qa_v2.12.1/native/before.png",
+      "sha256": "4882bc6aed16a8684e9d99c434c30a0a3d892b1d11e6a25aeb53269f4b4d6fde"
+    },
+    {
+      "path": "docs/qa_v2.12.1/native/selected.png",
+      "sha256": "63a80b11cf6bda3aea16d0e19f308ed25539c210ea9b4fdf9d1d978b71f12727"
+    },
+    {
+      "path": "docs/qa_v2.12.1/native/window.json",
+      "sha256": "e5684d47723e261fcaf28ee5c9f2ab59ba94554bef860facb8a1cc7884ac1c62"
+    },
+    {
+      "path": "docs/qa_v2.12.1/native_assertions.json",
+      "sha256": "915d27dda9245e9e29ef041378225aec6692f06f31b77fecefe0c7a6fe430385"
+    },
+    {
+      "path": "docs/qa_v2.12.1/project_examples.json",
+      "sha256": "e3a80cbc764bfd3bb7857fa3ef20baedbdcc9323f340bfddc3fd7a0761e6b162"
+    },
+    {
+      "path": "docs/qa_v2.12.1/repro/check_project_examples.py",
+      "sha256": "6a47299f031bfa643326cb9acc3d84ce1640082371a3d43ea387bdfe165c3b20"
+    },
+    {
+      "path": "docs/qa_v2.12.1/repro/check_window.py",
+      "sha256": "280be0b706ed973a7ff6feb29244f9f2158112b7ba4a2fcad8758c0d2b3a44ec"
+    },
+    {
+      "path": "docs/qa_v2.12.1/repro/test_acceptance_extra.py",
+      "sha256": "a4141aaed26fd0454e449b0f36c182ae28cc9596ce472912bf969ce746e17758"
+    },
+    {
+      "path": "docs/qa_v2.12.1/wheel.log",
+      "sha256": "a6090b3012d14db9f61de15c9851eeac6c313b2683fb02ae77f7823324296016"
+    },
+    {
+      "path": "docs/qa_v2.12.1/wheel_contents.json",
+      "sha256": "058daac5076fdd651cde3a8bae25712b2bbf20d43e5176ba54df213bd3f1145f"
+    },
+    {
+      "path": "lele/cif_input.py",
+      "sha256": "00342e7959c3d13f97b993fb415b9400f48d14017773b9a7c46029cb0ce4b566"
+    },
+    {
+      "path": "lele/vasp_constraints.py",
+      "sha256": "5884e137516a41ddd766da64a45f41a24b8b79519b674309458cabac66fa1c45"
+    },
+    {
+      "path": "tests/test_acceptance_extended_v2121.py",
+      "sha256": "24f7b9190c9e44d3436bed3ee9bfb9880980b3e08ec52d745d4fb74b0811b10c"
+    },
+    {
+      "path": "tests/test_acceptance_v2121.py",
+      "sha256": "a4141aaed26fd0454e449b0f36c182ae28cc9596ce472912bf969ce746e17758"
+    }
+  ],
+  "hash_excluded_self": "docs/qa_v2.12.1/source_integrity.json"
+}

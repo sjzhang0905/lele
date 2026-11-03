@@ -27,7 +27,7 @@ class BoundaryView:
         return BoundaryView(display, self.source_indices, self.shifts, self.bonds, lines, self.tiles)
 
 
-def boundary_view(frame,bounds,cutoff=1.18):
+def boundary_view(frame,bounds,cutoff=1.0):
     """Repeat full cells in integer [start, end) ranges, with shared face edges.
 
     Each copy has every source atom. The displayed frame retains the original
@@ -48,13 +48,21 @@ def boundary_view(frame,bounds,cutoff=1.18):
     n=len(frame.symbols)
     if count*n>MAX_DISPLAY_ATOMS:raise ValueError('Boundary exceeds 50,000 display atoms.')
     tiles=tuple(product(*ranges))
-    base,_=normalized_positions(frame)
+    phonon=frame.info.get('_qe_phonon_preview')
+    graph_frame=frame
+    if phonon is not None:
+        graph_frame=frame.clone();graph_frame.positions=np.asarray(phonon['reference_positions']).copy()
+    base,floors=normalized_positions(graph_frame)
     offsets=np.asarray(tiles,float)@cell
     positions=(base[None,:,:]+offsets[:,None,:]).reshape(-1,3)
+    if phonon is not None:
+        from .qe_phonons import phonon_offsets
+        phases=np.asarray(tiles)[:,None,:]-floors[None,:,:]
+        positions+=phonon_offsets(phonon,phases).reshape(-1,3)
     sources=np.tile(np.arange(n,dtype=int),count)
     shifts=np.repeat(np.asarray(tiles,int),n,axis=0)
     tile_indices={tile:k for k,tile in enumerate(tiles)}
-    periodic_edges=periodic_bonds(frame,cutoff)
+    periodic_edges=periodic_bonds(graph_frame,cutoff)
     edges=set()
     for k,tile in enumerate(tiles):
         for a,b,shift in periodic_edges:
@@ -63,8 +71,9 @@ def boundary_view(frame,bounds,cutoff=1.18):
                 pair=tuple(sorted((k*n+a,other*n+b)))
                 if pair[0]!=pair[1]:edges.add(pair)
     styles={i:frame.atom_appearance[source] for i,source in enumerate(sources) if source in frame.atom_appearance}
+    from .site_occupancy import subset_info
     display=Frame([frame.symbols[i] for i in sources],positions,
-                  frame.cell.copy(),(False,False,False),info=frame.info,atom_appearance=styles)
+                  frame.cell.copy(),(False,False,False),info=subset_info(frame.info,sources),atom_appearance=styles)
     from .hydrogen_bonds import repeat_hydrogen_bonds
     repeat_hydrogen_bonds(frame, display, tiles)
     # Keep each edge one original cell-vector long. Deduplicate shared edges

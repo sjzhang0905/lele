@@ -1,0 +1,40 @@
+{
+  "version": "2.11.0",
+  "date": "2026-11-02",
+  "full_regression": {
+    "tests_passed": 781,
+    "subtests_passed": 78,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 47.247,
+    "junit_tests_field": 859
+  },
+  "targeted_regression": {
+    "tests_passed": 54,
+    "subtests_passed": 6,
+    "failures": 0,
+    "skipped": 0
+  },
+  "actual_file_checks_executed": [
+    "test_actual_poscar_pair_is_a_rigid_reorientation",
+    "test_local_axes_match_supplied_rotation_script_without_pymatgen",
+    "test_real_supplied_qe_files",
+    "test_actual_124_atom_example_all_frequencies_and_frozen_rows"
+  ],
+  "private_source_files_redistributed": false,
+  "windows_exe_built_or_tested": false,
+  "baseline_files_preserved": 469,
+  "changed_baseline_files": [
+    "CHANGELOG.md",
+    "README.md",
+    "README_CN.md",
+    "lele/__init__.py",
+    "lele/app.py",
+    "lele/core.py",
+    "lele/energy_units.py",
+    "lele/formats.py",
+    "tests/test_coordinate_frame_contract.py",
+    "tests/test_edit_actions.py"
+  ]
+}

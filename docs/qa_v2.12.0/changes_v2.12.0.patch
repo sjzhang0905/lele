@@ -1,0 +1,1118 @@
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -1,4 +1,12 @@
+ # Changelog
++
++## 2.12.0 — 2026-11-02
++
++- Preserve CIF fractional and mixed-site occupancies through symmetry expansion, projects, Boundary, supercells, deletion and the native clipboard. Render species-proportional sphere sectors and a pale vacancy sector; include minority species in the legend, weighted composition and an unknown integer-electron parity. Preserve occupancy in CIF export and reject silent conversion to fully occupied calculation inputs.
++- Add right-click atom index dialogs with 1-based move-to-index and two-selection index swap. Reorder coordinates, species, occupancies, force vectors, appearance and ordinary/hydrogen-bond indices together; preserve current-frame scalar results and atom order in POSCAR export. Empty-space right-click still clears selection; right-drag still rolls the camera.
++- Detect slab outermost atomic planes and the largest periodic vacuum gap along the three cell normals. Adjust only the chosen cell vector's normal component, preserving all Cartesian coordinates, in-plane components and the other two cell vectors. Reject boundary-split slabs that cannot meet the fixed-coordinate requirement; support undo and clear invalidated calculation data.
++- Dynamically align the bottom summary with the coordinate-pane left edge as the window layout changes.
++- Replace the selected-atom wire mesh with an unfilled, thick green dashed camera-facing outline. Preserve atom colors and center labels; use explicit line gaps across native VTK backends.
+ 
+ ## 2.11.0 — 2026-11-02
+ 
+--- a/README.md
++++ b/README.md
+@@ -1,6 +1,11 @@
+ # LELE
+ 
+ **Local Environment and Lattice Explorer**
++
++Version **2.12.0** displays fractional CIF occupancies as colored site sectors,
++adds right-click atom reindex/swap and fixed-coordinate slab-vacuum editing,
++aligns the summary footer with the coordinate pane, and uses a green dashed
++selection silhouette. See the [guide](docs/FEATURES_v2.12.0_CN.md) and [validation](docs/VALIDATION_v2.12.0.md).
+ 
+ Version **2.11.0** reorients periodic structures with a proper rotation of both
+ coordinates and lattice. Use **Edit → Reorient complete structure / crystal…**
+--- a/README_CN.md
++++ b/README_CN.md
+@@ -1,6 +1,8 @@
+ # LELE
+ 
+ **Local Environment and Lattice Explorer — 局域环境与晶格探索工具**
++
++v2.12.0 增加 **CIF 分数占据扇区显示、右击原子重编号/交换编号、保持笛卡尔坐标的 slab 真空层修改**；底部摘要左侧与 Coordinates 窗口对齐，选中原子改为绿色粗虚线外轮廓。见[使用说明](docs/FEATURES_v2.12.0_CN.md)和[验证记录](docs/VALIDATION_v2.12.0.md)。
+ 
+ v2.11.0 修复周期结构重设方向：**XYZ 对齐同步旋转原子与晶胞**。新增 **Edit → Reorient complete structure / crystal…**，可一次设置原点、X 提示和 Z 方向，自动生成正交旋转矩阵，也可粘贴分析脚本的行向量矩阵。支持最近周期像、体数据同步变换、撤销和项目保存。见[使用说明](docs/FEATURES_v2.11.0_CN.md)和[验证记录](docs/VALIDATION_v2.11.0.md)。
+ 
+--- a/lele/__init__.py
++++ b/lele/__init__.py
+@@ -1,6 +1,6 @@
+ #!/usr/bin/env python3
+ """Local Environment and Lattice Explorer."""
+-__version__ = "2.11.0"
++__version__ = "2.12.0"
+ APP_NAME = "LELE"
+ APP_FULL_NAME = "Local Environment and Lattice Explorer"
+ APP_CONTACT_EMAIL = "sjzhang0905@hotmail.com"
+--- a/lele/app.py
++++ b/lele/app.py
+@@ -85,7 +85,10 @@
+         self.statusBar().showMessage('Open a calculation input/output file or a structure.')
+ 
+     def eventFilter(self, watched, event):
+-        if (watched in (self.measurement_value,self.measurement_value.lineEdit())
++        if watched is getattr(self,'tabs',None) and event.type() in (QEvent.Type.Move,QEvent.Type.Resize,QEvent.Type.Show):
++            QTimer.singleShot(0,self._align_summary_footer)
++        measurement=getattr(self,'measurement_value',None)
++        if (measurement is not None and watched in (measurement,measurement.lineEdit())
+                 and event.type()==QEvent.Type.FocusIn and hasattr(self,'playback')):
+             self.playback.stop();self.play_btn.setText('Play')
+         if (watched is getattr(getattr(self,'welcome_page',None),'title_label',None)
+@@ -191,6 +194,8 @@
+         self.supercell_action.setEnabled(False)
+         self.reorient_action=self._action(self.edit_menu,'Reorient complete structure / crystal…',self.configure_coordinate_reorientation)
+         self.reorient_action.setEnabled(False)
++        self.vacuum_action=self._action(self.edit_menu,'Modify slab vacuum…',self.configure_vacuum)
++        self.vacuum_action.setEnabled(False)
+         self.edit_menu.addSeparator()
+         self.fit_plane_action = self._action(
+             self.edit_menu, 'Fit selected plane', self.fit_selected_plane)
+@@ -340,6 +345,7 @@
+         self.results_only_source=QPlainTextEdit();self.results_only_source.setReadOnly(True);results_tabs.addTab(self.results_only_source,'Input / output text')
+         centre.addWidget(self.results_only_page)
+         self.tabs = QTabWidget()
++        self.tabs.installEventFilter(self)
+         self.atom_table = QTableWidget(0, 4)
+         self.atom_table.setHorizontalHeaderLabels(['Atom', 'X (Å)', 'Y (Å)', 'Z (Å)'])
+         coordinate_font = self.atom_table.font()
+@@ -392,7 +398,7 @@
+         self.summary_label = QLabel('Atoms 0  |  Formula -  |  electrons -  |')
+         self.summary_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+         self.summary_label.setWordWrap(False)
+-        self.summary_label.setContentsMargins(6, 0, 6, 0)
++        self.summary_label.setContentsMargins(0, 0, 6, 0)
+         self.summary_label.setToolTip(
+             'Total atoms and composition in the active frame. Electron parity uses the net charge; '
+             'neutral is assumed when charge is unknown. Short contacts use the periodic minimum image.')
+@@ -663,7 +669,7 @@
+         edit_outer = control_page('Edit')
+         measurements = QGroupBox('Geometry / atom selection')
+         m_layout = QVBoxLayout(measurements)
+-        selection_help = QLabel('Click atoms to select; right-click clears.\n'
++        selection_help = QLabel('Click atoms to select; right-click an atom to edit its index.\n'
+                                 'Ctrl+B toggles selected bonds.\n'
+                                 'Ctrl+H toggles a selected hydrogen bond (dashed).\n'
+                                 'Ctrl+G selects complete connected fragment(s).\n'
+@@ -732,6 +738,8 @@
+         self.reorient_btn.setToolTip('Select origin, X hint, Z in order, or enter atom indices. Uses a proper rotation of the complete crystal; also accepts a rotation matrix from the analyzer script.')
+         self.reorient_btn.clicked.connect(self.configure_coordinate_reorientation)
+         m_layout.addWidget(self.reorient_btn)
++        self.vacuum_btn=QPushButton('Modify slab vacuum…');self.vacuum_btn.setEnabled(False)
++        self.vacuum_btn.clicked.connect(self.configure_vacuum);m_layout.addWidget(self.vacuum_btn)
+         edit_outer.addWidget(measurements)
+         plane_group = QGroupBox('Best-fit selection plane')
+         plane_layout = QVBoxLayout(plane_group)
+@@ -807,6 +815,7 @@
+         self.vtk.GetRenderWindow().GetInteractor().SetInteractorStyle(vtkInteractorStyleTrackballCamera())
+         self.vtk.scene_renderer = self.scene
+         self.vtk.atomClick.connect(self._pick_from_canvas)
++        if hasattr(self.vtk,'atomContextClick'):self.vtk.atomContextClick.connect(self._atom_context_from_canvas)
+         if hasattr(self.vtk,'rectangleSelected'):
+             self.vtk.rectangleSelected.connect(self._rectangle_selected)
+             self.vtk.set_box_selection(self.box_select_action.isChecked())
+@@ -1272,11 +1281,11 @@
+             if choices:
+                 self.element_combo.setCurrentText(previously if previously in choices else choices[0])
+ 
+-    def _refresh_after_geometry_edit(self):
++    def _refresh_after_geometry_edit(self,*,preserve_results=False):
+         """Publish new coordinates, selection, rendering and document details."""
+         if getattr(self, 'renderer', None) is not None:
+             self.renderer.periodic_preview = None
+-        if getattr(self,'undo_stack',None):
++        if getattr(self,'undo_stack',None) and not preserve_results:
+             old=self.undo_stack[-1]
+             if old[0:2]==(self.current_doc,self.frame_index):
+                 from .energy_units import rigid_equivalent
+@@ -1333,13 +1342,18 @@
+             self.results_only_info.setPlainText(text);self.info_view.setPlainText(text)
+             self.summary_label.setText('No structure in this file')
+             return
+-        from .structure_summary import molecular_formula
++        from .site_occupancy import composition,is_disordered
+         from .chemical_analysis import electron_parity
+         from .periodic_geometry import short_contacts
+         lines = [f'File: {doc.path}', f'Reader: {doc.format_name}',
+                  ('View: frequency reference geometry' if self._active_vibration is not None
+                   else f'Frame: {self.frame_index + 1} of {len(doc.frames)}'),
+                  f'Atoms: {len(frame.symbols)}', f'Periodic flags: {frame.pbc}']
++        if is_disordered(frame):
++            lines.append('Occupancy-weighted composition: '+composition(frame))
++            lines.append('Fractional occupancies describe average sites; bonding uses the representative species, not a uniquely ordered microscopic configuration.')
++        if frame.info.get('vacuum_adjustment'):
++            data=frame.info['vacuum_adjustment'];lines.append(f'Last vacuum spacing: {data["gap"]:.6f} → {data["new_gap"]:.6f} Å (atomic-plane convention; Cartesian coordinates unchanged)')
+         if frame.info.get('series_label'):lines.insert(2,'Result series: '+frame.info['series_label'])
+         if frame.info.get('optimization_converged'):lines.append('Geometry optimization: converged')
+         if 'stage_index' in frame.info and doc.calculation_results is not None:
+@@ -1417,13 +1431,24 @@
+         parity = electron_parity(frame)
+         self.summary_label.setText(
+             f'Atoms {len(frame.symbols)}  |  '
+-            f'{system} {molecular_formula(frame.symbols)}  |  '
++            f'{system} {composition(frame)}  |  '
+             f'electrons {parity.split()[0].lower()}  |')
+         self.summary_label.setToolTip(
+             f'Electron parity: {parity}\nComposition and counts refer to the active source geometry.')
+         count, _ = short_contacts(frame)
+         self.short_contacts_button.setText(f'Short contacts {count}')
+         self.short_contacts_button.setEnabled(True)
++        self._align_summary_footer()
++
++    def _align_summary_footer(self):
++        from shiboken6 import isValid
++        if not isValid(self):return
++        if not hasattr(self,'footer_row') or self.footer_row.isHidden():return
++        from PySide6.QtCore import QPoint
++        target=self.tabs.mapToGlobal(QPoint(0,0)).x()
++        current=self.footer_row.mapToGlobal(QPoint(0,0)).x()
++        if abs(target-current)>1:
++            self.status_message_label.setFixedWidth(max(0,self.status_message_label.width()+target-current))
+ 
+     def show_short_contacts(self):
+         if self.frame is None:
+@@ -1820,6 +1845,9 @@
+         self.align_btn.setEnabled(editable and n == 2)
+         self.reorient_btn.setEnabled(editable and bool(frame.symbols))
+         self.reorient_action.setEnabled(self.reorient_btn.isEnabled())
++        from .core import valid_lattice
++        vacuum_ok=editable and any(frame.pbc) and valid_lattice(frame) if frame is not None else False
++        self.vacuum_action.setEnabled(vacuum_ok);self.vacuum_btn.setEnabled(vacuum_ok)
+         self.invert_btn.setEnabled(frame is not None and bool(frame.symbols))
+         self.delete_btn.setEnabled(editable and n > 0)
+         self.measurement_label.clear()
+@@ -2241,6 +2269,52 @@
+         self._refresh_after_geometry_edit()
+         self.statusBar().showMessage('Origin and axes reset with a proper rotation; coordinates, cell and grid transformed together. Ctrl+Z to undo.',7000)
+ 
++    def _atom_context_from_canvas(self,x,y):
++        if self.frame is None:return
++        from .interaction import vtk_display_from_qt
++        rw=self.vtk.GetRenderWindow();width,height=rw.GetSize()
++        try:dx,dy=vtk_display_from_qt(x,y,self.vtk.width(),self.vtk.height(),width,height)
++        except ValueError:return
++        atom=self.renderer.pick_index(dx,dy,width,height)
++        if atom is None:self._right_click_clear();return
++        if atom not in self.selection:
++            self.selection=[atom];self._sync_selection_to_table();self.refresh_scene()
++        from .structure_edit_dialogs import AtomIndexDialog
++        editable=self._active_vibration is None and not self._alignment_enabled()
++        dialog=AtomIndexDialog(self.frame,atom,self.selection,editable=editable,parent=self)
++        if dialog.exec()==QDialog.DialogCode.Accepted and editable:
++            self.apply_atom_index(atom,dialog.index.value()-1,swap=dialog.swap if dialog.operation=='swap' else None)
++
++    def apply_atom_index(self,atom,target,*,swap=None):
++        if not self._geometry_edit_allowed() or self.frame is None:return
++        from .atom_indices import index_order,reorder_atoms
++        try:order=index_order(len(self.frame.symbols),atom,target,swap=swap)
++        except ValueError as exc:QMessageBox.warning(self,'Invalid atom index',str(exc));return
++        if order==list(range(len(order))):return
++        self._record_undo();mapping=reorder_atoms(self.frame,order)
++        self.selection=[mapping[i] for i in self.selection]
++        self.doc.modified=True;self._refresh_after_geometry_edit(preserve_results=True)
++        self.statusBar().showMessage('Atom indices updated; positions and properties follow their atoms. Ctrl+Z to undo.',5000)
++
++    def configure_vacuum(self):
++        if not self._geometry_edit_allowed() or self.frame is None:return
++        if self.doc.volume is not None:
++            QMessageBox.warning(self,'Volume grid attached','Open a structure without a fixed volumetric grid to change the periodic cell.');return
++        from .structure_edit_dialogs import VacuumDialog
++        dialog=VacuumDialog(self.frame,self)
++        if dialog.exec()==QDialog.DialogCode.Accepted:self.apply_vacuum(dialog.gap.value(),dialog.selected_axis())
++
++    def apply_vacuum(self,gap,axis=None):
++        if not self._geometry_edit_allowed() or self.frame is None or self.doc.volume is not None:return
++        from .vacuum import change_vacuum
++        candidate=self.frame.clone()
++        try:result=change_vacuum(candidate,gap,axis)
++        except ValueError as exc:QMessageBox.warning(self,'Vacuum adjustment unavailable',str(exc));return
++        self._record_undo();candidate.bond_snapshot=self.frame.bond_snapshot;candidate.periodic_bond_snapshot=self.frame.periodic_bond_snapshot
++        self.doc.frames[self.frame_index]=candidate;self.doc.modified=True;self._refresh_after_geometry_edit()
++        self._refresh_frame_tree_label()
++        self.statusBar().showMessage(f'Vacuum {result["gap"]:.6f} → {gap:.6f} Å; Cartesian coordinates unchanged. Ctrl+Z to undo.',6000)
++
+     def _coordinate_edited(self, item):
+         if self._ignore_table or item.column() == 0 or self.frame is None:
+             return
+@@ -2641,7 +2715,7 @@
+             'Open files: Ctrl+O; save PNG: Ctrl+S; export structure: Ctrl+Shift+S.\n\n'
+             'File > Export animation GIF saves a trajectory or the selected vibration mode.\n'
+             'Drag files into the window. Left-drag: rotate; right-drag: roll clockwise/counterclockwise; mouse wheel: zoom.\n'
+-            'Click atoms to add/remove from selection; right-click to clear, right-drag to roll.\n'
++            'Click atoms to select; right-click an atom to edit indices, empty space to clear; right-drag to roll.\n'
+             'Ctrl+B toggles selected internal bonds; two atoms toggle regardless of distance.\n'
+             'Ctrl+H draws/removes a dashed hydrogen bond between two selected atoms; Ctrl+Z undoes it.\n'
+             'Switching files restores each file\'s camera, colours and display settings for this session.\n'
+--- a/lele/atom_clipboard.py
++++ b/lele/atom_clipboard.py
+@@ -26,6 +26,8 @@
+         bond_added={(remap[a],remap[b]) for a,b in frame.bond_added if a in remap and b in remap},
+         bond_removed={(remap[a],remap[b]) for a,b in frame.bond_removed if a in remap and b in remap},
+         atom_appearance={remap[i]:style for i,style in frame.atom_appearance.items() if i in remap})
++    from .site_occupancy import subset_info
++    if 'site_occupancies' in frame.info:fragment.info['site_occupancies']=subset_info(frame.info,indices)['site_occupancies']
+     if any(frame.pbc):
+         from .periodic_geometry import periodic_bonds
+         pairs = {(i,j) for i,j,_ in periodic_bonds(frame,cutoff) if i != j}
+@@ -40,6 +42,7 @@
+     text=str(len(indices))+'\nLELE selected atoms; centroid at origin\n'
+     text+='\n'.join(f'{s} {p[0]:.12f} {p[1]:.12f} {p[2]:.12f}' for s,p in zip(fragment.symbols,positions))+'\n'
+     metadata=json.dumps(dict(symbols=fragment.symbols,positions=positions.tolist(),
++        info=fragment.info,
+         added=sorted(fragment.bond_added),removed=sorted(fragment.bond_removed),
+         bonds=sorted(fragment.bond_snapshot),
+         hbonds=[[a,b,list(s)] for (a,b),s in sorted(fragment.hbond_added.items())],
+@@ -52,7 +55,7 @@
+     if metadata:
+         data=json.loads(metadata)
+         if not 0<len(data['symbols'])<=50000:raise ValueError('Invalid copied atom count')
+-        return Frame(data['symbols'],data['positions'],bond_added={tuple(p) for p in data.get('added',[])},
++        return Frame(data['symbols'],data['positions'],info=data.get('info',{}),bond_added={tuple(p) for p in data.get('added',[])},
+             bond_removed={tuple(p) for p in data.get('removed',[])},
+             atom_appearance={int(i):AtomAppearance(**style) for i,style in data.get('styles',{}).items()},
+             bond_snapshot=None if 'bonds' not in data else frozenset(tuple(p) for p in data['bonds']),
+@@ -74,8 +77,13 @@
+     freeze_bonds(target,cutoff)
+     internal = visible_bonds(fragment,cutoff)
+     n=len(target.symbols);count=len(fragment.symbols)
++    from .site_occupancy import site_species
++    occupancies=([site_species(target,i) for i in range(n)]+[site_species(fragment,i) for i in range(count)]
++                 if 'site_occupancies' in target.info or 'site_occupancies' in fragment.info else None)
+     target.symbols+=fragment.symbols
+     target.positions=np.concatenate((target.positions,fragment.positions+np.asarray(point)),axis=0)
++    if occupancies is not None:target.info['site_occupancies']=occupancies
++    target.info.pop('atom_source_order',None)
+     for name in ('bond_added','bond_removed'):
+         getattr(target,name).update((a+n,b+n) for a,b in getattr(fragment,name))
+     target.atom_appearance.update({n+i:style for i,style in fragment.atom_appearance.items()})
+--- a/lele/atom_legend.py
++++ b/lele/atom_legend.py
+@@ -12,14 +12,18 @@
+     frame=getattr(owner,'source_frame',owner.frame)
+     if frame is None:return []
+     visible={int(i) for i,_ in owner.displayed_atoms()};samples=[];seen=set()
++    from .site_occupancy import site_species
+     for i,symbol in enumerate(frame.symbols):
+-        if i not in visible or symbol in seen or not atom_is_drawn(frame,i):continue
+-        seen.add(symbol)
+-        if owner.options.style=='Space filling':size=owner._atom_radius(symbol)
+-        elif owner.options.style=='Sticks':size=max(.085,owner.options.bond_scale*1.18)
+-        else:size=max(.09,radius(symbol)*owner.options.atom_scale)
+-        samples.append(dict(symbol=symbol,source_index=i,color=owner.atom_color(frame,i),
+-                            opacity=appearance(frame,i).opacity,radius=size))
++        if i not in visible or not atom_is_drawn(frame,i):continue
++        for species,fraction in site_species(frame,i).items():
++            if species in seen or fraction<=0:continue
++            seen.add(species)
++            if owner.options.style=='Space filling':size=owner._atom_radius(species)
++            elif owner.options.style=='Sticks':size=max(.085,owner.options.bond_scale*1.18)
++            else:size=max(.09,radius(species)*owner.options.atom_scale)
++            color=appearance(frame,i).color or owner._display_color(species)
++            samples.append(dict(symbol=species,source_index=i,color=color,
++                                opacity=appearance(frame,i).opacity,radius=size))
+     return samples
+ 
+ 
+--- a/lele/atom_panel.py
++++ b/lele/atom_panel.py
+@@ -128,12 +128,15 @@
+                             item = QTreeWidgetItem([f'{symbol}{ordinal}  ·  #{i + 1}'])
+                             item.setData(0, Qt.ItemDataRole.UserRole, i)
+                             item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+-                            item.setToolTip(0, f'Atom #{i + 1}: {symbol}; original coordinate-table index')
++                            from .site_occupancy import description
++                            item.setToolTip(0, f'Atom #{i + 1}: {symbol}; coordinate-table index\nOccupancy: '+description(frame,i))
+                             parent.addChild(item)
+                             self._items[i] = item
+                         parent.setExpanded(symbol in expanded)
+             if frame is not None:
+                 for i, item in self._items.items():
++                    from .site_occupancy import description
++                    item.setToolTip(0,f'Atom #{i+1}: {frame.symbols[i]}; coordinate-table index\nOccupancy: '+description(frame,i))
+                     style = appearance(frame, i)
+                     item.setCheckState(0, Qt.CheckState.Checked if style.visible else Qt.CheckState.Unchecked)
+                     item.setForeground(0, QBrush(QColor('#303343' if style.visible else '#999999')))
+--- a/lele/boundary.py
++++ b/lele/boundary.py
+@@ -71,8 +71,9 @@
+                 pair=tuple(sorted((k*n+a,other*n+b)))
+                 if pair[0]!=pair[1]:edges.add(pair)
+     styles={i:frame.atom_appearance[source] for i,source in enumerate(sources) if source in frame.atom_appearance}
++    from .site_occupancy import subset_info
+     display=Frame([frame.symbols[i] for i in sources],positions,
+-                  frame.cell.copy(),(False,False,False),info=frame.info,atom_appearance=styles)
++                  frame.cell.copy(),(False,False,False),info=subset_info(frame.info,sources),atom_appearance=styles)
+     from .hydrogen_bonds import repeat_hydrogen_bonds
+     repeat_hydrogen_bonds(frame, display, tiles)
+     # Keep each edge one original cell-vector long. Deduplicate shared edges
+--- a/lele/chemical_analysis.py
++++ b/lele/chemical_analysis.py
+@@ -40,6 +40,8 @@
+ 
+     A parity statement is not evidence for a specific spin state.
+     """
++    from .site_occupancy import is_disordered
++    if is_disordered(frame):return 'Unknown (fractional site occupancies; no unique integer-electron configuration)'
+     missing = sorted(set(frame.symbols).difference(ATOMIC_NUMBERS))
+     if missing:
+         return f'Unknown (unsupported elements: {", ".join(missing)})'
+--- a/lele/crystal_rendering.py
++++ b/lele/crystal_rendering.py
+@@ -66,9 +66,11 @@
+                     if key not in known:
+                         self.polyhedra_extra_atoms.append((int(ligand), point));known.add(key)
+         if self.polyhedra_extra_atoms:
++            from .site_occupancy import subset_info
+             self._polyhedra_atoms_frame = Frame(
+                 [source.symbols[i] for i, _ in self.polyhedra_extra_atoms],
+                 [p for _, p in self.polyhedra_extra_atoms], self.frame.cell, self.frame.pbc,
++                info=subset_info(source.info,[i for i,_ in self.polyhedra_extra_atoms]),
+                 atom_appearance={j:appearance(source, i) for j, (i, _) in enumerate(self.polyhedra_extra_atoms)})
+ 
+     def _attach_crystal_clips(self, actor):
+--- a/lele/formats.py
++++ b/lele/formats.py
+@@ -53,6 +53,8 @@
+             pass
+     info = {str(k): str(v)[:180] for k, v in atoms.info.items()
+             if isinstance(v, (str, int, float, bool))}
++    from .site_occupancy import from_ase
++    info.update(from_ase(atoms))
+     if calc is not None and 'forces' in getattr(calc, 'results', {}):
+         forces=np.asarray(calc.results['forces'],float)
+         if forces.size and np.isfinite(forces).all():
+@@ -325,6 +327,12 @@
+         raise ValueError(f'Unsupported export target: {target}')
+     atoms = Atoms(symbols=frame.symbols, positions=frame.positions.copy(),
+                   cell=frame.cell.copy(), pbc=frame.pbc)
++    from .site_occupancy import is_disordered
++    if is_disordered(frame) and target!='cif':
++        raise ValueError('Fractional site occupancies require CIF export. Construct an explicit ordered structure before exporting a calculation input.')
++    if 'site_occupancies' in frame.info:
++        atoms.info['occupancy']={str(i):dict(s) for i,s in enumerate(frame.info['site_occupancies'])}
++        atoms.set_array('spacegroup_kinds',np.arange(len(atoms),dtype=int))
+     for k in ('converter_charge', 'converter_mult'):
+         if k in frame.info:
+             try:
+@@ -332,7 +340,7 @@
+             except (ValueError, TypeError):
+                 pass
+     prepared, notices = legacy.prepare_for_target(atoms, target, float(box_size))
+-    if target in ('poscar-direct','poscar-cartesian') and 'coordinate_reorientation' in frame.info:
++    if target in ('poscar-direct','poscar-cartesian') and ('coordinate_reorientation' in frame.info or frame.info.get('atom_order_edited')):
+         from ase.io import write
+         write(str(filename),prepared,format='vasp',direct=target=='poscar-direct',sort=False,vasp5=True)
+     else:
+--- a/lele/interaction.py
++++ b/lele/interaction.py
+@@ -35,6 +35,7 @@
+     """A reliable, Qt-level single-click signal and dedicated right-button roll."""
+ 
+     atomClick = Signal(float, float)  # Qt logical top-left pixel coordinates
++    atomContextClick = Signal(float,float)
+     clearSelectionClick = Signal()  # right click without dragging
+     fragmentGestureBegin = Signal(str, float, float)
+     fragmentGestureMove = Signal(str, float, float)
+@@ -159,7 +160,7 @@
+             if (self._right_start is not None and not self._right_dragged
+                 and (event.position().x()-self._right_start.x())**2
+                   + (event.position().y()-self._right_start.y())**2 <= 64):
+-                self.clearSelectionClick.emit()
++                self.atomContextClick.emit(float(event.position().x()),float(event.position().y()))
+             self._right_start = None
+             self._right_last = None
+             self._right_dragged = False
+--- a/lele/renderer.py
++++ b/lele/renderer.py
+@@ -15,7 +15,7 @@
+ from vtkmodules.vtkCommonDataModel import vtkPolyData, vtkCellArray, vtkStructuredGrid
+ from vtkmodules.vtkFiltersSources import vtkSphereSource, vtkArrowSource, vtkPlaneSource
+ from vtkmodules.vtkFiltersCore import vtkTubeFilter, vtkContourFilter
+-from vtkmodules.vtkRenderingCore import vtkActor, vtkPolyDataMapper, vtkGlyph3DMapper, vtkRenderer, vtkBillboardTextActor3D, vtkPropAssembly
++from vtkmodules.vtkRenderingCore import vtkActor, vtkPolyDataMapper, vtkGlyph3DMapper, vtkRenderer, vtkBillboardTextActor3D, vtkPropAssembly, vtkFollower
+ from vtkmodules.util.numpy_support import numpy_to_vtk
+ from vtkmodules.vtkCommonMath import vtkMatrix4x4
+ 
+@@ -249,8 +249,13 @@
+ 
+     def _atoms(self, frame):
+         groups = defaultdict(list)
++        from .site_occupancy import site_species
+         for i, symbol in enumerate(progress_items(frame.symbols,'Preparing atom display')):
+             if atom_is_drawn(frame, i):
++                values=site_species(frame,i)
++                if len(values)!=1 or abs(next(iter(values.values()),0.)-1.)>1.e-8:
++                    self._occupied_site(frame,i,values)
++                    continue
+                 groups[(symbol, self.atom_color(frame, i), appearance(frame, i).opacity)].append(i)
+         if not groups:
+             return
+@@ -293,6 +298,26 @@
+             self._add_actor(actor)
+             self._keepalive.append((pts, pdata, sizes, mapper))
+ 
++    def _occupied_site(self,frame,index,values):
++        start=0.;scale=self._atom_radius(frame.symbols[index])
++        if self.options.style=='Sticks':scale=max(.085,self.options.bond_scale*1.18)
++        sectors=list(values.items())
++        vacancy=max(0.,1-sum(values.values()))
++        if vacancy>1.e-8:sectors.append((None,vacancy))
++        for symbol,fraction in sectors:
++            if fraction<=1.e-12:continue
++            end=min(360.,start+360.*fraction)
++            sphere=vtkSphereSource();sphere.SetRadius(scale);sphere.SetCenter(*frame.positions[index])
++            sphere.SetStartTheta(start);sphere.SetEndTheta(end);sphere.SetThetaResolution(max(6,round(48*fraction)));sphere.SetPhiResolution(28)
++            mapper=vtkPolyDataMapper();mapper.SetInputConnection(sphere.GetOutputPort())
++            actor=vtkActor();actor.SetMapper(mapper)
++            if symbol is None:color='#CFD6DF';opacity=.12
++            else:
++                color=appearance(frame,index).color or self._display_color(symbol);opacity=1.
++            actor.GetProperty().SetColor(rgb(color));actor.GetProperty().SetOpacity(appearance(frame,index).opacity*opacity)
++            self._finish(actor.GetProperty());self._add_actor(actor);self._keepalive.append((sphere,mapper))
++            start=end
++
+     def _tube_segments(self, segments, tube_radius, opacity=1.0):
+         if not segments:
+             return None
+@@ -359,6 +384,7 @@
+             offset = np.asarray(tile, dtype=float) @ source_cell
+             positions = (base + offset) @ self.display_rotation + self.display_translation
+             phantom = Frame(list(frame.symbols), positions, frame.cell, frame.pbc,
++                            info=frame.info,
+                             atom_appearance=frame.atom_appearance)
+             self._atoms(phantom)
+             # Extra cells are visual context; their atoms are not new indices.
+@@ -690,23 +716,29 @@
+                 continue
+             if not atom_is_drawn(self.frame, i):
+                 continue
+-            sphere = vtkSphereSource()
+-            sphere.SetRadius(max(.18, self._atom_radius(self.frame.symbols[i]) * 1.17))
+-            sphere.SetThetaResolution(20)
+-            sphere.SetPhiResolution(14)
+-            sphere.SetCenter(*[float(x) for x in location])
++            # One camera-facing dashed silhouette, never a wire mesh across
++            # the sphere or its center label. Explicit gaps work on all VTK GL backends.
++            points=vtkPoints();lines=vtkCellArray()
++            for dash in range(32):
++                angles=np.linspace(2*np.pi*dash/32,2*np.pi*(dash+.64)/32,5)
++                lines.InsertNextCell(len(angles))
++                for angle in angles:lines.InsertCellPoint(points.InsertNextPoint(np.cos(angle),np.sin(angle),0.))
++            outline=vtkPolyData();outline.SetPoints(points);outline.SetLines(lines)
+             mapper = vtkPolyDataMapper()
+-            mapper.SetInputConnection(sphere.GetOutputPort())
+-            actor = vtkActor()
++            mapper.SetInputData(outline)
++            actor = vtkFollower();actor.SetCamera(self.renderer.GetActiveCamera())
+             actor.SetMapper(mapper)
+-            actor.GetProperty().SetRepresentationToWireframe()
+-            actor.GetProperty().SetColor(.15, .88, .75)
++            actor.SetPosition(*[float(x) for x in location])
++            size=max(.12,self._atom_radius(self.frame.symbols[i])*1.15)
++            if self.options.style=='Sticks':size=max(.085,self.options.bond_scale*1.18)*1.2
++            actor.SetScale(size)
++            actor.GetProperty().SetColor(.08, .78, .27)
+             actor.GetProperty().SetOpacity(appearance(self.frame, i).opacity)
+-            actor.GetProperty().SetLineWidth(2.5)
++            actor.GetProperty().SetLineWidth(3.5);actor.GetProperty().LightingOff()
+             actor.PickableOff()
+             self._add_actor(actor)
+             self.atom_highlights.append(actor)
+-            self._keepalive.append((sphere, mapper))
++            self._keepalive.append((outline,mapper))
+ 
+     def pick_index(self, display_x: int, display_y: int, width: int = 0, height: int = 0):
+         """Pick visible atom sphere in VTK *bottom-left-origin* display pixels.
+--- a/lele/selection_geometry.py
++++ b/lele/selection_geometry.py
+@@ -118,6 +118,8 @@
+         frame.info['poscar_groups'] = updated
+     frame.symbols = [frame.symbols[i] for i in kept]
+     frame.positions = frame.positions[kept].copy()
++    from .site_occupancy import subset_info
++    frame.info=subset_info(frame.info,kept)
+     for name in ('bond_added', 'bond_removed'):
+         setattr(frame, name, {(new_index[i], new_index[j]) for i, j in getattr(frame, name)
+                               if i in new_index and j in new_index})
+--- a/lele/structure_summary.py
++++ b/lele/structure_summary.py
+@@ -44,5 +44,6 @@
+ 
+ 
+ def summary_text(frame):
++    from .site_occupancy import composition
+     system = 'Cell composition' if any(frame.pbc) else 'Formula'
+-    return f'{system}: {molecular_formula(frame.symbols)}    |    Unpaired electrons: {spin_summary(frame.info)}'
++    return f'{system}: {composition(frame)}    |    Unpaired electrons: {spin_summary(frame.info)}'
+--- a/lele/supercell.py
++++ b/lele/supercell.py
+@@ -94,6 +94,8 @@
+     styles = {k * n + i: style for k in range(factor) for i, style in frame.atom_appearance.items()}
+     added, removed = _repeat_bond_overrides(frame, repeats, tiles, floors, bond_cutoff)
+     info = deepcopy(frame.info)
++    for key in ('site_occupancies','atom_source_order'):
++        if key in info:info[key]=info[key]*factor
+     info.pop('optimization_converged',None)
+     # POSCAR groups describe consecutive blocks, including intentionally
+     # repeated species headers. Tile-major ordering repeats those same blocks.
+--- a/lele/welcome.py
++++ b/lele/welcome.py
+@@ -44,7 +44,7 @@
+     )),
+     ('Mouse & navigation', (
+         ('Click atom', 'Add / remove selection'),
+-        ('Right click', 'Clear selection'),
++        ('Right click', 'Atom indices / clear empty space'),
+         ('Left drag', 'Rotate view'),
+         ('Right drag', 'Roll view'),
+         ('Middle drag', 'Pan view'),
+--- a/tests/test_native_interaction.py
++++ b/tests/test_native_interaction.py
+@@ -138,13 +138,13 @@
+         self.assertEqual(camera.orthogonalized, 1)
+         self.assertIsNone(view._right_last)
+ 
+-    def test_right_click_clears_but_right_drag_does_not(self):
++    def test_right_click_requests_atom_context_but_right_drag_does_not(self):
+         view = self.interaction.InteractiveVTKView()
+         camera = _Camera()
+         view.scene_renderer = SimpleNamespace(GetActiveCamera=lambda: camera)
+         view.mousePressEvent(_Event(2, 10, 10))
+         view.mouseReleaseEvent(_Event(2, 10, 10))
+-        self.assertEqual(view.emissions, [()])
++        self.assertEqual(view.emissions, [(10.0,10.0)])
+         view.emissions.clear()
+         view.mousePressEvent(_Event(2, 10, 10))
+         view.mouseMoveEvent(_Event(2, 50, 10))
+@@ -192,7 +192,7 @@
+         view.emissions.clear()
+         view.mousePressEvent(_Event(2, 10, 10))
+         view.mouseReleaseEvent(_Event(2, 10, 10))
+-        self.assertEqual(view.emissions, [()])
++        self.assertEqual(view.emissions, [(10.0,10.0)])
+ 
+     def test_alt_click_without_drag_not_edit_or_clear(self):
+         view = self.interaction.InteractiveVTKView()
+--- /dev/null
++++ b/lele/site_occupancy.py
+@@ -0,0 +1,52 @@
++"""CIF site probabilities: one position per site, without integerization."""
++from collections import Counter
++import numpy as np
++
++
++def site_species(frame,index):
++    sites=frame.info.get('site_occupancies')
++    return dict(sites[index]) if sites is not None else {frame.symbols[index]:1.}
++
++
++def is_disordered(frame):
++    return any(len(s)!=1 or abs(next(iter(s.values()),0.)-1.)>1.e-8
++               for s in frame.info.get('site_occupancies',[]))
++
++
++def from_ase(atoms):
++    occupancy=atoms.info.get('occupancy')
++    if not isinstance(occupancy,dict):return {}
++    kinds=atoms.arrays.get('spacegroup_kinds',np.arange(len(atoms)))
++    sites=[]
++    for i,kind in enumerate(kinds):
++        values={str(s):float(v) for s,v in occupancy.get(str(int(kind)),{atoms[i].symbol:1.}).items()}
++        if any(not np.isfinite(v) or v<0 or v>1+1.e-6 for v in values.values()) or sum(values.values())>1+1.e-6:
++            raise ValueError(f'Invalid CIF occupancy at expanded site {i+1}; values are retained only for physical site probabilities.')
++        sites.append(values)
++    return {'site_occupancies':sites}
++
++
++def subset_info(info,indices):
++    out=dict(info)
++    for key in ('site_occupancies','atom_source_order'):
++        if key in info:out[key]=[info[key][i] for i in indices]
++    return out
++
++
++def composition(frame):
++    if 'site_occupancies' not in frame.info:
++        from .structure_summary import molecular_formula
++        return molecular_formula(frame.symbols)
++    counts=Counter()
++    for i in range(len(frame.symbols)):counts.update(site_species(frame,i))
++    symbols=sorted(counts)
++    if 'C' in symbols:symbols=['C']+(['H'] if 'H' in symbols else [])+[s for s in symbols if s not in ('C','H')]
++    return ''.join(s+('' if abs(counts[s]-1)<1.e-8 else f'{counts[s]:.6g}') for s in symbols if counts[s]>1.e-12)
++
++
++def description(frame,index):
++    values=site_species(frame,index)
++    text=', '.join(f'{s} {v:.6g}' for s,v in values.items())
++    vacancy=max(0.,1-sum(values.values()))
++    if vacancy>1.e-8:text+=f'; vacancy {vacancy:.6g}'
++    return text
+--- /dev/null
++++ b/lele/atom_indices.py
+@@ -0,0 +1,42 @@
++"""Real atom-order changes; every index-bearing frame property follows atoms."""
++from itertools import groupby
++import numpy as np
++from .site_occupancy import subset_info
++
++
++def reorder_atoms(frame,order):
++    order=[int(i) for i in order];n=len(frame.symbols)
++    if sorted(order)!=list(range(n)):raise ValueError('Atom order must be a permutation of all atom indices.')
++    remap={old:new for new,old in enumerate(order)}
++    def pair(p):return tuple(sorted((remap[p[0]],remap[p[1]])))
++    def edge(i,j,s):
++        a,b=remap[i],remap[j];shift=np.asarray(s,dtype=int)
++        if a>b:a,b=b,a;shift=-shift
++        return a,b,tuple(int(v) for v in shift)
++    info=subset_info(frame.info,order)
++    source_order=frame.info.get('atom_source_order',list(range(n)))
++    info['atom_source_order']=[source_order[i] for i in order]
++    info['atom_order_edited']=True
++    for key in ('qe_forces_ev_ang',):
++        if key in info:info[key]=np.asarray(info[key])[order].copy()
++    for key in ('plane_alignment','coordinate_reorientation'):info.pop(key,None)
++    symbols=[frame.symbols[i] for i in order]
++    if 'poscar_groups' in info:info['poscar_groups']=[(s,len(list(g))) for s,g in groupby(symbols)]
++    frame.positions=frame.positions[order].copy();frame.symbols=symbols;frame.info=info
++    frame.bond_added={pair(p) for p in frame.bond_added};frame.bond_removed={pair(p) for p in frame.bond_removed}
++    frame.atom_appearance={remap[i]:s for i,s in frame.atom_appearance.items()}
++    if frame.bond_snapshot is not None:frame.bond_snapshot=frozenset(pair(p) for p in frame.bond_snapshot)
++    if frame.periodic_bond_snapshot is not None:frame.periodic_bond_snapshot=tuple(edge(i,j,s) for i,j,s in frame.periodic_bond_snapshot)
++    frame.hbond_added={e[:2]:e[2] for (i,j),s in frame.hbond_added.items() for e in [edge(i,j,s)]}
++    frame.hbond_removed={pair(p) for p in frame.hbond_removed}
++    return remap
++
++
++def index_order(count,atom,target,*,swap=None):
++    if not 0<=atom<count or not 0<=target<count:raise ValueError('Atom index is outside 1…N.')
++    order=list(range(count))
++    if swap is not None:
++        if not 0<=swap<count:raise ValueError('Atom index is outside 1…N.')
++        order[atom],order[swap]=order[swap],order[atom]
++    else:order.insert(target,order.pop(atom))
++    return order
+--- /dev/null
++++ b/lele/vacuum.py
+@@ -0,0 +1,45 @@
++"""Slab vacuum measured between outermost atomic planes along a cell normal."""
++import numpy as np
++
++
++def slab_vacuum(frame,axis=None):
++    if not any(frame.pbc) or abs(np.linalg.det(frame.cell))<1.e-9 or not frame.symbols:
++        raise ValueError('Vacuum adjustment needs atoms and a valid periodic cell.')
++    if axis is None:
++        candidates=[slab_vacuum(frame,i) for i in range(3)]
++        return max(candidates,key=lambda x:x['gap'])
++    axis=int(axis)
++    if axis not in (0,1,2):raise ValueError('Choose a, b or c as the vacuum direction.')
++    others=[i for i in range(3) if i!=axis]
++    normal=np.cross(frame.cell[others[0]],frame.cell[others[1]])
++    normal/=np.linalg.norm(normal)
++    if normal@frame.cell[axis]<0:normal=-normal
++    from .site_occupancy import site_species
++    active=[i for i in range(len(frame.symbols)) if sum(site_species(frame,i).values())>1.e-12]
++    if not active:raise ValueError('No occupied atomic sites are available to locate slab surfaces.')
++    height=float(normal@frame.cell[axis]);raw=frame.positions[active]@normal
++    wrapped=np.mod(raw,height);values=np.sort(wrapped)
++    gaps=np.diff(np.r_[values,values[0]+height]);k=int(np.argmax(gaps))
++    gap=float(gaps[k]);thickness=height-gap
++    # Coordinates split across the periodic boundary require image changes to
++    # keep the same slab; those cannot be hidden in a fixed-coordinate edit.
++    split=float(np.ptp(raw))>thickness+1.e-6
++    lower=float(values[(k+1)%len(values)]);upper=lower+thickness
++    return dict(axis=axis,normal=normal,height=height,gap=gap,thickness=thickness,
++                lower=lower,upper=upper,split=split)
++
++
++def change_vacuum(frame,gap,axis=None):
++    result=slab_vacuum(frame,axis);gap=float(gap)
++    if not np.isfinite(gap) or gap<0:raise ValueError('Vacuum spacing must be a finite non-negative value.')
++    if result['split']:
++        raise ValueError('The slab crosses the cell boundary. Keeping every Cartesian coordinate fixed cannot preserve this slab while changing its vacuum; first choose contiguous periodic representatives explicitly.')
++    if result['thickness']+gap<1.e-6:raise ValueError('The requested vacuum would make the cell singular.')
++    cell=frame.cell.copy();cell[result['axis']]+=(gap-result['gap'])*result['normal']
++    frame.cell=cell
++    frame.energy_ev=None
++    for key in ('optimization_converged','energy_source','qe_total_energy_ry','qe_energy_source_line',
++                'qe_forces_ev_ang','cartesian_max_force_ev_ang','cartesian_rms_force_ev_ang','coordinate_reorientation','plane_alignment'):
++        frame.info.pop(key,None)
++    frame.info['vacuum_adjustment']={**{k:v.tolist() if isinstance(v,np.ndarray) else v for k,v in result.items()},'new_gap':gap}
++    return result
+--- /dev/null
++++ b/lele/structure_edit_dialogs.py
+@@ -0,0 +1,57 @@
++"""Atom index and slab vacuum editors with explicit current-geometry previews."""
++from PySide6.QtWidgets import (QDialog,QVBoxLayout,QFormLayout,QLabel,QSpinBox,QDoubleSpinBox,
++                              QComboBox,QDialogButtonBox,QPushButton)
++from .site_occupancy import description
++from .vacuum import slab_vacuum
++
++
++class AtomIndexDialog(QDialog):
++    def __init__(self,frame,atom,selection=(),*,editable=True,parent=None):
++        super().__init__(parent);self.setWindowTitle('Atom index');self.operation='move';self.atom=atom
++        layout=QVBoxLayout(self);label=QLabel(f'Atom #{atom+1} · {frame.symbols[atom]}\nOccupancy: '+description(frame,atom))
++        label.setWordWrap(True);layout.addWidget(label)
++        layout.addWidget(QLabel('Cartesian / Å: '+', '.join(f'{v:.8f}' for v in frame.positions[atom])))
++        form=QFormLayout();layout.addLayout(form);self.index=QSpinBox();self.index.setRange(1,len(frame.symbols));self.index.setValue(atom+1)
++        self.index.setEnabled(editable);form.addRow('New index (1-based)',self.index)
++        note=QLabel('Moving to a new index shifts intervening indices. Atom coordinates and identities stay attached to their atoms. Applies to the current frame; Ctrl+Z restores its order.')
++        note.setWordWrap(True);layout.addWidget(note)
++        self.swap=None
++        if len(selection)==2 and atom in selection:
++            self.swap=next(i for i in selection if i!=atom)
++            button=QPushButton(f'Swap indices #{selection[0]+1} ↔ #{selection[1]+1}')
++            button.setEnabled(editable);button.clicked.connect(self._swap);layout.addWidget(button);self.swap_button=button
++        buttons=QDialogButtonBox(QDialogButtonBox.StandardButton.Ok|QDialogButtonBox.StandardButton.Cancel)
++        buttons.button(QDialogButtonBox.StandardButton.Ok).setText('Set index');buttons.button(QDialogButtonBox.StandardButton.Ok).setEnabled(editable)
++        buttons.accepted.connect(self.accept);buttons.rejected.connect(self.reject);layout.addWidget(buttons);self.resize(470,240)
++
++    def _swap(self):self.operation='swap';self.accept()
++
++
++class VacuumDialog(QDialog):
++    def __init__(self,frame,parent=None):
++        super().__init__(parent);self.frame=frame;self.setWindowTitle('Modify slab vacuum');self.resize(530,340)
++        layout=QVBoxLayout(self);form=QFormLayout();layout.addLayout(form)
++        self.axis=QComboBox();self.axis.addItems(['Automatic (largest periodic gap)','a normal','b normal','c normal'])
++        form.addRow('Surface normal',self.axis)
++        self.info=QLabel();self.info.setWordWrap(True);layout.addWidget(self.info)
++        self.gap=QDoubleSpinBox();self.gap.setDecimals(6);self.gap.setRange(0,1000000);self.gap.setSuffix(' Å');self.gap.setKeyboardTracking(False)
++        form.addRow('Vacuum spacing',self.gap)
++        note=QLabel('Spacing is measured between outermost atomic planes and the neighboring slab, along the surface normal. Only the normal component of the chosen cell vector changes. Cartesian atom coordinates and the other two cell vectors stay fixed.')
++        note.setWordWrap(True);layout.addWidget(note)
++        self.buttons=QDialogButtonBox(QDialogButtonBox.StandardButton.Ok|QDialogButtonBox.StandardButton.Cancel)
++        self.buttons.accepted.connect(self.accept);self.buttons.rejected.connect(self.reject);layout.addWidget(self.buttons)
++        self.axis.currentIndexChanged.connect(self._refresh);self._refresh()
++
++    def selected_axis(self):return self.axis.currentIndex()-1 if self.axis.currentIndex() else None
++
++    def _refresh(self,*_):
++        try:
++            data=slab_vacuum(self.frame,self.selected_axis());self.gap.setValue(data['gap'])
++            self.info.setText(f'Normal to the other two cell vectors: {"abc"[data["axis"]]} direction\n'
++                f'Cell height {data["height"]:.6f} Å · slab thickness {data["thickness"]:.6f} Å\n'
++                f'Lower / upper surface projections {data["lower"]:.6f} / {data["upper"]:.6f} Å\n'
++                f'Detected vacuum {data["gap"]:.6f} Å'+
++                ('\nSlab crosses the cell boundary; fixed-coordinate adjustment is unavailable.' if data['split'] else ''))
++            valid=not data['split']
++        except ValueError as exc:self.info.setText(str(exc));valid=False
++        self.buttons.button(QDialogButtonBox.StandardButton.Ok).setEnabled(valid)
+--- /dev/null
++++ b/tests/test_structure_edits_v2120.py
+@@ -0,0 +1,214 @@
++"""Occupancy probabilities, real atom indices, fixed-coordinate vacuum and UI."""
++from pathlib import Path
++from unittest.mock import patch
++import numpy as np
++import pytest
++from lele.core import Frame,Document,freeze_bonds
++from lele.atom_appearance import AtomAppearance
++from lele.formats import load_document,export_frame
++from lele.site_occupancy import site_species,composition,is_disordered
++from lele.chemical_analysis import electron_parity
++from lele.atom_indices import index_order,reorder_atoms
++from lele.vacuum import slab_vacuum,change_vacuum
++from lele.boundary import boundary_view
++from lele.supercell import make_supercell
++from lele.selection_geometry import delete_selected_atoms
++from lele.atom_clipboard import copy_atoms,read_atoms,paste_atoms
++from lele.project_file import save_project,load_project
++from lele.render_options import RenderOptions
++from test_periodic_fragment_ui_v171 import gui
++
++CIF='''data_partial
++_cell_length_a 5
++_cell_length_b 6
++_cell_length_c 8
++_cell_angle_alpha 90
++_cell_angle_beta 90
++_cell_angle_gamma 110
++_space_group_name_H-M_alt 'P 1'
++_space_group_IT_number 1
++loop_
++_space_group_symop_operation_xyz
++'x,y,z'
++loop_
++_atom_site_label
++_atom_site_type_symbol
++_atom_site_fract_x
++_atom_site_fract_y
++_atom_site_fract_z
++_atom_site_occupancy
++Fe1 Fe .1 .2 .3 .6
++Ni1 Ni .1 .2 .3 .4
++O1 O .5 .6 .7 .5
++'''
++
++
++def partial(tmp_path):
++    p=tmp_path/'partial.cif';p.write_text(CIF);return load_document(p).frames[0]
++
++
++def slab():
++    return Frame(['Co','Se','S'],[[1.,1,3],[2,2,5],[3,1,7]],np.diag([5.,6,20]),(True,)*3,-10.,{'optimization_converged':True})
++
++
++def test_cif_mixed_and_vacant_sites_are_not_integerized(tmp_path):
++    f=partial(tmp_path)
++    assert len(f.symbols)==2 and site_species(f,0)=={'Fe':.6,'Ni':.4} and site_species(f,1)=={'O':.5}
++    assert is_disordered(f) and composition(f)=='Fe0.6Ni0.4O0.5'
++    assert electron_parity(f).startswith('Unknown')
++    np.testing.assert_allclose(f.positions,np.array([[.1,.2,.3],[.5,.6,.7]])@f.cell)
++    p=tmp_path/'out.cif';export_frame(f,p,'cif');g=load_document(p).frames[0]
++    assert g.info['site_occupancies']==f.info['site_occupancies']
++    np.testing.assert_allclose(g.cell@ g.cell.T,f.cell@f.cell.T,atol=1.e-11)
++
++
++def test_cif_symmetry_expanded_sites_keep_their_occupancies(tmp_path):
++    text=CIF.replace("'P 1'","'P -1'").replace('_space_group_IT_number 1','_space_group_IT_number 2').replace("'x,y,z'","'x,y,z'\n'-x,-y,-z'")
++    p=tmp_path/'symmetric.cif';p.write_text(text);f=load_document(p).frames[0]
++    assert len(f.symbols)==4
++    assert f.info['site_occupancies']==[{'Fe':.6,'Ni':.4}]*2+[{'O':.5}]*2
++
++
++@pytest.mark.parametrize('target',['xyz','poscar-direct','poscar-cartesian','gjf'])
++def test_nonoccupancy_formats_do_not_silently_export_a_fully_occupied_model(tmp_path,target):
++    with pytest.raises(ValueError,match='Fractional'):export_frame(partial(tmp_path),tmp_path/'bad',target)
++    assert not (tmp_path/'bad').exists()
++
++
++def test_occupancy_survives_boundary_supercell_delete_clipboard_and_projects(tmp_path):
++    f=partial(tmp_path)
++    b=boundary_view(f,((0,2),(0,1),(0,1))).frame
++    assert b.info['site_occupancies']==f.info['site_occupancies']*2
++    s=make_supercell(f,(2,1,1));assert s.info['site_occupancies']==f.info['site_occupancies']*2
++    delete_selected_atoms(s,[1]);assert s.info['site_occupancies']==[{'Fe':.6,'Ni':.4}]*2+[{'O':.5}]
++    text,data=copy_atoms(f,[1]);fragment=read_atoms(text,data);assert fragment.info['site_occupancies']==[{'O':.5}]
++    paste_atoms(f,fragment,[10,10,10]);assert f.info['site_occupancies'][-1]=={'O':.5}
++    path=tmp_path/'partial.lele'
++    doc=Document(tmp_path/'p.cif','CIF',[f]);save_project(path,dict(documents=[dict(document=doc,options=RenderOptions(),frame_index=0)],current_document=0))
++    g=load_project(path)['documents'][0]['document'].frames[0]
++    assert g.info['site_occupancies']==f.info['site_occupancies']
++
++
++def test_reindex_moves_all_atom_properties_and_preserves_physical_paths(tmp_path):
++    f=partial(tmp_path);f.energy_ev=-3;f.atom_appearance={0:AtomAppearance(color='#123456')}
++    f.bond_added={(0,1)};f.bond_snapshot=frozenset({(0,1)});f.periodic_bond_snapshot=((0,1,(1,0,0)),)
++    f.hbond_added={(0,1):(1,0,0)};f.info['qe_forces_ev_ang']=np.array([[1,2,3],[4,5,6]])
++    old=f.clone();mapping=reorder_atoms(f,index_order(2,0,1,swap=1))
++    assert mapping=={1:0,0:1} and f.symbols==old.symbols[::-1] and f.energy_ev==-3
++    np.testing.assert_array_equal(f.positions,old.positions[::-1]);np.testing.assert_array_equal(f.cell,old.cell)
++    assert f.atom_appearance[1].color=='#123456' and f.info['site_occupancies']==old.info['site_occupancies'][::-1]
++    assert f.periodic_bond_snapshot==((0,1,(-1,0,0)),) and f.hbond_added=={(0,1):(-1,0,0)}
++    np.testing.assert_array_equal(f.info['qe_forces_ev_ang'],old.info['qe_forces_ev_ang'][::-1])
++
++
++def test_move_index_shifts_intermediate_indices_and_export_preserves_order(tmp_path):
++    f=slab();old=f.clone();mapping=reorder_atoms(f,index_order(3,0,2))
++    assert f.symbols==['Se','S','Co'] and mapping[0]==2
++    np.testing.assert_array_equal(f.positions,old.positions[[1,2,0]])
++    p=tmp_path/'POSCAR';export_frame(f,p,'poscar-cartesian');g=load_document(p).frames[0]
++    assert g.symbols==f.symbols;np.testing.assert_allclose(g.positions,f.positions,atol=1.e-12)
++
++
++@pytest.mark.parametrize('order',[[0,0,2],[1,0],[0,1,4]])
++def test_invalid_reindex_is_not_a_partial_mutation(order):
++    f=slab();old=f.clone()
++    with pytest.raises(ValueError):reorder_atoms(f,order)
++    np.testing.assert_array_equal(f.positions,old.positions);assert f.symbols==old.symbols
++
++
++@pytest.mark.parametrize('gap',[4.,12.,30.])
++def test_vacuum_changes_only_cell_normal_and_keeps_every_cartesian_coordinate(gap):
++    f=slab();old=f.clone();data=slab_vacuum(f)
++    assert data['axis']==2 and data['gap']==16 and data['thickness']==4 and not data['split']
++    change_vacuum(f,gap)
++    np.testing.assert_array_equal(f.positions,old.positions);np.testing.assert_array_equal(f.cell[:2],old.cell[:2])
++    np.testing.assert_allclose(f.cell[2],[0,0,4+gap]);assert f.pbc==old.pbc and f.symbols==old.symbols
++    assert f.energy_ev is None and not f.info.get('optimization_converged')
++
++
++def test_skew_and_rotated_slab_use_true_surface_normal():
++    f=slab();f.cell=np.array([[5.,0,0],[1,6,0],[2,3,25]])
++    r=np.array([[0.,0,1],[1.,0,0],[0,1.,0]])
++    f.cell=f.cell@r;f.positions=f.positions@r;old=f.clone()
++    d=slab_vacuum(f);assert d['axis']==2 and d['gap']==21
++    change_vacuum(f,10.)
++    np.testing.assert_array_equal(f.positions,old.positions)
++    np.testing.assert_allclose(f.cell[2],[2,3,14]@r)
++    np.testing.assert_allclose(f.cell[:2],old.cell[:2])
++
++
++def test_wrapped_slab_is_detected_without_secretly_moving_atoms():
++    f=slab();f.positions[:,2]=[19,0,1];old=f.clone();d=slab_vacuum(f,2)
++    assert d['gap']==18 and d['split']
++    with pytest.raises(ValueError,match='crosses'):change_vacuum(f,8.,2)
++    np.testing.assert_array_equal(f.positions,old.positions);np.testing.assert_array_equal(f.cell,old.cell)
++
++
++@pytest.mark.parametrize('gap',[-1,float('nan'),float('inf')])
++def test_invalid_vacuum_cannot_modify_cell(gap):
++    f=slab();old=f.cell.copy()
++    with pytest.raises(ValueError):change_vacuum(f,gap)
++    np.testing.assert_array_equal(f.cell,old)
++
++
++def test_selected_outline_is_a_dashed_camera_facing_ring_and_keeps_original_colors():
++    from vtkmodules.vtkRenderingCore import vtkRenderer,vtkFollower
++    from lele.renderer import MoleculeRenderer
++    draw=MoleculeRenderer(vtkRenderer());f=slab();draw.selected=[0];color=draw.atom_color(f,0);draw.set_scene(f)
++    actor,=draw.atom_highlights
++    assert isinstance(actor,vtkFollower) and not actor.GetPickable() and actor.GetProperty().GetLineWidth()>=3
++    mesh=actor.GetMapper().GetInput();assert mesh.GetNumberOfPolys()==0 and mesh.GetNumberOfLines()==32
++    assert draw.atom_color(f,0)==color
++    assert all(abs(mesh.GetPoint(i)[2])<1.e-12 for i in range(mesh.GetNumberOfPoints()))
++
++
++def test_partial_renderer_uses_fractional_sectors_and_legend_contains_minor_species(tmp_path):
++    from vtkmodules.vtkRenderingCore import vtkRenderer
++    from vtkmodules.vtkFiltersSources import vtkSphereSource
++    from lele.renderer import MoleculeRenderer
++    from lele.atom_legend import legend_samples
++    f=partial(tmp_path);draw=MoleculeRenderer(vtkRenderer());draw.set_scene(f)
++    sectors=[item[0] for item in draw._keepalive if isinstance(item,tuple) and len(item)==2 and isinstance(item[0],vtkSphereSource)]
++    fractions=sorted(round((s.GetEndTheta()-s.GetStartTheta())/360,8) for s in sectors)
++    assert fractions==[.4,.5,.5,.6]
++    assert [x['symbol'] for x in legend_samples(draw)]==['Fe','Ni','O']
++
++
++def test_gui_right_click_set_index_swap_and_undo(gui):
++    from PySide6.QtWidgets import QDialog
++    from lele.structure_edit_dialogs import AtomIndexDialog
++    f=slab();gui.attach(f);w=gui.window;old=w.frame.clone();gui.select([0])
++    w.vtk.resize(600,400);w.vtk.GetRenderWindow().SetSize(600,400)
++    def set_index(dialog):dialog.index.setValue(3);return QDialog.DialogCode.Accepted
++    with patch.object(w.renderer,'pick_index',return_value=0),patch.object(AtomIndexDialog,'exec',set_index):w._atom_context_from_canvas(50,50)
++    assert w.frame.symbols==['Se','S','Co'] and w.selection==[2] and w.frame.energy_ev==-10
++    w.undo_edit();assert w.frame.symbols==old.symbols
++    gui.select([0,1])
++    def swap(dialog):dialog.operation='swap';return QDialog.DialogCode.Accepted
++    with patch.object(w.renderer,'pick_index',return_value=0),patch.object(AtomIndexDialog,'exec',swap):w._atom_context_from_canvas(50,50)
++    assert w.frame.symbols==['Se','Co','S']
++    w.undo_edit();np.testing.assert_array_equal(w.frame.positions,old.positions)
++    with patch.object(w.renderer,'pick_index',return_value=None):w._atom_context_from_canvas(50,50)
++    assert w.selection==[]
++
++
++def test_gui_vacuum_preserves_coordinates_and_undo_restores_cell_and_energy(gui):
++    from PySide6.QtWidgets import QDialog
++    from lele.structure_edit_dialogs import VacuumDialog
++    gui.attach(slab());w=gui.window;old=w.frame.clone()
++    def accept(dialog):dialog.gap.setValue(8);return QDialog.DialogCode.Accepted
++    with patch.object(VacuumDialog,'exec',accept):w.configure_vacuum()
++    np.testing.assert_array_equal(w.frame.positions,old.positions);assert w.frame.cell[2,2]==12
++    assert w.frame.energy_ev is None and 'Vacuum' in w.statusBar().currentMessage()
++    w.undo_edit();np.testing.assert_array_equal(w.frame.cell,old.cell);assert w.frame.energy_ev==-10
++
++
++def test_gui_fractional_composition_and_footer_left_edge_tracks_coordinate_tabs(gui,tmp_path):
++    from PySide6.QtCore import QPoint
++    gui.attach(partial(tmp_path));w=gui.window
++    assert 'Fe0.6Ni0.4O0.5' in w.summary_label.text() and 'electrons unknown' in w.summary_label.text()
++    for width in (1280,1600,1100):
++        w.resize(width,850);w.show()
++        for _ in range(3):gui.app.processEvents();w._align_summary_footer()
++        left=w.tabs.mapToGlobal(QPoint(0,0)).x();actual=w.summary_label.mapToGlobal(QPoint(0,0)).x()
++        assert abs(left-actual)<=1
+--- /dev/null
++++ b/docs/FEATURES_v2.12.0_CN.md
+@@ -0,0 +1,47 @@
++# LELE v2.12.0：分数占据、原子编号与真空层
++
++日期：2026-11-02。包含此前 v2.11.0 的周期旋转和 v2.10.1 的 A1–A3 修复。
++
++## 1. CIF 分数占据
++
++读取 CIF 的 `_atom_site_occupancy` 并保留到对称性展开后的每个位点。相同位点的混占元素按占据率显示为不同元素颜色的球面扇区；未占据部分显示为浅灰半透明扇区。例如 Fe 0.6 / Ni 0.4 为两种颜色，O 0.5 为半球氧色和半球浅灰。颜色沿用当前元素配色，原子自定义颜色仍优先。
++
++![分数占据和绿色虚线选中轮廓，原生 VTK 渲染](qa_v2.12.0/partial_selection_native.png)
++
++图例包含混占中的少数组分。在原子列表悬停或右击原子，可查看具体占据率；底部 composition 显示按占据率加权的组成。Atoms 数为可视化位点数；分数占据不指定唯一的微观整数构型，因此电子奇偶性显示 `unknown`，不按主元素虚构 `even/odd`。成键仍以位点代表元素估计，不能据此把平均结构当作唯一有序原子构型。
++
++占据信息跟随 `.lele` 项目、Boundary、扩胞、删除、重编号及 LELE 内部复制粘贴保存。CIF 导出保留混占与占据率。XYZ、POSCAR、GJF 等不支持这些位点概率的输出不再静默丢弃占据率：需先构建明确的有序构型，或保存为 CIF。外部纯 XYZ 剪贴板不包含占据率，LELE 原生剪贴板元数据包含。
++
++占据率定义依据：[IUCr CIF `_atom_site_occupancy`](https://www.iucr.org/__data/iucr/cifdic_html/1/cif_core.dic/Iatom_site_occupancy.html)。读取沿用 ASE 的 CIF 对称性展开及 `spacegroup_kinds` 映射，未执行随机整数化。
++
++## 2. 右击原子设置 index
++
++右击画布中的原子打开 **Atom index** 窗口。`New index (1-based)` 使用坐标表中的全局编号，从 1 到 N。设置后，该原子移动到指定行，中间的编号顺移，保证编号唯一。
++
++先选中两个原子，再右击其中任意一个，窗口会出现 **Swap indices #… ↔ #…** 按钮，可直接交换这两个原子的编号。
++
++这是实际原子顺序变更；坐标不作空间移动，元素、占据率、颜色/透明度和键的归属跟随各自原子，周期键/氢键的平移方向也同步重映射。操作只作用于当前结构帧，原有标量能量和收敛标记保留，POSCAR 导出保留新顺序。Ctrl+Z 撤销完整变更。振动参考或轨迹显示对齐状态下只允许查看，沿用原有几何编辑限制。
++
++右击空白位置仍清空选区，右键拖动仍为视图 roll。
++
++## 3. 修改 slab 真空层
++
++入口：**Edit → Modify slab vacuum…**，或 Edit 面板同名按钮。窗口自动比较 a、b、c 三个方向的周期空隙，也可手动选择。
++
++这里的真空厚度定义为：沿另外两个晶胞矢量所张平面的法向，从 slab 最上方原子核所在平面到相邻周期副本最下方原子核平面的距离。窗口同时显示 slab 厚度、上下表面投影、晶胞法向高度和当前真空间距。计算包含占据率大于零的吸附原子，未扣除原子半径。
++
++填写目标 **Vacuum spacing** 后，只修改所选晶胞矢量在表面法向上的分量。原子笛卡尔坐标保持逐项不变，另两条晶胞矢量、所选矢量的面内分量、元素、编号和周期标记保持不变。支持斜晶胞及整体旋转后的 slab；不把 `|c|` 直接当作真空方向高度。
++
++如果 slab 的原子代表坐标分散到晶胞两端，修改晶胞会改变其跨边界内部距离；在保持每个原子坐标不动的要求下无法完成时，窗口明确提示并禁用应用，不会偷偷平移原子。可先明确选择连续的周期代表坐标，再调整真空。附带固定体数据网格时需先单独打开结构进行晶胞修改。
++
++改变真空后，源能量、收敛标记及相关力数据被清除，因为原计算对应不同的周期晶胞；其他输入元信息保留。Ctrl+Z 恢复原晶胞、能量和坐标。对于不规则孔道、多个分离片层或复杂体相，“最大空隙”只是几何候选，请结合显示的表面和厚度选择方向。
++
++## 4. 底部摘要对齐
++
++`Atoms | Composition / Formula | electrons…` 所在行左侧动态对齐到 **Coordinates / Input / Results** 标签页的左边缘，不再按固定宽度从窗口左侧偏移。短接触按钮、可编辑测量值及状态信息保留。
++
++## 5. 绿色粗虚线选中轮廓
++
++选中效果改为面向镜头的绿色粗虚线外环，位于原子轮廓之外。没有覆盖球体的网格，不改变原始元素色，也不覆盖中心 label / index。真实断开的线段保证 VTK 后端可见虚线，不依赖驱动对线型的可选支持；Boundary 的各个可见副本也沿用该轮廓。
++
++验证结果见 [v2.12.0 复验记录](VALIDATION_v2.12.0.md)。
+--- /dev/null
++++ b/docs/VALIDATION_v2.12.0.md
+@@ -0,0 +1,42 @@
++# LELE v2.12.0 复验记录
++
++日期：2026-11-02。
++
++**806 项测试和 78 个子测试全部通过，0 失败、0 错误、0 跳过，耗时约 73.5 秒。**
++
++| 验证 | 结果 | 证据 |
++| --- | --- | --- |
++| 全量回归 | 806 测试、78 子测试通过，无失败或跳过 | [XML](qa_v2.12.0/full_v2120.xml)、[日志](qa_v2.12.0/full_v2120.log) |
++| 针对性测试 | 97 测试、3 子测试通过，无失败或跳过 | [XML](qa_v2.12.0/targeted_v2120.xml)、[日志](qa_v2.12.0/targeted_v2120.log) |
++| 原生 VTK 渲染 | 分数占据扇区、浅灰空位和绿色虚线外环已实际渲染及目视检查 | [PNG](qa_v2.12.0/partial_selection_native.png)、[像素核对](qa_v2.12.0/native_render_validation.json) |
++| 真实 Qt 控件 | 原子编号、交换编号和真空层弹窗已实际截图、目视检查；操作和撤销有 GUI 用例 | 新增交互回归用例；截图仅作内部验证 |
++| 旧实际文件 | QE 四份文件、CP2K Molden、POSCAR1/POSCAR2 及旋转脚本约定测试继续执行并通过 | 全量 XML 中的实际文件用例 |
++
++JUnit `tests` 汇总为 884（包含 78 个子测试），实际 `<testcase>` 元素为 806。新增永久回归位于 `tests/test_structure_edits_v2120.py`，共 25 个参数展开后的用例。旧的右击“无条件清空”事件断言根据新需求更新为发出带鼠标位置的原子上下文请求；空白处清空、右拖和 Alt 拖动仍有回归。
++
++## 数据与几何检查
++
++- CIF：合成 P1 样例中 Fe 0.6 / Ni 0.4 同位点和 O 0.5 位点没有整数化；P-1 对称性展开后的占据率映射正确。CIF 导出重读保留各位点概率及晶胞度量；不支持占据率的格式不会静默生成满占模型。Boundary、扩胞、删除、LELE 剪贴板及项目保存恢复保留占据率。混占中的少数组分出现在图例，加权组成和电子奇偶性显示正确。
++- 原子编号：指定新行与两原子交换均检查坐标、元素、颜色和占据率跟随；QE 力数组与周期键、氢键索引/平移方向同步重映射。POSCAR 重新读取保留新顺序。实际右击处理入口、两选区交换、空白清选和 Ctrl+Z 有 GUI 检查。
++- 真空层：正交、斜晶胞及整体旋转后的 slab 都按表面法向检查。目标真空 4、12、30 Å 等情况只改变对应晶胞矢量的法向分量，原子笛卡尔数组逐项不变，另外两条晶胞矢量保持不变。跨边界分裂的代表坐标、负值和非有限值被拒绝，未发生部分变更。GUI 调整与撤销恢复原晶胞和能量。
++- 底部对齐：窗口尺寸变化时，摘要文本与 Coordinates 标签页左边缘差不超过 1 个 Qt 逻辑像素。
++- 选中轮廓：原生 VTK 的绿色轮廓包含 32 个有间隙的线单元，不含填充面；相机跟随且不可拾取。900×520 画面中轮廓有 1632 个绿色像素，选中前后原子中心 29×29 区域的最大通道差为 0，原子色和中心编号未被选中覆盖物改变。隐藏和全透明原子的既有行为继续通过。
++
++新增 CIF 用例为可重现的合成数据，本次没有收到用户的实际分数占据 CIF。未声称覆盖所有 CIF 方言、所有无序组装语法或通过平均占据率确定唯一微观有序结构。
++
++## 环境与执行
++
++Python 3.12.14、ASE 3.29.0、NumPy 2.3.5、SciPy 1.17.0、PySide6 6.12.0、VTK 9.7.1、pytest 9.2.0；Linux、Qt offscreen / 原生 VTK EGL。
++
++```bash
++LELE_QE_EXAMPLE_DIR=/path/to/four/QE/files \
++LELE_CP2K_MOLDEN_EXAMPLE=/path/to/COF2_O2_a_freq-VIBRATIONS-1.mol \
++LELE_ROTATION_EXAMPLE_DIR=/path/to/POSCAR1_and_POSCAR2 \
++LELE_ROTATION_SCRIPT=/path/to/rotate_structure_from_analyzer_v32_v33_csv_v13_20260809.py \
++QT_QPA_PLATFORM=offscreen VTK_DEFAULT_OPENGL_WINDOW=vtkEGLRenderWindow \
++python -m pytest tests -q --junitxml=full_retest.xml
++```
++
++私人样例路径未设置时，对应实际文件测试会跳过；本次已设置，实际无跳过。此前私人计算文件和两个原始脚本未加入源码发布包。交付为源码更新，未构建或运行 Windows EXE，Windows 图形驱动和高 DPI 的人工验收仍不在已验证结果内。
++
++操作和数据含义见 [v2.12.0 使用说明](FEATURES_v2.12.0_CN.md)。

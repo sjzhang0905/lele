@@ -1,0 +1,246 @@
+{
+  "version": "2.6.0",
+  "environment": "Linux offscreen Qt event loop, headless canvas with real VTK scene; native QVTK/OpenGL not validated",
+  "synthetic": true,
+  "frames": 6000,
+  "atoms_per_frame": 16,
+  "dipoles": 6000,
+  "elapsed_seconds": 2.0293101569995997,
+  "attachment": [
+    {
+      "parse_seconds": 1.5526498999997784,
+      "main_thread": 140196004181824,
+      "timer_ticks_before_attach": 173,
+      "attach_seconds": 0.30338913700052217
+    }
+  ],
+  "timer_ticks": 174,
+  "timer_max_gap_seconds": 0.30871947500054375,
+  "stages": [
+    {
+      "time": 0.02336577000005491,
+      "stage": "Reading orca_6000.out",
+      "value": 0,
+      "total": 9430994
+    },
+    {
+      "time": 0.07346666800003732,
+      "stage": "Reading orca_6000.out",
+      "value": 9289728,
+      "total": 9430994
+    },
+    {
+      "time": 0.07512017499993817,
+      "stage": "Reading orca_6000.out",
+      "value": 9430994,
+      "total": 9430994
+    },
+    {
+      "time": 0.07625191300030565,
+      "stage": "ORCA: identifying calculation jobs",
+      "value": 0,
+      "total": 312005
+    },
+    {
+      "time": 0.1270933989999321,
+      "stage": "ORCA: identifying calculation jobs",
+      "value": 122880,
+      "total": 312005
+    },
+    {
+      "time": 0.17870877400036989,
+      "stage": "ORCA: identifying calculation jobs",
+      "value": 249856,
+      "total": 312005
+    },
+    {
+      "time": 0.20394605999990745,
+      "stage": "ORCA: identifying calculation jobs",
+      "value": 312005,
+      "total": 312005
+    },
+    {
+      "time": 0.2050406930002282,
+      "stage": "ORCA: geometry, energies and orbitals",
+      "value": 0,
+      "total": 312005
+    },
+    {
+      "time": 0.2633422420003626,
+      "stage": "ORCA: geometry, energies and orbitals",
+      "value": 31534,
+      "total": 312005
+    },
+    {
+      "time": 0.30711773999973957,
+      "stage": "ORCA: geometry, energies and orbitals",
+      "value": 67394,
+      "total": 312005
+    },
+    {
+      "time": 0.36120317400036583,
+      "stage": "ORCA: geometry, energies and orbitals",
+      "value": 103034,
+      "total": 312005
+    },
+    {
+      "time": 0.41111915199962823,
+      "stage": "ORCA: geometry, energies and orbitals",
+      "value": 139207,
+      "total": 312005
+    },
+    {
+      "time": 0.4648183429999335,
+      "stage": "ORCA: geometry, energies and orbitals",
+      "value": 173754,
+      "total": 312005
+    },
+    {
+      "time": 0.5440374009995139,
+      "stage": "ORCA: geometry, energies and orbitals",
+      "value": 201886,
+      "total": 312005
+    },
+    {
+      "time": 0.6089234490000308,
+      "stage": "ORCA: geometry, energies and orbitals",
+      "value": 207346,
+      "total": 312005
+    },
+    {
+      "time": 0.6589621419998366,
+      "stage": "ORCA: geometry, energies and orbitals",
+      "value": 236708,
+      "total": 312005
+    },
+    {
+      "time": 0.7089210149997598,
+      "stage": "ORCA: geometry, energies and orbitals",
+      "value": 274582,
+      "total": 312005
+    },
+    {
+      "time": 0.7601292950002971,
+      "stage": "ORCA: geometry, energies and orbitals",
+      "value": 312005,
+      "total": 312005
+    },
+    {
+      "time": 0.7611244079998869,
+      "stage": "Collecting structure frames",
+      "value": 0,
+      "total": 6000
+    },
+    {
+      "time": 0.8113099230004082,
+      "stage": "Collecting structure frames",
+      "value": 1938,
+      "total": 6000
+    },
+    {
+      "time": 0.8613160980003158,
+      "stage": "Collecting structure frames",
+      "value": 3901,
+      "total": 6000
+    },
+    {
+      "time": 0.9113232339996102,
+      "stage": "Collecting structure frames",
+      "value": 5879,
+      "total": 6000
+    },
+    {
+      "time": 0.9153203289997691,
+      "stage": "Collecting structure frames",
+      "value": 6000,
+      "total": 6000
+    },
+    {
+      "time": 0.9672492870004135,
+      "stage": "ORCA: dipoles and excited states",
+      "value": 0,
+      "total": 312005
+    },
+    {
+      "time": 1.0172131480003372,
+      "stage": "ORCA: dipoles and excited states",
+      "value": 35779,
+      "total": 312005
+    },
+    {
+      "time": 1.0672607759997845,
+      "stage": "ORCA: dipoles and excited states",
+      "value": 71393,
+      "total": 312005
+    },
+    {
+      "time": 1.1172502449999229,
+      "stage": "ORCA: dipoles and excited states",
+      "value": 106951,
+      "total": 312005
+    },
+    {
+      "time": 1.2350366069995289,
+      "stage": "ORCA: dipoles and excited states",
+      "value": 139155,
+      "total": 312005
+    },
+    {
+      "time": 1.2849714309995761,
+      "stage": "ORCA: dipoles and excited states",
+      "value": 174079,
+      "total": 312005
+    },
+    {
+      "time": 1.335000336000121,
+      "stage": "ORCA: dipoles and excited states",
+      "value": 207254,
+      "total": 312005
+    },
+    {
+      "time": 1.3850375339998209,
+      "stage": "ORCA: dipoles and excited states",
+      "value": 240699,
+      "total": 312005
+    },
+    {
+      "time": 1.434995761999744,
+      "stage": "ORCA: dipoles and excited states",
+      "value": 273728,
+      "total": 312005
+    },
+    {
+      "time": 1.4850339610002266,
+      "stage": "ORCA: dipoles and excited states",
+      "value": 306231,
+      "total": 312005
+    },
+    {
+      "time": 1.494252630000119,
+      "stage": "ORCA: dipoles and excited states",
+      "value": 312005,
+      "total": 312005
+    }
+  ],
+  "tree_widgets_after_last_frame": 393,
+  "last_frame_verified": true,
+  "geometry_enter_and_undo_verified": true,
+  "layout": {
+    "1380": {
+      "window_width": 1380,
+      "window_height": 850,
+      "canvas_width": 1022,
+      "canvas_height": 620,
+      "footer_gap": 2,
+      "measurement_right": 1376
+    },
+    "1100": {
+      "window_width": 1100,
+      "window_height": 850,
+      "canvas_width": 801,
+      "canvas_height": 620,
+      "footer_gap": 2,
+      "measurement_right": 1096
+    }
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "long_cp2k.xyz": {
+    "old_seconds": 3.7444319589999395,
+    "new_seconds": 1.1491598660004456,
+    "speedup": 3.2584082248122015,
+    "frames": 10000,
+    "records": 10000,
+    "science_values_identical": true
+  },
+  "long_plain.xyz": {
+    "old_seconds": 2.26534641499984,
+    "new_seconds": 0.9797103670002798,
+    "speedup": 2.3122613491740185,
+    "frames": 10000,
+    "records": 0,
+    "science_values_identical": true
+  },
+  "XDATCAR_long": {
+    "old_seconds": 6.279312237999875,
+    "new_seconds": 1.232828144999985,
+    "speedup": 5.093420574041122,
+    "frames": 10000,
+    "records": 10000,
+    "science_values_identical": true
+  },
+  "long_noisy_cp2k.out": {
+    "old_seconds": 7.2304135950003,
+    "new_seconds": 1.5218425379998735,
+    "speedup": 4.751091794623565,
+    "frames": 0,
+    "records": 4000,
+    "science_values_identical": true
+  },
+  "long_staged.out": {
+    "old_seconds": 0.49174912800026505,
+    "new_seconds": 0.37773400600008245,
+    "speedup": 1.301839707807927,
+    "frames": 4000,
+    "records": 4000,
+    "science_values_identical": true
+  }
+}

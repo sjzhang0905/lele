@@ -13,7 +13,7 @@ import numpy as np
 from .core import Frame, visible_bonds
 
 
-def selected_fragments(frame: Frame, selected, cutoff: float = 1.18) -> list[int]:
+def selected_fragments(frame: Frame, selected, cutoff: float = 1.0) -> list[int]:
     """Union of connected components containing the selected 0-based atoms."""
     roots = list(dict.fromkeys(int(i) for i in selected))
     n = len(frame.symbols)

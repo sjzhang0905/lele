@@ -1,0 +1,264 @@
+* Getting build dependencies for wheel...
+running egg_info
+writing lele_explorer.egg-info/PKG-INFO
+writing dependency_links to lele_explorer.egg-info/dependency_links.txt
+writing entry points to lele_explorer.egg-info/entry_points.txt
+writing requirements to lele_explorer.egg-info/requires.txt
+writing top-level names to lele_explorer.egg-info/top_level.txt
+reading manifest file 'lele_explorer.egg-info/SOURCES.txt'
+reading manifest template 'MANIFEST.in'
+warning: no previously-included files matching '__pycache__' found anywhere in distribution
+warning: no previously-included files matching '*.py[cod]' found anywhere in distribution
+adding license file 'LICENSE'
+writing manifest file 'lele_explorer.egg-info/SOURCES.txt'
+* Building wheel...
+running bdist_wheel
+running build
+running build_py
+running egg_info
+writing lele_explorer.egg-info/PKG-INFO
+writing dependency_links to lele_explorer.egg-info/dependency_links.txt
+writing entry points to lele_explorer.egg-info/entry_points.txt
+writing requirements to lele_explorer.egg-info/requires.txt
+writing top-level names to lele_explorer.egg-info/top_level.txt
+reading manifest file 'lele_explorer.egg-info/SOURCES.txt'
+reading manifest template 'MANIFEST.in'
+warning: no previously-included files matching '__pycache__' found anywhere in distribution
+warning: no previously-included files matching '*.py[cod]' found anywhere in distribution
+adding license file 'LICENSE'
+writing manifest file 'lele_explorer.egg-info/SOURCES.txt'
+installing to build/bdist.linux-x86_64/wheel
+running install
+running install_lib
+creating build/bdist.linux-x86_64/wheel
+creating build/bdist.linux-x86_64/wheel/lele
+copying build/lib/lele/legend_canvas.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/spectrum_dialog.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/qe_reference_dialog.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/results_dialog.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/structure_edit_dialogs.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/energy_units.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/workflow_ui.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/periodic_geometry.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/document_view.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/orbital_dialog.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/internal_coordinates.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/__main__.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/trajectory_analysis.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/appearance_workflow.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/crystal_rendering.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/reorientation_dialog.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/vibration_controls.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/orca_goat.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/trajectory_actions.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/coordinate_reorientation.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/polyhedron_analysis.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/cp2k_results.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/orca_analysis_dialogs.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/output_text.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/convergence_dialog.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/atom_panel.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/geometry_curve_dialog.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/vibration_analysis_dialog.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/gaussian_vibrations.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/qe_trajectory.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/renderer.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/boundary.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/orca_results.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/supercell_dialog.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/crystal_settings.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/hydrogen_bonds.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/qe_phonons.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/chemical_analysis.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/project_file.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/numeric_controls.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/cif_input.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/file_loading.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/qe_results.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/vacuum.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/trajectory_io.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/bond_filter.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/supercell.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/orca_properties.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/settings.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/selection_geometry.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/element_rules.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/property_export.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/transition_dialog.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/atom_clipboard.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/gaussian_properties.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/atom_legend_dialog.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/interaction.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/molden_vibrations.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/restored_actions.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/render_options.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/result_availability.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/spectra.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/element_rule_actions.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/welcome.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/nwchem_trajectory.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/_display_reference_values.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/project_actions.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/siesta_trajectory.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/vasp_results.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/short_contacts_dialog.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/app.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/xtb_results.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/vasp_constraints.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/legacy_converter.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/polyhedron_dialog.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/crystal_actions.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/orca_soc.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/display_reference.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/orca_vibrations.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/core.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/structure_summary.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/style_presets.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/operations.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/polyhedra.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/gif_dialog.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/animation_export.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/atom_appearance.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/element_rules_panel.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/calculation_results.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/backend_loader.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/atom_legend.py -> build/bdist.linux-x86_64/wheel/./lele
+creating build/bdist.linux-x86_64/wheel/lele/assets
+copying build/lib/lele/assets/lele.ico -> build/bdist.linux-x86_64/wheel/./lele/assets
+copying build/lib/lele/assets/lele_icon.png -> build/bdist.linux-x86_64/wheel/./lele/assets
+copying build/lib/lele/assets/lele_walk.png -> build/bdist.linux-x86_64/wheel/./lele/assets
+copying build/lib/lele/crystal_planes.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/atom_indices.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/sibyl_palette.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/selection_outline.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/site_occupancy.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/boundary_panel.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/formats.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/dipole_panel.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/poscar_labels.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/__init__.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/crystal_panel.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/fragment.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/orca_neb.py -> build/bdist.linux-x86_64/wheel/./lele
+copying build/lib/lele/cp2k_input.py -> build/bdist.linux-x86_64/wheel/./lele
+running install_egg_info
+Copying lele_explorer.egg-info to build/bdist.linux-x86_64/wheel/./lele_explorer-2.13.0-py3.12.egg-info
+running install_scripts
+creating build/bdist.linux-x86_64/wheel/lele_explorer-2.13.0.dist-info/WHEEL
+creating '/workspace/scratch/3b983c32cd5d/qa-results/v2130_wheels/.tmp-xw8ol8_4/lele_explorer-2.13.0-py3-none-any.whl' and adding 'build/bdist.linux-x86_64/wheel' to it
+adding 'lele/__init__.py'
+adding 'lele/__main__.py'
+adding 'lele/_display_reference_values.py'
+adding 'lele/animation_export.py'
+adding 'lele/app.py'
+adding 'lele/appearance_workflow.py'
+adding 'lele/atom_appearance.py'
+adding 'lele/atom_clipboard.py'
+adding 'lele/atom_indices.py'
+adding 'lele/atom_legend.py'
+adding 'lele/atom_legend_dialog.py'
+adding 'lele/atom_panel.py'
+adding 'lele/backend_loader.py'
+adding 'lele/bond_filter.py'
+adding 'lele/boundary.py'
+adding 'lele/boundary_panel.py'
+adding 'lele/calculation_results.py'
+adding 'lele/chemical_analysis.py'
+adding 'lele/cif_input.py'
+adding 'lele/convergence_dialog.py'
+adding 'lele/coordinate_reorientation.py'
+adding 'lele/core.py'
+adding 'lele/cp2k_input.py'
+adding 'lele/cp2k_results.py'
+adding 'lele/crystal_actions.py'
+adding 'lele/crystal_panel.py'
+adding 'lele/crystal_planes.py'
+adding 'lele/crystal_rendering.py'
+adding 'lele/crystal_settings.py'
+adding 'lele/dipole_panel.py'
+adding 'lele/display_reference.py'
+adding 'lele/document_view.py'
+adding 'lele/element_rule_actions.py'
+adding 'lele/element_rules.py'
+adding 'lele/element_rules_panel.py'
+adding 'lele/energy_units.py'
+adding 'lele/file_loading.py'
+adding 'lele/formats.py'
+adding 'lele/fragment.py'
+adding 'lele/gaussian_properties.py'
+adding 'lele/gaussian_vibrations.py'
+adding 'lele/geometry_curve_dialog.py'
+adding 'lele/gif_dialog.py'
+adding 'lele/hydrogen_bonds.py'
+adding 'lele/interaction.py'
+adding 'lele/internal_coordinates.py'
+adding 'lele/legacy_converter.py'
+adding 'lele/legend_canvas.py'
+adding 'lele/molden_vibrations.py'
+adding 'lele/numeric_controls.py'
+adding 'lele/nwchem_trajectory.py'
+adding 'lele/operations.py'
+adding 'lele/orbital_dialog.py'
+adding 'lele/orca_analysis_dialogs.py'
+adding 'lele/orca_goat.py'
+adding 'lele/orca_neb.py'
+adding 'lele/orca_properties.py'
+adding 'lele/orca_results.py'
+adding 'lele/orca_soc.py'
+adding 'lele/orca_vibrations.py'
+adding 'lele/output_text.py'
+adding 'lele/periodic_geometry.py'
+adding 'lele/polyhedra.py'
+adding 'lele/polyhedron_analysis.py'
+adding 'lele/polyhedron_dialog.py'
+adding 'lele/poscar_labels.py'
+adding 'lele/project_actions.py'
+adding 'lele/project_file.py'
+adding 'lele/property_export.py'
+adding 'lele/qe_phonons.py'
+adding 'lele/qe_reference_dialog.py'
+adding 'lele/qe_results.py'
+adding 'lele/qe_trajectory.py'
+adding 'lele/render_options.py'
+adding 'lele/renderer.py'
+adding 'lele/reorientation_dialog.py'
+adding 'lele/restored_actions.py'
+adding 'lele/result_availability.py'
+adding 'lele/results_dialog.py'
+adding 'lele/selection_geometry.py'
+adding 'lele/selection_outline.py'
+adding 'lele/settings.py'
+adding 'lele/short_contacts_dialog.py'
+adding 'lele/sibyl_palette.py'
+adding 'lele/siesta_trajectory.py'
+adding 'lele/site_occupancy.py'
+adding 'lele/spectra.py'
+adding 'lele/spectrum_dialog.py'
+adding 'lele/structure_edit_dialogs.py'
+adding 'lele/structure_summary.py'
+adding 'lele/style_presets.py'
+adding 'lele/supercell.py'
+adding 'lele/supercell_dialog.py'
+adding 'lele/trajectory_actions.py'
+adding 'lele/trajectory_analysis.py'
+adding 'lele/trajectory_io.py'
+adding 'lele/transition_dialog.py'
+adding 'lele/vacuum.py'
+adding 'lele/vasp_constraints.py'
+adding 'lele/vasp_results.py'
+adding 'lele/vibration_analysis_dialog.py'
+adding 'lele/vibration_controls.py'
+adding 'lele/welcome.py'
+adding 'lele/workflow_ui.py'
+adding 'lele/xtb_results.py'
+adding 'lele/assets/lele.ico'
+adding 'lele/assets/lele_icon.png'
+adding 'lele/assets/lele_walk.png'
+adding 'lele_explorer-2.13.0.dist-info/licenses/LICENSE'
+adding 'lele_explorer-2.13.0.dist-info/METADATA'
+adding 'lele_explorer-2.13.0.dist-info/WHEEL'
+adding 'lele_explorer-2.13.0.dist-info/entry_points.txt'
+adding 'lele_explorer-2.13.0.dist-info/top_level.txt'
+adding 'lele_explorer-2.13.0.dist-info/RECORD'
+removing build/bdist.linux-x86_64/wheel
+Successfully built lele_explorer-2.13.0-py3-none-any.whl

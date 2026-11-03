@@ -1,0 +1,39 @@
+{
+  "baseline": "2.8.0",
+  "version": "2.9.0",
+  "added": [
+    "docs/FEATURES_v2.9.0_CN.md",
+    "docs/VALIDATION_v2.9.0.md",
+    "docs/display_reference_data.md",
+    "docs/qa_v2.9.0/full_v290.xml",
+    "docs/qa_v2.9.0/reference_acceptance.json",
+    "docs/qa_v2.9.0/release_changes.json",
+    "docs/qa_v2.9.0/vesta_radii_native.png",
+    "lele/_display_reference_values.py",
+    "lele/display_reference.py",
+    "tests/test_reference_defaults_v290.py",
+    "tools/extract_display_reference_data.py",
+    "tools/render_reference_preview.py"
+  ],
+  "changed": [
+    "CHANGELOG.md",
+    "README.md",
+    "README_CN.md",
+    "lele/__init__.py",
+    "lele/app.py",
+    "lele/atom_clipboard.py",
+    "lele/boundary.py",
+    "lele/core.py",
+    "lele/document_view.py",
+    "lele/element_rule_actions.py",
+    "lele/fragment.py",
+    "lele/internal_coordinates.py",
+    "lele/periodic_geometry.py",
+    "lele/project_file.py",
+    "lele/render_options.py",
+    "lele/renderer.py",
+    "lele/style_presets.py",
+    "lele/supercell.py"
+  ],
+  "removed": []
+}

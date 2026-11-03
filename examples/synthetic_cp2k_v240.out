@@ -1,0 +1,35 @@
+ CP2K| version string: CP2K version 2026.2
+ GLOBAL| Run type GEO_OPT
+ GLOBAL| Project name example
+ DFT| Charge 0
+ DFT| Multiplicity 1
+ CELL| Vector a [angstrom]: 8 0 0 |a| = 8
+ CELL| Vector b [angstrom]: 0 9 0 |b| = 9
+ CELL| Vector c [angstrom]: 0 0 10 |c| = 10
+ CELL| Periodicity XY
+ - Atoms: 2
+ MODULE QUICKSTEP: ATOMIC COORDINATES IN ANGSTROM
+
+ Atom Kind Element X Y Z Z(eff) Mass
+ 1 1 O 8 0 0 0 6.0 16.0
+ 2 2 H 1 0 0 1 1.0 1.0
+
+ ENERGY| Total FORCE_EVAL ( QS ) energy [hartree] -10.1
+ OPTIMIZATION STEP: 1
+ ENERGY| Total FORCE_EVAL ( QS ) energy [hartree] -10.3
+ OPT| Step number 1
+ OPT| Maximum gradient 0.0003
+ OPT| Convergence limit for maximum gradient 0.0004
+ OPT| RMS gradient 0.00005
+ OPT| Convergence limit for RMS gradient 0.0001
+ OPT| Maximum step size 0.001
+ OPT| Convergence limit for maximum step size 0.003
+ OPT| RMS step size 0.0005
+ OPT| Convergence limit for RMS step size 0.0015
+ Only KERNEL NONE is active for k-point TDDFPT; transition dipole magnitudes are shown.
+ State Excitation Transition dipole (a.u.) Oscillator
+ number energy (eV) x y z strength (a.u.)
+ --------
+ TDDFPT| 1 2.0 1.0 2.0 3.0 0.5
+ TDDFPT_KPOINT| 1 2 1 4 5 0.25
+ TDDFPT| 2 3.0 0.1 0.2 0.3 0.04

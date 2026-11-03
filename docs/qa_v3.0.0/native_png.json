@@ -1,0 +1,33 @@
+{
+  "version": "3.0.0",
+  "converged_text_bounds_at_canvas_size": {
+    "before": [
+      97,
+      18
+    ],
+    "export": [
+      95,
+      17
+    ]
+  },
+  "live_view_mean_rgb_difference_after_export": 0.0,
+  "source_size": [
+    1022,
+    620
+  ],
+  "output_size": [
+    4088,
+    2480
+  ],
+  "smooth_edges": true,
+  "png_action_ok": true,
+  "live_view_unchanged": true,
+  "labels_and_corner_axes_present": true,
+  "dipole_vector": [
+    1.0,
+    -2.0,
+    2.0
+  ],
+  "default_h_radius": 0.17825,
+  "ok": true
+}

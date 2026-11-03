@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from .output_text import read_output_lines, check_load_cancelled, load_progress, open_output_text
 import re
 import numpy as np
 
@@ -103,7 +104,7 @@ def _extract_coordinates(lines, header_idx, species):
         else:
             names.append(atom[0]); xyz.append(atom[1])
         j += 1
-    return names, np.asarray(xyz, dtype=float).reshape(-1, 3)
+    return names, np.asarray(xyz, dtype=float).reshape(-1, 3),j
 
 
 def _frame_energy_map(frames, energy_records):
@@ -123,16 +124,18 @@ def _frame_energy_map(frames, energy_records):
             f'{len(frames)} geometries); energies not paired to steps.')
 
 
-def read_siesta_output(path: Path, max_frames: int = 750):
+def read_siesta_output(path: Path, max_frames: int | None = None):
     """Return (frames, note), reading all printed geometry snapshots."""
-    lines = path.read_text(encoding='utf-8', errors='replace').splitlines()
+    lines = read_output_lines(path)
     cell = None
     species = {}
     snapshots = []
     energy_records = []
     spin_setting = None
     j = 0
+    progress=load_progress('SIESTA: structures and ionic energies',len(lines))
     while j < len(lines):
+        check_load_cancelled();progress(j)
         raw = lines[j]
         spin_match = SPIN_FLAG.search(raw)
         if spin_match:
@@ -164,7 +167,7 @@ def read_siesta_output(path: Path, max_frames: int = 750):
             if len(rows) == 3:
                 cell = np.asarray(rows, dtype=float)
         if COORD_HEADER.search(raw):
-            names, pos = _extract_coordinates(lines, j, species)
+            names, pos, end = _extract_coordinates(lines, j, species)
             if len(names):
                 lower = raw.lower()
                 if 'fractional' in lower:
@@ -176,9 +179,11 @@ def read_siesta_output(path: Path, max_frames: int = 750):
                 snapshots.append((j, Frame(names, pos, cell.copy() if cell is not None else np.zeros((3,3)),
                                             (cell is not None,) * 3,
                                             info={'source': 'SIESTA .out', **({'spin_polarized': spin_setting} if spin_setting is not None else {})})))
-                if len(snapshots) > max_frames:
+                if max_frames is not None and len(snapshots) > max_frames:
                     raise ValueError(f'SIESTA output exceeds frame limit ({max_frames})')
+            j=max(j,end-1)
         j += 1
+    progress(len(lines))
     frames = [f for _, f in snapshots]
     if not frames:
         return [], 'No per-step coordinate blocks in SIESTA .out.'
@@ -188,11 +193,14 @@ def read_siesta_output(path: Path, max_frames: int = 750):
     return frames, note
 
 
-def read_siesta_ani(path: Path, max_frames=750):
+def read_siesta_ani(path: Path, max_frames=None):
     """Read the conventional XYZ-like Siesta .ANI without an ASE dependency."""
     frames = []
-    with path.open(encoding='utf-8', errors='replace') as stream:
+    size=path.stat().st_size
+    progress=load_progress('SIESTA: ANI coordinate frames',size)
+    with open_output_text(path) as stream:
         while True:
+            check_load_cancelled();progress(min(max(0,size-1),stream.buffer.tell()))
             count_line = stream.readline()
             if not count_line:
                 break
@@ -218,8 +226,9 @@ def read_siesta_ani(path: Path, max_frames=750):
                 names.append(symbol)
                 coords.append([_number(x) for x in values[1:4]])
             frames.append(Frame(names, np.asarray(coords), info={'source': 'SIESTA .ANI', 'comment': comment.strip()[:180]}))
-            if len(frames) > max_frames:
+            if max_frames is not None and len(frames) > max_frames:
                 raise ValueError(f'ANI exceeds frame limit ({max_frames})')
+    progress(size)
     return frames
 
 
@@ -228,7 +237,7 @@ def read_siesta_mde(path: Path):
 
     Arbitrary .MDE column layouts are intentionally not guessed.
     """
-    lines = path.read_text(encoding='utf-8', errors='replace').splitlines()
+    lines = read_output_lines(path)
     header_found = any(re.match(r'(?i)^\s*#\s*Step\s+T\b', ln)
                        and re.search(r'(?i)E[_-]?KS', ln)
                        and re.search(r'(?i)E[_-]?tot', ln) for ln in lines)
@@ -281,7 +290,7 @@ def _add_mde_energies(path, frames):
     return True
 
 
-def load_siesta_history(path: Path, max_frames=750):
+def load_siesta_history(path: Path, max_frames=None):
     """Prefer .out snapshots; fall back to sibling .ANI when .out is sparse.
 
     A companion ANI has no unit cell; use per-step .out cells only with an
@@ -336,7 +345,7 @@ def load_siesta_history(path: Path, max_frames=750):
             if not matched:
                 # Etot records from .out can be associated by count only.
                 records = []
-                for raw in path.read_text(encoding='utf-8', errors='replace').splitlines():
+                for raw in read_output_lines(path):
                     m = ENERGY.search(raw)
                     if m and m.group(1).lower().replace('_', '').replace('-', '') == 'etot':
                         records.append(_number(m.group(2)))

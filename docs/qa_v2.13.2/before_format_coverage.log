@@ -1,0 +1,123 @@
+.................F.FF.                                                   [100%]
+=================================== FAILURES ===================================
+_ test_explicit_inline_molecular_and_siesta_inputs[water.pqr-text3-expected3] __
+
+tmp_path = PosixPath('/tmp/pytest-of-root/pytest-9/test_explicit_inline_molecular3')
+name = 'water.pqr'
+text = 'ATOM 1 O WAT 1 1.000 2.000 3.000 -0.8 1.5\nATOM 2 H1 WAT 1 1.750 2.500 3.000 0.4 1.2\nATOM 3 H2 WAT 1 0.250 2.500 3.000 0.4 1.2\nEND\n'
+expected = [[1, 2, 3], [1.75, 2.5, 3], [0.25, 2.5, 3]]
+
+    @pytest.mark.parametrize('name,text,expected',[
+        ('orca.inp','! HF STO-3G\n* xyz 0 1\nO 1 2 3\nH 1.75 2.5 3\nH .25 2.5 3\n*\n',[[1,2,3],[1.75,2.5,3],[.25,2.5,3]]),
+        ('water.fdf','SystemName water\nNumberOfAtoms 3\nNumberOfSpecies 2\nLatticeConstant 1 Ang\n%block LatticeVectors\n10 0 0\n0 11 0\n0 0 12\n%endblock LatticeVectors\n%block ChemicalSpeciesLabel\n1 8 O\n2 1 H\n%endblock ChemicalSpeciesLabel\nAtomicCoordinatesFormat Ang\n%block AtomicCoordinatesAndAtomicSpecies\n1 2 3 1\n1.75 2.5 3 2\n.25 2.5 3 2\n%endblock AtomicCoordinatesAndAtomicSpecies\n',[[1,2,3],[1.75,2.5,3],[.25,2.5,3]]),
+        ('water.mol2','@<TRIPOS>MOLECULE\nwater\n3 2 1 0 0\nSMALL\nUSER_CHARGES\n@<TRIPOS>ATOM\n1 O1 1 2 3 O.3 1 MOL -0.8\n2 H1 1.75 2.5 3 H 1 MOL 0.4\n3 H2 .25 2.5 3 H 1 MOL 0.4\n@<TRIPOS>BOND\n1 1 2 1\n2 1 3 1\n',[[1,2,3],[1.75,2.5,3],[.25,2.5,3]]),
+        ('water.pqr','ATOM 1 O WAT 1 1.000 2.000 3.000 -0.8 1.5\nATOM 2 H1 WAT 1 1.750 2.500 3.000 0.4 1.2\nATOM 3 H2 WAT 1 0.250 2.500 3.000 0.4 1.2\nEND\n',[[1,2,3],[1.75,2.5,3],[.25,2.5,3]])])
+    def test_explicit_inline_molecular_and_siesta_inputs(tmp_path,name,text,expected):
+        path=tmp_path/name;path.write_text(text)
+>       frame=load_document(path).frames[0]
+              ^^^^^^^^^^^^^^^^^^^
+
+audit/repro/test_format_coverage.py:30: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+audit/source/LELE/lele/formats.py:294: in load_document
+    document = _load_complete_document(filename, max_frames)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+audit/source/LELE/lele/formats.py:300: in _load_complete_document
+    document = _load_document(filename, max_frames)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+audit/source/LELE/lele/formats.py:283: in _load_document
+    else:atoms, detection = legacy.read_structure(path, detection)
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+audit/source/LELE/lele/legacy_converter.py:1119: in read_structure
+    atoms = parse_pqr(path)
+            ^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+path = PosixPath('/tmp/pytest-of-root/pytest-9/test_explicit_inline_molecular3/water.pqr')
+
+    def parse_pqr(path: Path) -> Atoms:
+        symbols: list[str] = []
+        positions: list[list[float]] = []
+        for raw in path.read_text(encoding="utf-8", errors="replace").splitlines():
+            if not raw.startswith(("ATOM  ", "HETATM")):
+                continue
+            try:
+                x = _to_float(raw[30:38].strip())
+                y = _to_float(raw[38:46].strip())
+                z = _to_float(raw[46:54].strip())
+            except (ValueError, IndexError):
+                parts = raw.split()
+                if len(parts) < 8:
+                    continue
+                numeric = []
+                for token in parts:
+                    try:
+                        numeric.append(_to_float(token))
+                    except ValueError:
+                        pass
+                if len(numeric) < 5:
+                    continue
+                x, y, z = numeric[-5:-2]
+    
+            element_field = raw[76:78].strip() if len(raw) >= 78 else ""
+            atom_name = raw[12:16].strip() if len(raw) >= 16 else ""
+            try:
+                symbol = normalize_element(element_field) if element_field else normalize_element(atom_name)
+            except ConversionError:
+                cleaned = re.sub(r"^[0-9]+", "", atom_name)
+                symbol = normalize_element(cleaned)
+            symbols.append(symbol)
+            positions.append([x, y, z])
+    
+        if not positions:
+>           raise ConversionError("No ATOM/HETATM coordinates were found in PQR file")
+E           lele.legacy_converter.ConversionError: No ATOM/HETATM coordinates were found in PQR file
+
+audit/source/LELE/lele/legacy_converter.py:961: ConversionError
+_ test_pqr_atom_name_is_oxygen_regardless_of_residue_and_spacing[ATOM  1 O ASN 1 1.000 2.000 3.000 -0.8 1.5] _
+
+tmp_path = PosixPath('/tmp/pytest-of-root/pytest-9/test_pqr_atom_name_is_oxygen_r0')
+line = 'ATOM  1 O ASN 1 1.000 2.000 3.000 -0.8 1.5'
+
+    @pytest.mark.parametrize('line',[
+        'ATOM  1 O ASN 1 1.000 2.000 3.000 -0.8 1.5',
+        'HETATM 1 O ASN 1 1.000 2.000 3.000 -0.8 1.5',
+        'ATOM      1  O   WAT A   1       1.000   2.000   3.000 -0.8000 1.5000'])
+    def test_pqr_atom_name_is_oxygen_regardless_of_residue_and_spacing(tmp_path,line):
+        # APBS PQR accepts whitespace-separated fields and an optional chain ID:
+        # https://apbs.readthedocs.io/en/latest/formats/pqr.html
+        path=tmp_path/'oxygen.pqr';path.write_text(line+'\n')
+        frame=load_document(path).frames[0]
+>       assert frame.symbols==['O']
+E       AssertionError: assert ['N'] == ['O']
+E         
+E         At index 0 diff: 'N' != 'O'
+E         Use -v to get more diff
+
+audit/repro/test_format_coverage.py:53: AssertionError
+_ test_pqr_atom_name_is_oxygen_regardless_of_residue_and_spacing[HETATM 1 O ASN 1 1.000 2.000 3.000 -0.8 1.5] _
+
+tmp_path = PosixPath('/tmp/pytest-of-root/pytest-9/test_pqr_atom_name_is_oxygen_r1')
+line = 'HETATM 1 O ASN 1 1.000 2.000 3.000 -0.8 1.5'
+
+    @pytest.mark.parametrize('line',[
+        'ATOM  1 O ASN 1 1.000 2.000 3.000 -0.8 1.5',
+        'HETATM 1 O ASN 1 1.000 2.000 3.000 -0.8 1.5',
+        'ATOM      1  O   WAT A   1       1.000   2.000   3.000 -0.8000 1.5000'])
+    def test_pqr_atom_name_is_oxygen_regardless_of_residue_and_spacing(tmp_path,line):
+        # APBS PQR accepts whitespace-separated fields and an optional chain ID:
+        # https://apbs.readthedocs.io/en/latest/formats/pqr.html
+        path=tmp_path/'oxygen.pqr';path.write_text(line+'\n')
+        frame=load_document(path).frames[0]
+>       assert frame.symbols==['O']
+E       AssertionError: assert ['Sn'] == ['O']
+E         
+E         At index 0 diff: 'Sn' != 'O'
+E         Use -v to get more diff
+
+audit/repro/test_format_coverage.py:53: AssertionError
+=========================== short test summary info ============================
+FAILED audit/repro/test_format_coverage.py::test_explicit_inline_molecular_and_siesta_inputs[water.pqr-text3-expected3]
+FAILED audit/repro/test_format_coverage.py::test_pqr_atom_name_is_oxygen_regardless_of_residue_and_spacing[ATOM  1 O ASN 1 1.000 2.000 3.000 -0.8 1.5]
+FAILED audit/repro/test_format_coverage.py::test_pqr_atom_name_is_oxygen_regardless_of_residue_and_spacing[HETATM 1 O ASN 1 1.000 2.000 3.000 -0.8 1.5]
+3 failed, 19 passed in 1.88s

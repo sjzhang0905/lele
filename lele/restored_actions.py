@@ -77,7 +77,9 @@ class RestoredActions:
         path,_=QFileDialog.getSaveFileName(self,'Export '+kind,self._save_path('_'+kind+'.csv'),'CSV (*.csv)')
         if path:
             try:
-                count=(export_dipoles if kind=='dipoles' else export_transitions)(path,self.doc)
+                from .operations import run_data_task
+                document=self.doc
+                count=run_data_task(self,'Exporting '+kind,lambda:(export_dipoles if kind=='dipoles' else export_transitions)(path,document))
                 self.statusBar().showMessage(f'Exported {count} records: {path}',7000)
             except (OSError,ValueError) as ex:QMessageBox.warning(self,'Export failed',str(ex))
 

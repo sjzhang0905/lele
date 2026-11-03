@@ -1,0 +1,11 @@
+{
+  "ok": true,
+  "symbols_checked": 119,
+  "palette_ui": "Default",
+  "default_atom_size": 50,
+  "default_bond_thickness": 9,
+  "white_share": 0.1,
+  "atom_bond_editor_legend_consistent": true,
+  "old_project_and_saved_preset_compatible": true,
+  "explicit_colors_and_saved_sizes_preserved": true
+}

@@ -15,16 +15,18 @@ from vtkmodules.vtkCommonCore import vtkPoints, vtkUnsignedCharArray, vtkFloatAr
 from vtkmodules.vtkCommonDataModel import vtkPolyData, vtkCellArray, vtkStructuredGrid
 from vtkmodules.vtkFiltersSources import vtkSphereSource, vtkArrowSource, vtkPlaneSource
 from vtkmodules.vtkFiltersCore import vtkTubeFilter, vtkContourFilter
-from vtkmodules.vtkRenderingCore import vtkActor, vtkPolyDataMapper, vtkGlyph3DMapper, vtkRenderer, vtkBillboardTextActor3D, vtkPropAssembly
+from vtkmodules.vtkRenderingCore import vtkActor, vtkPolyDataMapper, vtkGlyph3DMapper, vtkRenderer, vtkBillboardTextActor3D, vtkPropAssembly, vtkFollower
 from vtkmodules.util.numpy_support import numpy_to_vtk
 from vtkmodules.vtkCommonMath import vtkMatrix4x4
 
-from .core import Frame, Volume, visible_bonds, unit_cell_edges, colour, radius, atom_label_texts, axis_vectors
+from .core import Frame, Volume, visible_bonds, unit_cell_edges, radius, atom_label_texts, axis_vectors
 from .hydrogen_bonds import hydrogen_bond_links
 from .periodic_geometry import periodic_basis, normalized_positions
-from .style_presets import mix_color
+from .style_presets import element_palette_color
 from .render_options import RenderOptions, MIN_ISOVALUE
 from .atom_appearance import appearance, atom_is_drawn
+from .crystal_rendering import CrystalRendering
+from .output_text import load_progress,progress_items
 
 
 def rgb(hex_color):
@@ -36,7 +38,7 @@ def uchar_rgb(hex_color):
     return tuple(int(round(x * 255)) for x in rgb(hex_color))
 
 
-class MoleculeRenderer:
+class MoleculeRenderer(CrystalRendering):
     def __init__(self, renderer: vtkRenderer):
         self.renderer = renderer
         self.options = RenderOptions()
@@ -51,6 +53,10 @@ class MoleculeRenderer:
         self.dipole_label = 'μ'
         self.corner_labels = []
         self._corner_label_renderer = None
+        self._corner_label_observer = None
+        self._corner_label_positions = []
+        self._corner_label_fonts = []
+        self._corner_layout_view = None
         self.fitted_plane = None
         # A vibrational preview retains equilibrium connectivity as atoms move.
         self.fixed_bonds = None
@@ -67,6 +73,7 @@ class MoleculeRenderer:
         self._label_actors = []
         self._label_positions = []
         self._label_radii = []
+        self._init_crystal_rendering()
         # Project labels toward the camera before every draw: at ball centres in
         # screen space, but in front of the ball surface so they stay visible.
         self.renderer.AddObserver('StartEvent', self._place_labels)
@@ -82,11 +89,13 @@ class MoleculeRenderer:
         self._label_radii.clear()
 
     def _add_actor(self, actor):
+        self._attach_crystal_clips(actor)
         self.renderer.AddActor(actor)
         self.dynamic.append(actor)
         return actor
 
     def set_scene(self, frame: Frame, volume: Volume | None = None, reset_camera: bool = False):
+        report=load_progress('Preparing atoms and boundaries',8)
         source_frame = frame
         self.source_frame = source_frame
         self.display_rotation = np.eye(3)
@@ -109,12 +118,15 @@ class MoleculeRenderer:
         original_fixed = self.fixed_bonds
         if boundary:
             from .boundary import boundary_view
+            from .element_rules import frame_rules, rule_signature
             source = source_frame
             key=(id(source),source.positions.tobytes(),source.cell.tobytes(),source.pbc,
                  tuple(tuple(x) for x in self.options.boundary_bounds),self.options.bond_cutoff,
+                 source.info.get('bond_model', 'Chemcraft pair ranges'),
                  tuple(sorted(source.atom_appearance.items())),tuple(sorted(source.bond_added)),tuple(sorted(source.bond_removed)),
                  source.bond_snapshot,source.periodic_bond_snapshot,
-                 tuple(sorted(source.hbond_added.items())), tuple(sorted(source.hbond_removed)))
+                 tuple(sorted(source.hbond_added.items())), tuple(sorted(source.hbond_removed)),
+                 rule_signature(*frame_rules(source)))
             if self._boundary_cache is None or self._boundary_cache[0]!=key:
                 self._boundary_cache=(key,boundary_view(source,self.options.boundary_bounds,self.options.bond_cutoff))
             self.boundary_display=self._boundary_cache[1]
@@ -122,16 +134,24 @@ class MoleculeRenderer:
                 self.boundary_display=self.boundary_display.transformed(self.display_rotation,self.display_translation)
             frame=self.boundary_display.frame
             self.fixed_bonds=self.boundary_display.bonds
-        if self.options.style != 'Wireframe':
+        self._prepare_crystal_geometry()
+        report(1)
+        polyhedral = self.options.style == 'Polyhedral'
+        show_atoms = not polyhedral or self.options.polyhedra_show_atoms
+        if self.options.style != 'Wireframe' and show_atoms:
             self._atoms(frame)
             if self.periodic_preview is not None and not boundary:
                 self._periodic_copy_atoms(frame)
+            if self._polyhedra_atoms_frame is not None:self._atoms(self._polyhedra_atoms_frame)
+        if polyhedral:self._render_polyhedra()
+        report(2)
         if self.options.bonds:
             self._bonds(frame)
             if self.periodic_preview is not None and not boundary:
                 self._periodic_fragment_bonds(frame)
         if self.options.hydrogen_bonds or frame.hbond_added:
             self._hydrogen_bonds(frame, automatic=self.options.hydrogen_bonds)
+        report(3)
         if self.options.unit_cell:
             if boundary:
                 self._tube_segments([(p,q,'#7D8CA4') for p,q in self.boundary_display.cell_lines],.025)
@@ -139,22 +159,39 @@ class MoleculeRenderer:
                 self._periodic_supercell_outline(frame)
             else:
                 self._cell(frame)
-        self._labels(frame)
+        if show_atoms:
+            self._labels(frame)
+            if self._polyhedra_atoms_frame is not None:
+                self._labels(self._polyhedra_atoms_frame, [i for i, _ in self.polyhedra_extra_atoms])
         self.fixed_bonds = original_fixed
+        report(4)
+        self._clipping_suspended = True
         if self.dipole_vector is not None and self.options.dipole_mode!='Off':self._dipole_arrows(self.frame)
         if self.options.axes_position == 'Origin':
             self._world_axes(frame)
+        self._clipping_suspended = False
         if volume is not None and self.options.show_volume:
             self._volume(volume)
         self._highlights()
+        report(5)
         if self.fitted_plane is not None:
             self._selection_plane()
         if self.mode_vectors is not None:
             self._mode_arrows()
+        self._render_lattice_planes()
+        report(6)
         if reset_camera:
             self.renderer.ResetCamera()
             self.renderer.ResetCameraClippingRange()
         self._place_labels()
+        if source_frame.info.get('optimization_converged'):
+            from vtkmodules.vtkRenderingCore import vtkTextActor
+            text=vtkTextActor();text.SetInput('converged');text.PickableOff();text.UseBoundsOff()
+            text.GetPositionCoordinate().SetCoordinateSystemToNormalizedViewport();text.SetPosition(.025,.94)
+            text.GetTextProperty().SetFontSize(18);text.GetTextProperty().SetBold(True)
+            text.GetTextProperty().SetColor(.13,.63,.34)
+            self.renderer.AddViewProp(text);self.dynamic.append(text)
+        report(8)
 
     def _selection_plane(self):
         """A translucent non-pickable best-fit plane with a thin outline."""
@@ -178,13 +215,7 @@ class MoleculeRenderer:
         self._keepalive.append((source, mapper))
 
     def _display_color(self, symbol, *, for_bond=False):
-        if for_bond and self.options.bond_palette == 'Neutral gray':
-            return '#969CA8'
-        scheme = self.options.atom_palette
-        if scheme == 'Monochrome':
-            return '#ABB6C6'
-        base = self.options.element_colors.get(symbol, colour(symbol))
-        return mix_color(base, .43) if scheme == 'Pastel' else base
+        return element_palette_color(self.options,symbol,for_bond=for_bond)
 
     def _finish(self, prop):
         lighting = {
@@ -214,8 +245,13 @@ class MoleculeRenderer:
 
     def _atoms(self, frame):
         groups = defaultdict(list)
-        for i, symbol in enumerate(frame.symbols):
+        from .site_occupancy import site_species
+        for i, symbol in enumerate(progress_items(frame.symbols,'Preparing atom display')):
             if atom_is_drawn(frame, i):
+                values=site_species(frame,i)
+                if len(values)!=1 or abs(next(iter(values.values()),0.)-1.)>1.e-8:
+                    self._occupied_site(frame,i,values)
+                    continue
                 groups[(symbol, self.atom_color(frame, i), appearance(frame, i).opacity)].append(i)
         if not groups:
             return
@@ -229,13 +265,7 @@ class MoleculeRenderer:
             pts = vtkPoints()
             sizes = vtkFloatArray()
             sizes.SetName('atom_radius')
-            mode = self.options.style
-            if mode == 'Space filling':
-                ball_size = self._atom_radius(sym)
-            elif mode == 'Sticks':
-                ball_size = max(0.085, self.options.bond_scale * 1.18)
-            else:
-                ball_size = max(0.09, radius(sym) * self.options.atom_scale)
+            ball_size = self._atom_radius(sym)
             for i in indices:
                 pts.InsertNextPoint(*[float(x) for x in frame.positions[i]])
                 sizes.InsertNextValue(ball_size)
@@ -257,6 +287,26 @@ class MoleculeRenderer:
             self._finish(actor.GetProperty())
             self._add_actor(actor)
             self._keepalive.append((pts, pdata, sizes, mapper))
+
+    def _occupied_site(self,frame,index,values):
+        start=0.;scale=self._atom_radius(frame.symbols[index])
+        if self.options.style=='Sticks':scale=max(.085,self.options.bond_scale*1.18)
+        sectors=list(values.items())
+        vacancy=max(0.,1-sum(values.values()))
+        if vacancy>1.e-8:sectors.append((None,vacancy))
+        for symbol,fraction in sectors:
+            if fraction<=1.e-12:continue
+            end=min(360.,start+360.*fraction)
+            sphere=vtkSphereSource();sphere.SetRadius(scale);sphere.SetCenter(*frame.positions[index])
+            sphere.SetStartTheta(start);sphere.SetEndTheta(end);sphere.SetThetaResolution(max(6,round(48*fraction)));sphere.SetPhiResolution(28)
+            mapper=vtkPolyDataMapper();mapper.SetInputConnection(sphere.GetOutputPort())
+            actor=vtkActor();actor.SetMapper(mapper)
+            if symbol is None:color='#CFD6DF';opacity=.12
+            else:
+                color=appearance(frame,index).color or self._display_color(symbol);opacity=1.
+            actor.GetProperty().SetColor(rgb(color));actor.GetProperty().SetOpacity(appearance(frame,index).opacity*opacity)
+            self._finish(actor.GetProperty());self._add_actor(actor);self._keepalive.append((sphere,mapper))
+            start=end
 
     def _tube_segments(self, segments, tube_radius, opacity=1.0):
         if not segments:
@@ -324,6 +374,7 @@ class MoleculeRenderer:
             offset = np.asarray(tile, dtype=float) @ source_cell
             positions = (base + offset) @ self.display_rotation + self.display_translation
             phantom = Frame(list(frame.symbols), positions, frame.cell, frame.pbc,
+                            info=frame.info,
                             atom_appearance=frame.atom_appearance)
             self._atoms(phantom)
             # Extra cells are visual context; their atoms are not new indices.
@@ -391,21 +442,23 @@ class MoleculeRenderer:
         if mode == 'Wireframe':
             return max(.008, self.options.bond_scale * .50)
         if mode == 'Space filling':
-            vdw = {'H': 1.20, 'C': 1.70, 'N': 1.55, 'O': 1.52,
-                   'F': 1.47, 'P': 1.80, 'S': 1.80, 'Cl': 1.75,
-                   'Br': 1.85, 'I': 1.98, 'Li': 1.82, 'Na': 2.27,
-                   'K': 2.75, 'Fe': 2.0, 'Cu': 1.40, 'Zn': 1.39}.get(
-                       symbol, max(1.1, radius(symbol) * 1.70))
-            return max(.12, vdw * self.options.atom_scale)
+            from .display_reference import vesta_radius
+            return vesta_radius(symbol, self.options.space_filling_radii) * self.options.space_filling_scale
         if mode == 'Sticks':
             return max(0.085, self.options.bond_scale * 1.18)
-        return max(0.09, radius(symbol) * self.options.atom_scale)
+        size = max(0.09, radius(symbol) * self.options.atom_scale)
+        if (mode == 'Ball and stick' and symbol == 'H'
+                and self.options.atom_palette in ('Default', 'Sibyl')):
+            size *= 1.15
+        return size
 
-    def _labels(self, frame):
+    def _labels(self, frame, source_indices=None):
+        from .crystal_planes import inside_cuts
         names = {}
         for i, (symbol, pos) in enumerate(zip(frame.symbols, frame.positions)):
             if not atom_is_drawn(frame, i):
                 continue
+            if self.crystal_cuts and not inside_cuts([pos], self.crystal_cuts)[0]:continue
             style = appearance(frame, i)
             mode = self.options.labels if style.label_mode == 'Global' else style.label_mode
             if mode == 'None':
@@ -414,9 +467,10 @@ class MoleculeRenderer:
                 text = style.label_text
             else:
                 if mode not in names:
-                    source=self.frame if self.boundary_display is not None else frame
+                    source=self.frame if self.boundary_display is not None or source_indices is not None else frame
                     names[mode] = atom_label_texts(source.symbols, mode, source.info.get('poscar_groups'))
-                source_index=int(self.boundary_display.source_indices[i]) if self.boundary_display is not None else i
+                source_index=(source_indices[i] if source_indices is not None else
+                              int(self.boundary_display.source_indices[i]) if self.boundary_display is not None else i)
                 text = names[mode][source_index]
             if not text:
                 continue
@@ -518,6 +572,8 @@ class MoleculeRenderer:
         assembly = vtkPropAssembly()
         self.detach_corner_labels()
         self.corner_labels=[]
+        self._corner_label_positions=[]
+        self._corner_label_fonts=[]
         for (name, vec), c in zip(axis_vectors(frame, self.options.axes_basis,
                                                self.options.axes_length, corner=True), self.AXIS_COLORS):
             actor, resources = self._arrow_actor(vec, c)
@@ -533,6 +589,8 @@ class MoleculeRenderer:
             label.GetTextProperty().SetJustificationToCentered()
             label.GetTextProperty().SetVerticalJustificationToCentered()
             label.SetPosition(*(float(x) for x in vec * 1.15))
+            self._corner_label_positions.append(label.GetPosition())
+            self._corner_label_fonts.append(label.GetTextProperty().GetFontSize())
             # Pixel-sized text must not feed back into the marker camera's
             # world bounds as the view rotates or the glyph texture updates.
             label.UseBoundsOff()
@@ -543,15 +601,67 @@ class MoleculeRenderer:
 
     def detach_corner_labels(self):
         if self._corner_label_renderer is not None:
+            if self._corner_label_observer is not None:
+                self._corner_label_renderer.RemoveObserver(self._corner_label_observer)
             for label in self.corner_labels:
                 self._corner_label_renderer.RemoveActor(label)
         self._corner_label_renderer = None
+        self._corner_label_observer = None
+        self._corner_layout_view = None
 
     def attach_corner_labels(self, renderer):
         self.detach_corner_labels()
         self._corner_label_renderer = renderer
         for label in self.corner_labels:
             renderer.AddActor(label)
+        self._corner_label_observer = renderer.AddObserver('StartEvent', self._layout_corner_labels)
+
+    def _layout_corner_labels(self, *_args):
+        """Keep complete corner glyphs inside the viewport as the camera rotates."""
+        renderer = self._corner_label_renderer
+        window = renderer.GetRenderWindow() if renderer is not None else None
+        if window is None or not self.corner_labels:
+            return
+        width, height = window.GetSize()
+        if width < 1 or height < 1:
+            return
+        from vtkmodules.vtkRenderingCore import vtkTextRenderer
+        camera = self.renderer.GetActiveCamera()
+        view = (camera.GetPosition(), camera.GetFocalPoint(), camera.GetViewUp(),
+                camera.GetParallelScale(), camera.GetViewAngle(), camera.GetParallelProjection(),
+                window.GetSize(), renderer.GetViewport(), tuple(self._corner_label_fonts))
+        if view != self._corner_layout_view:
+            for label, position, font in zip(self.corner_labels, self._corner_label_positions,
+                                             self._corner_label_fonts):
+                label.SetPosition(position)
+                label.GetTextProperty().SetFontSize(font)
+            self._corner_layout_view = view
+        left, bottom, right, top = renderer.GetViewport()
+        left, right = left * width, right * width
+        bottom, top = bottom * height, top * height
+        text_renderer = vtkTextRenderer.GetInstance()
+        for label in self.corner_labels:
+            prop = label.GetTextProperty()
+            bounds = [0, 0, 0, 0]
+            if not text_renderer.GetBoundingBox(prop, label.GetInput(), bounds, window.GetDPI()):
+                continue
+            available = (max(1., right-left-6), max(1., top-bottom-6))
+            fit = min(1., available[0]/max(1, bounds[1]-bounds[0]+1),
+                      available[1]/max(1, bounds[3]-bounds[2]+1))
+            if fit < 1.:
+                prop.SetFontSize(max(1, int(prop.GetFontSize()*fit)))
+                text_renderer.GetBoundingBox(prop, label.GetInput(), bounds, window.GetDPI())
+            renderer.SetWorldPoint(*label.GetPosition(), 1.)
+            renderer.WorldToDisplay()
+            x, y, z = renderer.GetDisplayPoint()
+            target_x = min(max(x, left+3-bounds[0]), right-3-bounds[1])
+            target_y = min(max(y, bottom+3-bounds[2]), top-3-bounds[3])
+            if abs(target_x-x) > .01 or abs(target_y-y) > .01:
+                renderer.SetDisplayPoint(target_x, target_y, z)
+                renderer.DisplayToWorld()
+                point = renderer.GetWorldPoint()
+                if abs(point[3]) > 1.e-12:
+                    label.SetPosition(*(value/point[3] for value in point[:3]))
 
     def _dipole_arrows(self,frame):
         if not frame.symbols:return
@@ -573,17 +683,29 @@ class MoleculeRenderer:
     def _mode_arrows(self):
         data = np.asarray(self.mode_vectors, dtype=float)
         if data.shape != self.frame.positions.shape or not np.isfinite(data).all(): return
+        frame=self.frame
+        if self.boundary_display is not None:
+            display=self.boundary_display;ids=display.source_indices;frame=display.frame
+            data=data[ids]
+            phonon=self.source_frame.info.get('_qe_phonon_preview')
+            if phonon is not None:
+                from .periodic_geometry import normalized_positions
+                reference=self.source_frame.clone();reference.positions=np.asarray(phonon['reference_positions'])
+                _,floors=normalized_positions(reference)
+                phase=2*np.pi*((display.shifts-floors[ids])@phonon['q_fractional'])+phonon['arrow_phase']
+                data=phonon['real'][ids]*np.cos(phase)[:,None]-phonon['imaginary'][ids]*np.sin(phase)[:,None]
+            indices=range(len(data)) if self.mode_vector_indices is None else [i for i,source in enumerate(ids) if source in self.mode_vector_indices]
+        else:indices=range(len(data)) if self.mode_vector_indices is None else self.mode_vector_indices
         peak = float(np.linalg.norm(data, axis=1).max())
         if peak < 1.e-15: return
-        indices = range(len(data)) if self.mode_vector_indices is None else self.mode_vector_indices
         for i in indices:
-            if not 0 <= i < len(data) or not atom_is_drawn(self.frame, i): continue
+            if not 0 <= i < len(data) or not atom_is_drawn(frame, i): continue
             vector = data[i] @ self.display_rotation * (self.mode_vector_length / peak)
             actor, resources = self._arrow_actor(vector, '#008a95')
             if actor is None: continue
-            for k in range(3): resources[2].SetElement(k, 3, float(self.frame.positions[i, k]))
+            for k in range(3): resources[2].SetElement(k, 3, float(frame.positions[i, k]))
             actor.PickableOff()
-            actor.GetProperty().SetOpacity(appearance(self.frame, i).opacity)
+            actor.GetProperty().SetOpacity(appearance(frame, i).opacity)
             self._add_actor(actor); self._keepalive.append(resources); self.mode_arrow_actors.append(actor)
 
     def _volume(self, volume):
@@ -611,6 +733,8 @@ class MoleculeRenderer:
             contour = vtkContourFilter()
             contour.SetInputData(grid)
             contour.SetValue(0, value)
+            from .operations import ui_checkpoint
+            contour.AddObserver('ProgressEvent',lambda algorithm,_:ui_checkpoint('Computing isosurface',algorithm.GetProgress(),1))
             contour.Update()
             mapper = vtkPolyDataMapper()
             mapper.SetInputConnection(contour.GetOutputPort())
@@ -642,23 +766,29 @@ class MoleculeRenderer:
                 continue
             if not atom_is_drawn(self.frame, i):
                 continue
-            sphere = vtkSphereSource()
-            sphere.SetRadius(max(.18, self._atom_radius(self.frame.symbols[i]) * 1.17))
-            sphere.SetThetaResolution(20)
-            sphere.SetPhiResolution(14)
-            sphere.SetCenter(*[float(x) for x in location])
+            # One camera-facing dashed silhouette, never a wire mesh across
+            # the sphere or its center label. Explicit gaps work on all VTK GL backends.
+            points=vtkPoints();lines=vtkCellArray()
+            for dash in range(32):
+                angles=np.linspace(2*np.pi*dash/32,2*np.pi*(dash+.64)/32,5)
+                lines.InsertNextCell(len(angles))
+                for angle in angles:lines.InsertCellPoint(points.InsertNextPoint(np.cos(angle),np.sin(angle),0.))
+            outline=vtkPolyData();outline.SetPoints(points);outline.SetLines(lines)
             mapper = vtkPolyDataMapper()
-            mapper.SetInputConnection(sphere.GetOutputPort())
-            actor = vtkActor()
+            mapper.SetInputData(outline)
+            actor = vtkFollower();actor.SetCamera(self.renderer.GetActiveCamera())
             actor.SetMapper(mapper)
-            actor.GetProperty().SetRepresentationToWireframe()
-            actor.GetProperty().SetColor(.15, .88, .75)
+            actor.SetPosition(*[float(x) for x in location])
+            size=max(.12,self._atom_radius(self.frame.symbols[i])*1.15)
+            if self.options.style=='Sticks':size=max(.085,self.options.bond_scale*1.18)*1.2
+            actor.SetScale(size)
+            actor.GetProperty().SetColor(.08, .78, .27)
             actor.GetProperty().SetOpacity(appearance(self.frame, i).opacity)
-            actor.GetProperty().SetLineWidth(2.5)
+            actor.GetProperty().SetLineWidth(3.5);actor.GetProperty().LightingOff()
             actor.PickableOff()
             self._add_actor(actor)
             self.atom_highlights.append(actor)
-            self._keepalive.append((sphere, mapper))
+            self._keepalive.append((outline,mapper))
 
     def pick_index(self, display_x: int, display_y: int, width: int = 0, height: int = 0):
         """Pick visible atom sphere in VTK *bottom-left-origin* display pixels.
@@ -702,14 +832,7 @@ class MoleculeRenderer:
         return min(hits)[-1] if hits else None
 
     def displayed_atoms(self):
-        if self.frame is None:return []
-        if self.boundary_display is not None:
-            return [(int(i),p) for i,p in zip(self.boundary_display.source_indices,self.boundary_display.frame.positions)]
-        result=list(enumerate(self.frame.positions))
-        if self.periodic_preview is not None:
-            result += [(i,p @ self.display_rotation + self.display_translation)
-                       for i,p in self.periodic_preview.image_positions.items()]
-        return result
+        return self._crystal_visible_atoms()
 
 
 def set_isometric_view(renderer: vtkRenderer):

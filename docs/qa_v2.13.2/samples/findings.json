@@ -1,0 +1,112 @@
+{
+  "A1_pqr_single_space.pqr": {
+    "expected_symbols": [
+      "O"
+    ],
+    "actual_symbols": [
+      "O"
+    ],
+    "positions": [
+      [
+        1.0,
+        2.0,
+        3.0
+      ]
+    ],
+    "volume_shape": null,
+    "correct": true
+  },
+  "A1_pqr_double_space.pqr": {
+    "expected_symbols": [
+      "O"
+    ],
+    "actual_symbols": [
+      "O"
+    ],
+    "positions": [
+      [
+        1.0,
+        2.0,
+        3.0
+      ]
+    ],
+    "volume_shape": null,
+    "correct": true
+  },
+  "A1_pqr_hetatm.pqr": {
+    "expected_symbols": [
+      "O"
+    ],
+    "actual_symbols": [
+      "O"
+    ],
+    "positions": [
+      [
+        1.0,
+        2.0,
+        3.0
+      ]
+    ],
+    "volume_shape": null,
+    "correct": true
+  },
+  "control_pqr_fixed_width.pqr": {
+    "expected_symbols": [
+      "O"
+    ],
+    "actual_symbols": [
+      "O"
+    ],
+    "positions": [
+      [
+        1.0,
+        2.0,
+        3.0
+      ]
+    ],
+    "volume_shape": null,
+    "correct": true
+  },
+  "A2_cube_negative.cube": {
+    "expected_symbols": [
+      "O"
+    ],
+    "actual_symbols": [
+      "O"
+    ],
+    "positions": [
+      [
+        1.25,
+        2.25,
+        3.25
+      ]
+    ],
+    "volume_shape": [
+      2,
+      2,
+      2
+    ],
+    "correct": true
+  },
+  "control_cube_positive.cube": {
+    "expected_symbols": [
+      "O"
+    ],
+    "actual_symbols": [
+      "O"
+    ],
+    "positions": [
+      [
+        0.6614715132048015,
+        1.1906487237686425,
+        1.7198259343324838
+      ]
+    ],
+    "volume_shape": [
+      2,
+      2,
+      2
+    ],
+    "correct": true
+  }
+}

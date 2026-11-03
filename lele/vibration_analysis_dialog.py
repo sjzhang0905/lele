@@ -1,5 +1,7 @@
 """Find normal modes involving the current atom selection."""
 import csv
+from .operations import gui_operation,run_data_task
+from .output_text import progress_items
 from PySide6.QtCore import Qt, QSignalBlocker
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
     QComboBox, QCheckBox, QDoubleSpinBox, QPushButton, QTableWidget,
@@ -62,8 +64,9 @@ class VibrationAnalysisDialog(QDialog):
     def use_selection(self, *_):
         analysis = self.document.vibrations[self.analysis_combo.currentIndex()]
         frame = self.window.frame
-        compatible = self.window.doc is self.document and frame is not None and frame.symbols == analysis.reference.symbols
-        self.selected = tuple(self.window.selection) if compatible else ()
+        from .atom_indices import atom_mapping
+        mapping=atom_mapping(frame,analysis.reference,allow_partial=True) if self.window.doc is self.document and frame is not None else None
+        self.selected=tuple(mapping[i] for i in self.window.selection if mapping[i] is not None) if mapping is not None else ()
         text = ', '.join(f'{analysis.reference.symbols[i]}{i+1}' for i in self.selected)
         self.selection_label.setText('Selected atoms: ' + text if self.selected else
                                      'No compatible atoms selected. Select atoms in the molecule, then click Use current atom selection.')
@@ -71,11 +74,14 @@ class VibrationAnalysisDialog(QDialog):
         with QSignalBlocker(self.selected_only): self.selected_only.setChecked(bool(self.selected))
         self.redraw()
 
+    @gui_operation('Analyzing vibrational modes')
     def redraw(self, *_):
         analysis = self.document.vibrations[self.analysis_combo.currentIndex()]
         self.rows = []
-        for i, mode in enumerate(analysis.modes):
-            share = displacement_share(mode, self.selected, len(analysis.reference.symbols))
+        selected=self.selected
+        shares=run_data_task(self,'Calculating mode participation',lambda:[displacement_share(m,selected,len(analysis.reference.symbols))
+            for m in progress_items(analysis.modes,'Analyzing mode participation')])
+        for i, (mode,share) in enumerate(zip(analysis.modes,shares)):
             if self.imaginary_only.isChecked() and not mode.imaginary: continue
             if self.selected_only.isChecked() and (share is None or share * 100 < self.threshold.value()): continue
             self.rows.append((i, mode, share))
@@ -84,7 +90,7 @@ class VibrationAnalysisDialog(QDialog):
         elif self.sort_combo.currentIndex() == 1: self.rows.sort(key=lambda row: row[1].frequency_cm1)
         else: self.rows.sort(key=lambda row: row[1].number)
         self.table.setRowCount(len(self.rows))
-        for r, (_, mode, share) in enumerate(self.rows):
+        for r, (_, mode, share) in enumerate(progress_items(self.rows,'Building mode table')):
             values = [mode.number, f'{mode.frequency_cm1:.4f}', '—' if share is None else f'{share*100:.3f}',
                       '—' if mode.ir_intensity is None else f'{mode.ir_intensity:.5g}', mode.ir_intensity_unit,
                       '—' if mode.raman_activity is None else f'{mode.raman_activity:.5g}',
@@ -116,16 +122,19 @@ class VibrationAnalysisDialog(QDialog):
         self.window.vibration_controls.arrows_check.setChecked(True)
         self.window.stop_vibration()
 
+    @gui_operation('Exporting vibration results')
     def write_csv(self, path):
         with open(path, 'w', encoding='utf-8-sig', newline='') as stream:
             writer = csv.writer(stream)
+            qe=any(hasattr(m,'qpoint') for _,m,_ in self.rows)
             writer.writerow(['analysis', 'mode', 'frequency_cm-1', 'selected_atoms_1based',
                              'selected_cartesian_displacement_share', 'IR_intensity', 'IR_unit',
-                             'Raman_activity_A4_amu', 'displacements_available'])
-            for _, mode, share in self.rows:
+                             'Raman_activity_A4_amu', 'displacements_available']+(['q_x','q_y','q_z','q_units'] if qe else []))
+            for _, mode, share in progress_items(self.rows,'Writing mode CSV'):
                 writer.writerow([self.analysis_combo.currentIndex()+1, mode.number, mode.frequency_cm1,
                                  ' '.join(str(i+1) for i in self.selected), share, mode.ir_intensity,
-                                 mode.ir_intensity_unit, mode.raman_activity, mode.can_animate])
+                                 mode.ir_intensity_unit, mode.raman_activity, mode.can_animate]+
+                                ([*mode.qpoint,'Cartesian 2pi/alat'] if qe else []))
 
     def export_csv(self):
         path, _ = QFileDialog.getSaveFileName(self, 'Export selected vibration results',

@@ -4,7 +4,7 @@ import re
 import numpy as np
 from .gaussian_vibrations import _number
 from .calculation_results import NUMBER
-from .output_text import read_output_lines
+from .output_text import read_output_lines, load_progress
 
 
 @dataclass
@@ -39,6 +39,8 @@ class SOCAnalysis:
 
 def read_soc(path):
     lines=read_output_lines(path);analyses=[];analysis=None;state=None;section='';i=0
+    if not any('SOC' in s or 'SPIN ORBIT CORRECTED' in s for s in lines):return []
+    progress=load_progress('ORCA: spin-orbit coupling',len(lines))
     vector=re.compile(rf'^\s*(\d+)\s+(\d+)\s+\(\s*({NUMBER})\s*,\s*({NUMBER})\s*\)\s+\(\s*({NUMBER})\s*,\s*({NUMBER})\s*\)\s+\(\s*({NUMBER})\s*,\s*({NUMBER})\s*\)')
     def ensure(line):
         nonlocal analysis
@@ -46,6 +48,7 @@ def read_soc(path):
             analysis=SOCAnalysis(line,'ORCA SOC');analyses.append(analysis)
         return analysis
     while i<len(lines):
+        progress(i)
         line=lines[i];upper=line.upper()
         if 'CALCULATED SOCME BETWEEN TRIPLETS AND SINGLETS' in upper:
             analysis=SOCAnalysis(i+1,'Triplet–singlet SOC');analyses.append(analysis);section='vector'
@@ -56,7 +59,7 @@ def read_soc(path):
         elif 'SOC CORRECTED' in upper or 'SPIN ORBIT CORRECTED' in upper:
             if 'ABSORPTION SPECTRUM VIA TRANSITION ELECTRIC' in upper:ensure(i+1);section='spectrum'
             elif 'SPECTRUM' in upper or 'SPECTRA' in upper:section=''
-        stabilization=re.search(rf'SOC stabilization of the ground state:\s*({NUMBER})',line)
+        stabilization=re.search(rf'SOC stabilization of the ground state:\s*({NUMBER})',line) if 'SOC stabilization' in line else None
         if stabilization:ensure(i+1).stabilization_cm=_number(stabilization[1])
         if section=='vector':
             m=vector.match(line)
@@ -96,4 +99,5 @@ def read_soc(path):
                     if old is None:analysis.transitions.append(item)
                     elif 'complex_dipole' in item:old.update(item)
         i+=1
+    progress(len(lines))
     return [a for a in analyses if a.elements or a.states or a.transitions]

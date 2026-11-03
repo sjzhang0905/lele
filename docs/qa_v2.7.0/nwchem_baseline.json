@@ -1,0 +1,51 @@
+{
+  "version": "2.6.0",
+  "synthetic": true,
+  "repeat": 2,
+  "cases": {
+    "nwchem_1000.nwo": {
+      "bytes": 198043,
+      "frames": 1000,
+      "steps": 0,
+      "seconds": [
+        0.09629431800021848,
+        0.09312344899990421
+      ],
+      "median_seconds": 0.09470888350006135,
+      "document_digest": "4e885a098eda5a4b9c7d6a43856176f26bac5389b8e05c1000cbd65292469d8e"
+    },
+    "nwchem_4000.nwo": {
+      "bytes": 792043,
+      "frames": 4000,
+      "steps": 0,
+      "seconds": [
+        0.41860021899992716,
+        0.4799827409988211
+      ],
+      "median_seconds": 0.44929147999937413,
+      "document_digest": "37cba95baefe1b7fcfab7b6846a690e11ea47038b47c93cebb64d882d9f49c58"
+    },
+    "nwchem_continuation_1000.nwo": {
+      "bytes": 84271,
+      "frames": 2,
+      "steps": 0,
+      "seconds": [
+        2.7143923259991425,
+        2.685073173001001
+      ],
+      "median_seconds": 2.699732749500072,
+      "document_digest": "259f9a8c2ff88239c1ade0f91b46a34bf9ca87e3ed7e368b234346239cd4c562"
+    },
+    "nwchem_continuation_4000.nwo": {
+      "bytes": 336271,
+      "frames": 2,
+      "steps": 0,
+      "seconds": [
+        41.48286964399995,
+        41.00746221200097
+      ],
+      "median_seconds": 41.24516592800046,
+      "document_digest": "79e1b211732558f4a73ee8d25a8b03e852364ffe90889a8596a9d614b9bab698"
+    }
+  }
+}

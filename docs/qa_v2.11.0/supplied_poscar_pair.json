@@ -1,0 +1,44 @@
+{
+  "origin_atom_1_based": 20,
+  "atoms": 100,
+  "row_rotation": [
+    [
+      0.28614935793037893,
+      0.9219456815460914,
+      -0.26102625391816886
+    ],
+    [
+      -0.944978566687904,
+      0.3166052056426768,
+      0.08232042432144483
+    ],
+    [
+      0.15853723050606652,
+      0.22310827873138894,
+      0.9618152850235637
+    ]
+  ],
+  "cell_metric_max_error_A2": 2.3646862246096134e-11,
+  "rotation_determinant": 1.0000000000000067,
+  "orthogonality_error": 3.361692921450859e-14,
+  "volume_before_A3": 4695.6302560431,
+  "volume_target_A3": 4695.630256043134,
+  "atom_order_preserved": true,
+  "private_files_redistributed": false,
+  "input_sha256": {
+    "POSCAR1": "4fde7bcbc1440612787f863cbb014c1535b8fe821ac5afa35b91d028e74a2f4c",
+    "POSCAR2": "e4515daac6cec8d646baa047e4f50ab15622079ddb2ff9b3c49868749ef95081",
+    "rotate_structure_from_analyzer_v32_v33_csv_v13_20260809.py": "afcae6112dea9a1b3479696fb1cd28986be45fa27ee6ab0720d20af7155ed9a1",
+    "crystal_field_site_analyzer_v20260809_33_fix13.py": "e11709ff82f482c22b223248466c7b60fa19660b496301625d94465c0ae3f307"
+  },
+  "full_precision": {
+    "max_cartesian_error_A": 7.528901058151405e-08,
+    "max_cell_error_A": 1.7763568394002505e-15,
+    "volume_A3": 4695.630256043134
+  },
+  "pasted_12_decimals": {
+    "max_cartesian_error_A": 7.529128681627029e-08,
+    "max_cell_error_A": 1.369215851809713e-11,
+    "volume_A3": 4695.630256044268
+  }
+}

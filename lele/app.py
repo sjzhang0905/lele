@@ -22,23 +22,29 @@ from PySide6.QtWidgets import (
     QComboBox, QSlider, QCheckBox, QDoubleSpinBox, QPushButton, QSpinBox,
     QGroupBox, QFormLayout, QTabWidget, QTableWidget, QTableWidgetItem,
     QMessageBox, QScrollArea, QPlainTextEdit, QAbstractItemView, QColorDialog,
-    QInputDialog, QDialog, QLineEdit, QTextEdit, QAbstractSpinBox, QStackedWidget, QHeaderView, QProgressDialog, QMenu,
+    QInputDialog, QDialog, QLineEdit, QTextEdit, QAbstractSpinBox, QStackedWidget, QHeaderView, QProgressDialog, QMenu, QSizePolicy,
 )
 from PySide6.QtGui import QAction, QActionGroup, QKeySequence, QColor, QIcon, QPalette
 
 from .render_options import RenderOptions
 from .backend_loader import get_backend_loader
+from .operations import run_data_task,ui_operation,gui_operation,ui_checkpoint,ui_busy
+from .output_text import LoadCancelled
 from .atom_panel import AtomPanel
 from .atom_appearance import DEFAULT_APPEARANCE, LABEL_MODES, appearance
 from .numeric_controls import IsovalueSpinBox
 from .vibration_controls import VibrationControls
-from .style_presets import (BUILTIN_PRESETS, CUSTOM_KEY, STYLE_KEYS,
+from .style_presets import (BUILTIN_PRESETS, CUSTOM_KEY, STYLE_KEYS, STYLE_MODES,
                             ATOM_PALETTES, BOND_PALETTES, SURFACE_FINISHES,
                             apply_preset, snapshot, validate_preset)
 from .welcome import WelcomePage
 from .restored_actions import RestoredActions
 from .trajectory_actions import TrajectoryAnalysisActions
 from .document_view import DocumentViewActions
+from .crystal_actions import CrystalActions
+from .element_rule_actions import ElementRuleActions
+from .project_actions import ProjectActions
+from .file_loading import FileLoadActions
 
 if TYPE_CHECKING:
     from .core import Document, Frame
@@ -46,7 +52,7 @@ if TYPE_CHECKING:
 ICON_PATH = Path(__file__).with_name('assets') / 'lele.ico'
 
 
-class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions, QMainWindow):
+class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions, CrystalActions, ElementRuleActions, ProjectActions, FileLoadActions, QMainWindow):
     def __init__(self, initial_files=()):
         super().__init__()
         self.setWindowTitle(APP_TITLE)
@@ -79,7 +85,16 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
         self.statusBar().showMessage('Open a calculation input/output file or a structure.')
 
     def eventFilter(self, watched, event):
-        if (watched is self.welcome_page.title_label
+        if watched is getattr(self,'tabs',None) and event.type() in (QEvent.Type.Move,QEvent.Type.Resize,QEvent.Type.Show):
+            self._queue_summary_alignment()
+        if (watched in (getattr(self,'footer_row',None),getattr(self,'status_message_label',None),getattr(self,'_summary_status_bar',None))
+                and event.type() in (QEvent.Type.Move,QEvent.Type.Resize,QEvent.Type.Show,QEvent.Type.LayoutRequest)):
+            self._queue_summary_alignment()
+        measurement=getattr(self,'measurement_value',None)
+        if (measurement is not None and watched in (measurement,measurement.lineEdit())
+                and event.type()==QEvent.Type.FocusIn and hasattr(self,'playback')):
+            self.playback.stop();self.play_btn.setText('Play')
+        if (watched is getattr(getattr(self,'welcome_page',None),'title_label',None)
                 and event.type() == QEvent.Type.Paint):
             watched.removeEventFilter(self)
             self._startup_painted = True
@@ -124,7 +139,7 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
         for filename in pending:
             if self._closing:
                 break
-            self._open_path_now(filename)
+            self._open_or_queue_file(filename)
 
     def _action(self, menu, title, handler, shortcut=None):
         act = QAction(title, self)
@@ -146,6 +161,7 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
         self._vibration_reference = None
         self._vibration_references = {}
         self._gif_exporting = False
+        self._png_exporting = False
         self._gif_progress = None
         self._gif_close_requested = False
         self._vibration_phase = 0.
@@ -180,6 +196,10 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
         self.edit_menu.addSeparator()
         self.supercell_action = self._action(self.edit_menu, 'Build supercell…', self.build_supercell)
         self.supercell_action.setEnabled(False)
+        self.reorient_action=self._action(self.edit_menu,'Reorient complete structure / crystal…',self.configure_coordinate_reorientation)
+        self.reorient_action.setEnabled(False)
+        self.vacuum_action=self._action(self.edit_menu,'Modify slab vacuum…',self.configure_vacuum)
+        self.vacuum_action.setEnabled(False)
         self.edit_menu.addSeparator()
         self.fit_plane_action = self._action(
             self.edit_menu, 'Fit selected plane', self.fit_selected_plane)
@@ -189,6 +209,7 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
         self.align_plane_action.setEnabled(False)
 
         self.view_menu = self.menuBar().addMenu('&View')
+        self.atom_legend_action=self._action(self.view_menu,'Atom legend…',self.show_atom_legend)
         self._action(self.view_menu, 'Fit to window', lambda: self.reset_camera())
         self._action(self.view_menu, 'Isometry', self.isometric_view)
         self.view_menu.addSeparator()
@@ -217,6 +238,7 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
         self.energy_curve_action=self._action(self.analysis_menu, 'Energy / maximum-RMS convergence curves…', self.show_energy_curve)
         self.energy_curve_action.setEnabled(False)
         self._action(self.analysis_menu, 'Vibrational frequencies', self.show_frequencies)
+        self.qe_reference_action=self._action(self.analysis_menu,'Assign QE phonon reference…',self.assign_qe_phonon_reference)
         self.neb_action=self._action(self.analysis_menu,'NEB / NEB-TS paths…',self.show_neb_results)
         self.goat_action=self._action(self.analysis_menu,'GOAT conformer ensemble…',self.show_goat_results)
         self.soc_action=self._action(self.analysis_menu,'Spin–orbit coupling (SOC)…',self.show_soc_results)
@@ -302,7 +324,6 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
         centre = QStackedWidget()
         self.canvas_stack = centre
         self.welcome_page = WelcomePage()
-        self.welcome_page.openRequested.connect(self.open_dialog)
         centre.addWidget(self.welcome_page)
         self.structure_page = QSplitter(Qt.Orientation.Vertical)
         centre.addWidget(self.structure_page)
@@ -311,18 +332,23 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
         self.results_only_title=QLabel('Calculation results')
         title_font=self.results_only_title.font();title_font.setPointSize(20);title_font.setBold(True)
         self.results_only_title.setFont(title_font);results_layout.addWidget(self.results_only_title)
-        results_notice=QLabel('No coordinates in this file. Available energies and orbital results can be viewed independently.')
+        results_notice=QLabel('No coordinates for this result. Available calculation data can be viewed independently.')
         results_notice.setWordWrap(True);results_layout.addWidget(results_notice)
         result_buttons=QHBoxLayout();results_layout.addLayout(result_buttons)
         self.results_energy_button=QPushButton('Energy curve…');self.results_energy_button.clicked.connect(self.show_energy_curve)
         self.results_orbital_button=QPushButton('HOMO / LUMO…');self.results_orbital_button.clicked.connect(self.show_orbital_energies)
         overview_button=QPushButton('Calculation overview…');overview_button.clicked.connect(self.show_calculation_overview)
         for button in (self.results_energy_button,self.results_orbital_button,overview_button):result_buttons.addWidget(button)
+        property_buttons=QHBoxLayout();results_layout.addLayout(property_buttons)
+        self.results_spectrum_button=QPushButton('UV-Vis spectrum…');self.results_spectrum_button.clicked.connect(lambda:self.show_spectrum('UV-Vis'))
+        self.results_transition_button=QPushButton('Export transitions CSV…');self.results_transition_button.clicked.connect(self.export_transition_data)
+        for button in (self.results_spectrum_button,self.results_transition_button):property_buttons.addWidget(button)
         results_tabs=QTabWidget();results_layout.addWidget(results_tabs,1)
         self.results_only_info=QPlainTextEdit();self.results_only_info.setReadOnly(True);results_tabs.addTab(self.results_only_info,'Results')
         self.results_only_source=QPlainTextEdit();self.results_only_source.setReadOnly(True);results_tabs.addTab(self.results_only_source,'Input / output text')
         centre.addWidget(self.results_only_page)
         self.tabs = QTabWidget()
+        self.tabs.installEventFilter(self)
         self.atom_table = QTableWidget(0, 4)
         self.atom_table.setHorizontalHeaderLabels(['Atom', 'X (Å)', 'Y (Å)', 'Z (Å)'])
         coordinate_font = self.atom_table.font()
@@ -375,20 +401,20 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
         self.summary_label = QLabel('Atoms 0  |  Formula -  |  electrons -  |')
         self.summary_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         self.summary_label.setWordWrap(False)
-        self.summary_label.setContentsMargins(8, 4, 8, 5)
+        self.summary_label.setContentsMargins(0, 0, 6, 0)
         self.summary_label.setToolTip(
             'Total atoms and composition in the active frame. Electron parity uses the net charge; '
             'neutral is assumed when charge is unknown. Short contacts use the periodic minimum image.')
         summary_row = QHBoxLayout()
         summary_row.setSpacing(0)
-        summary_row.addWidget(self.summary_label)
+        summary_row.addWidget(self.summary_label, 0, Qt.AlignmentFlag.AlignVCenter)
         self.short_contacts_button = QPushButton('Short contacts -')
         self.short_contacts_button.setFlat(True)
         self.short_contacts_button.setEnabled(False)
         self.short_contacts_button.setCursor(Qt.CursorShape.PointingHandCursor)
         contact_font = self.short_contacts_button.font(); contact_font.setUnderline(True)
         self.short_contacts_button.setFont(contact_font)
-        self.short_contacts_button.setStyleSheet('QPushButton { color: palette(link); padding: 4px 2px; border: none; }')
+        self.short_contacts_button.setStyleSheet('QPushButton { color: palette(link); padding: 1px 2px; border: none; }')
         self.short_contacts_button.setToolTip('Click to inspect atom pairs and distances.')
         self.short_contacts_button.clicked.connect(self.show_short_contacts)
         summary_row.addWidget(self.short_contacts_button)
@@ -397,15 +423,57 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
         self.measurement_label.setObjectName('selectionMeasurement')
         self.measurement_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         self.measurement_label.setWordWrap(False)
-        self.measurement_label.setContentsMargins(8, 4, 8, 5)
+        self.measurement_label.setContentsMargins(8, 0, 2, 0)
         self.measurement_label.setStyleSheet('font-weight: 600;')
         self.measurement_label.setToolTip(
             'Measurement in selection order: two atoms give a bond length, three a bond angle, '
             'and four a dihedral. Uses the active frame coordinates, including the frequency reference.')
-        summary_row.addWidget(self.measurement_label)
-        lower_layout.addLayout(summary_row)
+        summary_row.addWidget(self.measurement_label, 0, Qt.AlignmentFlag.AlignVCenter)
+        self.measurement_value = QDoubleSpinBox()
+        self.measurement_value.setDecimals(4)
+        self.measurement_value.setKeyboardTracking(False)
+        self.measurement_value.installEventFilter(self)
+        self.measurement_value.lineEdit().installEventFilter(self)
+        self.measurement_value.setFixedWidth(118)
+        self.measurement_value.setToolTip('Enter a target value and press Enter or Set. Move the last selected atom and its bonded terminal fragment.')
+        self.measurement_value.valueChanged.connect(self._measurement_value_changed)
+        self.measurement_value.editingFinished.connect(self._apply_measurement_value)
+        self.measurement_set = QPushButton('Set')
+        self.measurement_set.setFixedWidth(36)
+        self.measurement_set.clicked.connect(self._apply_measurement_value)
+        self.measurement_value.hide();self.measurement_set.hide()
+        self._measurement_context = None
+        self._measurement_pending = False
+        summary_row.addWidget(self.measurement_value)
+        summary_row.addWidget(self.measurement_set)
+        self.footer_row = QWidget()
+        self.footer_row.setLayout(summary_row)
+        summary_row.setContentsMargins(0, 0, 4, 0)
+        # Keep space for the native editor height even when it is hidden.
+        # Showing a bond length/angle must not resize QStatusBar and the canvas.
+        footer_widgets = (self.summary_label, self.short_contacts_button,
+                          self.measurement_label, self.measurement_value, self.measurement_set)
+        for widget in footer_widgets:
+            widget.ensurePolished()
+        self.footer_row.setFixedHeight(max(widget.sizeHint().height() for widget in footer_widgets))
+        self.footer_row.setSizePolicy(QSizePolicy.Policy.Ignored,QSizePolicy.Policy.Fixed)
+        self.footer_row.hide()
+        # One bottom row replaces the former summary row plus separate status
+        # strip. Keep full status text available on hover in its compact cell.
+        self.status_message_label = QLabel()
+        self.status_message_label.setFixedWidth(235)
+        self.status_message_label.setContentsMargins(5,0,5,0)
+        bar=self.statusBar();bar.setSizeGripEnabled(False)
+        self._summary_status_bar=bar
+        bar.addPermanentWidget(self.status_message_label)
+        bar.addPermanentWidget(self.footer_row,1)
+        bar.messageChanged.connect(self._status_message_changed)
+        bar.layout().setContentsMargins(0,0,0,0)
+        self._footer_alignment_timer=QTimer(self);self._footer_alignment_timer.setSingleShot(True)
+        self._footer_alignment_timer.setInterval(0);self._footer_alignment_timer.timeout.connect(self._align_summary_footer)
+        for watched in (bar,self.footer_row,self.status_message_label):watched.installEventFilter(self)
         self.structure_page.addWidget(lower_panel)
-        self.structure_page.setSizes([630, 220])
+        self.structure_page.setSizes([660, 190])
         root.addWidget(centre)
 
         def control_page(title):
@@ -440,21 +508,29 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
         form.addRow(QLabel('Presets change appearance only; coordinates, bond\n'
                                'cutoff, labels and cell settings stay unchanged.'))
         self.style_combo = QComboBox()
-        self.style_combo.addItems(['Ball and stick', 'Space filling', 'Sticks', 'Wireframe'])
+        self.style_combo.addItems(STYLE_MODES)
         self.style_combo.currentTextChanged.connect(lambda s: self._set_option('style', s))
         form.addRow('Style', self.style_combo)
         self.atom_slider = QSlider(Qt.Orientation.Horizontal)
         self.atom_slider.setRange(20, 180)
-        self.atom_slider.setValue(60)
-        self.atom_slider.valueChanged.connect(lambda v: self._set_option('atom_scale', v / 100))
+        self.atom_slider.setValue(round(self.render_options.atom_scale * 100))
+        self.atom_slider.valueChanged.connect(lambda v: self._set_option(
+            'space_filling_scale' if self.render_options.style == 'Space filling' else 'atom_scale', v / 100))
         form.addRow('Atom size', self.atom_slider)
+        self.sf_radii_combo = QComboBox()
+        self.sf_radii_combo.addItems(['Atomic', 'Ionic', 'van der Waals'])
+        self.sf_radii_combo.setToolTip('VESTA 3.5.8 radius table. Space filling uses 100% at Atom size 100%; ionic values represent preset oxidation/coordination states.')
+        self.sf_radii_combo.setEnabled(False)
+        self.sf_radii_combo.currentTextChanged.connect(lambda v: self._set_option('space_filling_radii', v))
+        form.addRow('VESTA radii', self.sf_radii_combo)
         self.bond_slider = QSlider(Qt.Orientation.Horizontal)
         self.bond_slider.setRange(3, 35)
-        self.bond_slider.setValue(11)
+        self.bond_slider.setValue(round(self.render_options.bond_scale * 100))
         self.bond_slider.valueChanged.connect(lambda v: self._set_option('bond_scale', v / 100))
         form.addRow('Bond thickness', self.bond_slider)
         self.atom_palette_combo = QComboBox()
         self.atom_palette_combo.addItems(ATOM_PALETTES)
+        self.atom_palette_combo.setToolTip('Default uses slightly lighter element colors. GaussView style remains available from Chemcraft’s compatibility preset.')
         self.atom_palette_combo.currentTextChanged.connect(
             lambda val: self._set_option('atom_palette', val))
         form.addRow('Atom colours', self.atom_palette_combo)
@@ -465,16 +541,28 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
         form.addRow('Bond colours', self.bond_palette_combo)
         self.finish_combo = QComboBox()
         self.finish_combo.addItems(SURFACE_FINISHES)
+        self.finish_combo.setCurrentText(self.render_options.surface_finish)
         self.finish_combo.currentTextChanged.connect(
             lambda val: self._set_option('surface_finish', val))
         form.addRow('Lighting', self.finish_combo)
+        self.bond_model_combo = QComboBox()
+        self.bond_model_combo.addItems(['Chemcraft pair ranges', 'Covalent radii'])
+        self.bond_model_combo.setToolTip('Ordinary-bond limits from Chemcraft b816bt. Explicit element-pair rules override these limits. Hydrogen bonds are controlled separately.')
+        self.bond_model_combo.currentTextChanged.connect(lambda v: self._set_option('bond_model', v))
+        form.addRow('Bond search', self.bond_model_combo)
         self.cutoff_slider = QSlider(Qt.Orientation.Horizontal)
-        self.cutoff_slider.setRange(100, 160)
-        self.cutoff_slider.setValue(118)
+        self.cutoff_slider.setRange(10, 500)
+        self.cutoff_slider.setValue(100)
         self.cutoff_slider.valueChanged.connect(lambda v: self._set_option('bond_cutoff', v / 100))
-        self.cutoff_slider.setToolTip('Used for initial bonds and Edit → Rebuild bonds from distances. '
-                                     'Moving or editing atoms preserves their existing connections.')
-        form.addRow('Bond cutoff ×', self.cutoff_slider)
+        self.cutoff_slider.setToolTip('Distance multiplier, 0.10–5.00. Chemcraft’s tabulated ordinary-bond limits use ×1.00. Changing this rebuilds automatic bonds; manual bonds and element-pair rules remain.')
+        self.cutoff_spin=QDoubleSpinBox()
+        self.cutoff_spin.setRange(.10,5.)
+        self.cutoff_spin.setDecimals(2);self.cutoff_spin.setSingleStep(.05)
+        self.cutoff_spin.setValue(1.0);self.cutoff_spin.setKeyboardTracking(False)
+        self.cutoff_spin.setToolTip(self.cutoff_slider.toolTip())
+        self.cutoff_spin.valueChanged.connect(lambda v:self._set_option('bond_cutoff',v))
+        cutoff_row=QHBoxLayout();cutoff_row.addWidget(self.cutoff_slider,1);cutoff_row.addWidget(self.cutoff_spin)
+        form.addRow('Bond cutoff ×',cutoff_row)
         self.bond_check = QCheckBox('Display bonds')
         self.bond_check.setChecked(True)
         self.bond_check.toggled.connect(lambda v: self._set_option('bonds', v))
@@ -501,7 +589,7 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
         dark_btn.clicked.connect(lambda: self._set_option('background', '#131824'))
         form.addRow(dark_btn)
         light_btn = QPushButton('Light background')
-        light_btn.clicked.connect(lambda: self._set_option('background', '#F7F8FA'))
+        light_btn.clicked.connect(lambda: self._set_option('background', '#FFFFFF'))
         form.addRow(light_btn)
         display_outer.addWidget(group)
         display_outer.addStretch(1)
@@ -518,6 +606,7 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
             lambda _: self._set_option('axes_position', self.axes_position_combo.currentData()))
         axis_form.addRow('Position', self.axes_position_combo)
         self.axes_basis_combo = QComboBox()
+        self.axes_basis_combo.addItem('Automatic (periodic abc / molecular XYZ)', 'Auto')
         self.axes_basis_combo.addItem('XYZ (Cartesian)', 'XYZ')
         self.axes_basis_combo.addItem('abc (cell vectors)', 'abc')
         self.axes_basis_combo.currentIndexChanged.connect(
@@ -596,7 +685,7 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
         edit_outer = control_page('Edit')
         measurements = QGroupBox('Geometry / atom selection')
         m_layout = QVBoxLayout(measurements)
-        selection_help = QLabel('Click atoms to select; right-click clears.\n'
+        selection_help = QLabel('Click atoms to select; right-click an atom to edit its index.\n'
                                 'Ctrl+B toggles selected bonds.\n'
                                 'Ctrl+H toggles a selected hydrogen bond (dashed).\n'
                                 'Ctrl+G selects complete connected fragment(s).\n'
@@ -656,11 +745,17 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
         alignment_row.addWidget(self.align_combo)
         alignment_row.addWidget(self.align_btn)
         m_layout.addLayout(alignment_row)
-        alignment_help = QLabel('All axes (XYZ/abc): rotate atomic coordinates only.\n'
-                                'The lattice and camera remain unchanged.\n'
-                                'The first selected atom remains fixed.')
+        alignment_help = QLabel('XYZ: periodic coordinates and cell rotate together.\n'
+                                'a/b/c: rotate atoms within the fixed cell (changes crystal geometry).\n'
+                                'The first selected atom remains fixed. Use Origin + X/Z to define both axes at once.')
         alignment_help.setWordWrap(True)
         m_layout.addWidget(alignment_help)
+        self.reorient_btn=QPushButton('Set origin + X/Z axes…')
+        self.reorient_btn.setToolTip('Select origin, X hint, Z in order, or enter atom indices. Uses a proper rotation of the complete crystal; also accepts a rotation matrix from the analyzer script.')
+        self.reorient_btn.clicked.connect(self.configure_coordinate_reorientation)
+        m_layout.addWidget(self.reorient_btn)
+        self.vacuum_btn=QPushButton('Modify slab vacuum…');self.vacuum_btn.setEnabled(False)
+        self.vacuum_btn.clicked.connect(self.configure_vacuum);m_layout.addWidget(self.vacuum_btn)
         edit_outer.addWidget(measurements)
         plane_group = QGroupBox('Best-fit selection plane')
         plane_layout = QVBoxLayout(plane_group)
@@ -706,10 +801,13 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
         self.fragment_btn.setEnabled(False)
         self.origin_btn.setEnabled(False)
         self.align_btn.setEnabled(False)
+        self.reorient_btn.setEnabled(False)
         self.invert_btn.setEnabled(False)
         self.delete_btn.setEnabled(False)
         self._install_restored_controls()
+        self._install_crystal_controls()
         self._init_document_views()
+        self._install_project_actions()
 
     def _ensure_3d_view(self):
         """Create the native canvas once on the GUI thread after preloading."""
@@ -733,6 +831,7 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
         self.vtk.GetRenderWindow().GetInteractor().SetInteractorStyle(vtkInteractorStyleTrackballCamera())
         self.vtk.scene_renderer = self.scene
         self.vtk.atomClick.connect(self._pick_from_canvas)
+        if hasattr(self.vtk,'atomContextClick'):self.vtk.atomContextClick.connect(self._atom_context_from_canvas)
         if hasattr(self.vtk,'rectangleSelected'):
             self.vtk.rectangleSelected.connect(self._rectangle_selected)
             self.vtk.set_box_selection(self.box_select_action.isChecked())
@@ -744,7 +843,7 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
         self.axes_widget.SetInteractor(self.vtk.GetRenderWindow().GetInteractor())
         self.axes_widget.SetViewport(0.015, 0.015, 0.225, 0.225)
         self.structure_page.insertWidget(0, self.vtk)
-        self.structure_page.setSizes([630, 220])
+        self.structure_page.setSizes([660, 190])
 
     @property
     def doc(self) -> Document | None:
@@ -768,6 +867,20 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
         for name in filenames:
             self.open_path(name)
 
+    def assign_qe_phonon_reference(self):
+        if self.doc is None or not getattr(self.doc.calculation_results,'phonon_sets',None):
+            QMessageBox.information(self,'QE phonons','Open a QE PHONON output or normalized .modes file first.');return
+        from .qe_reference_dialog import QeReferenceDialog
+        from .qe_phonons import bind_qe_phonons
+        dialog=QeReferenceDialog(self,self.doc)
+        if dialog.exec()!=QDialog.DialogCode.Accepted:return
+        if dialog.reference() is None:return
+        try:
+            document=bind_qe_phonons(self.doc,dialog.reference(),dialog.alat.value(),dialog.reference_name())
+        except ValueError as exc:
+            QMessageBox.warning(self,'QE reference mismatch',str(exc));return
+        self._attach_loaded_document(document)
+
     def open_path(self, filename):
         if self._closing:
             return
@@ -779,15 +892,22 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
                 self._backend_start_timer.start(0)
             self.statusBar().showMessage('Loading components… The selected file will open when ready.')
             return
-        self._open_path_now(filename)
+        self._open_or_queue_file(filename)
 
     def _open_path_now(self, filename):
+        if Path(filename).suffix.lower() == '.lele':
+            return self._load_project_path(filename)
         try:
             from .formats import load_document
-            new_doc = load_document(filename)
+            new_doc = run_data_task(self,'Loading '+Path(filename).name,lambda:load_document(filename),cancellable=True)
+        except LoadCancelled:return
         except Exception as ex:
             QMessageBox.warning(self, 'Could not open file', f'{Path(filename).name}\n\n{ex}')
             return
+        self._attach_loaded_document(new_doc)
+
+    @gui_operation('Preparing structure view')
+    def _attach_loaded_document(self, new_doc):
         index = len(self.documents)
         self.documents.append(new_doc)
         self._add_document_tree(index, new_doc)
@@ -798,12 +918,18 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
         detail=(f'{len(new_doc.frames)} frame(s) • {len(new_doc.frames[0].symbols)} atoms' if new_doc.frames else 'calculation results • no structure')
         self.statusBar().showMessage(f'Opened {new_doc.path.name} • {detail}{suffix}')
 
+    @gui_operation('Preparing file tree')
     def _add_document_tree(self, index, new_doc):
         from .energy_units import display_energy
         label=new_doc.format_name+(' · results only' if not new_doc.frames else '')
         head = QTreeWidgetItem([f'{new_doc.path.name}  ({label})'])
         head.setData(0, Qt.ItemDataRole.UserRole, (index, 0))
         self.files_tree.addTopLevelItem(head)
+        if not getattr(self,'_lazy_tree_connected',False):
+            from .workflow_ui import expand_tree_item
+            self.files_tree.itemExpanded.connect(expand_tree_item)
+            self.files_tree.setUniformRowHeights(True)
+            self._lazy_tree_connected=True
         from .workflow_ui import populate_tree, populate_energy_steps
         populate_energy_steps(self, index, new_doc, head)
         if not new_doc.frames:
@@ -812,22 +938,19 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
         if populate_tree(self,index,new_doc,head):return
         geometry_parent = head
         if new_doc.vibrations:
-            geometry_parent = QTreeWidgetItem([f'Geometry / optimization ({len(new_doc.frames)} frames)'])
+            label = ('Frequency calculation structures' if new_doc.calculation_results is not None
+                     and new_doc.calculation_results.program == 'VASP' else 'Geometry / optimization')
+            geometry_parent = QTreeWidgetItem([f'{label} ({len(new_doc.frames)} frames)'])
             geometry_parent.setData(0, Qt.ItemDataRole.UserRole, (index, 0))
             head.addChild(geometry_parent)
         if len(new_doc.frames) > 1 or new_doc.vibrations:
-            for i, frame in enumerate(new_doc.frames):
-                energy,unit=display_energy(frame,new_doc.format_name)
-                suffix = f' • {energy:.5f} {unit}' if energy is not None else ''
-                child = QTreeWidgetItem([f'Frame {i + 1}{suffix}'])
-                child.setData(0, Qt.ItemDataRole.UserRole, (index, i))
-                geometry_parent.addChild(child)
-                self._frame_tree_items[index, i] = child
+            from .workflow_ui import add_frame_items
+            add_frame_items(self,index,new_doc,geometry_parent,range(len(new_doc.frames)))
         else:
             self._frame_tree_items[index, 0] = head
         for analysis_index, analysis in enumerate(new_doc.vibrations):
             imaginary = sum(mode.imaginary for mode in analysis.modes)
-            title = 'Frequencies' if len(new_doc.vibrations) == 1 else f'Frequencies {analysis_index + 1}'
+            title = analysis.purpose or ('Frequencies' if len(new_doc.vibrations) == 1 else f'Frequencies {analysis_index + 1}')
             group = QTreeWidgetItem([f'{title} ({len(analysis.modes)} modes · {imaginary} imaginary)'])
             group.setData(0, Qt.ItemDataRole.UserRole, (index, 'frequencies', analysis_index))
             head.addChild(group)
@@ -843,7 +966,7 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
                 item.setData(0, Qt.ItemDataRole.UserRole, (index, 'mode', analysis_index, mode_index))
                 details = [f'Mode {mode.number}: {mode.frequency_cm1:.4f} cm⁻¹']
                 if mode.ir_intensity is not None:
-                    details.append(f'IR intensity: {mode.ir_intensity:.4f} km/mol')
+                    details.append(f'IR intensity: {mode.ir_intensity:.4f} {mode.ir_intensity_unit}')
                 if mode.symmetry:
                     details.append(f'Symmetry: {mode.symmetry}')
                 item.setToolTip(0, '\n'.join(details))
@@ -872,6 +995,7 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
                 return
             if len(data)>1 and data[1]=='series':
                 doc_index,_,indices,position,label=data
+                indices=self._tree_sequences[indices]
                 self._jump_to_result_sequence(self.documents[doc_index],indices[position],indices,label)
                 return
             if len(data)>1 and data[1]=='analysis':
@@ -892,7 +1016,12 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
         idx = self.current_doc if doc_index is None else doc_index
         if idx < 0:
             return
-        path = self.documents[idx].path
+        document = self.documents[idx]
+        if document.source_preview is not None:
+            self.source_view.setPlainText(document.source_preview)
+            self.results_only_source.setPlainText(document.source_preview)
+            return
+        path = document.path
         try:
             with path.open('rb') as f:
                 raw = f.read(180_000)
@@ -904,6 +1033,7 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
             else:
                 decoded = decode_output(raw)
                 self.source_view.setPlainText(decoded + ('\n\n[Text preview truncated at 180 KB]' if remaining else ''))
+            document.source_preview = self.source_view.toPlainText()
         except Exception as ex:
             self.source_view.setPlainText(str(ex))
         self.results_only_source.setPlainText(self.source_view.toPlainText())
@@ -921,6 +1051,7 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
         self._refresh_coordinates();self._refresh_element_choices();self._refresh_measurement()
         self.refresh_scene();self._refresh_info();self._update_gif_action()
 
+    @gui_operation('Preparing structure frame')
     def change_frame(self, index, *, switch_doc=None, reset_camera=False):
         self._pending_paste=None
         self._energy_only_context = None
@@ -946,8 +1077,8 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
         head = self.files_tree.topLevelItem(self.current_doc)
         if head is not None:
             sequence=self._navigation_indices()
-            target=getattr(self,'_series_tree_items',{}).get((self.current_doc,tuple(sequence),self.frame_index))
-            if target is None:target = self._frame_tree_items.get((self.current_doc, self.frame_index), head)
+            from .workflow_ui import frame_tree_item
+            target=frame_tree_item(self,self.current_doc,sequence,self.frame_index,head)
             if target is not None and self.files_tree.currentItem() is not target:
                 self._ignore_tree = True
                 try:
@@ -969,9 +1100,9 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
         self._refresh_element_choices()
         from .core import valid_lattice
         has_cell = valid_lattice(frame)
-        self.axes_basis_combo.model().item(1).setEnabled(has_cell)
+        self.axes_basis_combo.model().item(self.axes_basis_combo.findData('abc')).setEnabled(has_cell)
         if not has_cell and self.axes_basis_combo.currentData() == 'abc':
-            self.axes_basis_combo.setCurrentIndex(0)
+            self.axes_basis_combo.setCurrentIndex(self.axes_basis_combo.findData('XYZ'))
         self._set_frame_controls_enabled(len(sequence) > 1)
         self.play_btn.setEnabled(len(sequence) > 1)
         self.refresh_scene(reset_camera=reset_camera)
@@ -982,6 +1113,8 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
         self._refresh_frame_tree_label()
 
     def show_frequencies(self):
+        if self.doc is not None and not self.doc.vibrations and getattr(self.doc.calculation_results,'phonon_sets',None):
+            self.assign_qe_phonon_reference();return
         if self.doc is None or not self.doc.vibrations:
             self.statusBar().showMessage('No supported harmonic frequencies in the current file.', 5000)
             return
@@ -1002,7 +1135,10 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
         reference_index=len(source_doc.frames)-1
         if source_analysis.stage_index is not None:
             import numpy as np
-            matches=[i for i,f in enumerate(source_doc.frames) if f.symbols==source_analysis.reference.symbols and np.allclose(f.positions,source_analysis.reference.positions,atol=2.e-6,rtol=0)]
+            reference_line=source_analysis.reference.info.get('vasp_reference_source_line')
+            matches=[i for i,f in enumerate(source_doc.frames) if f.symbols==source_analysis.reference.symbols
+                     and (f.info.get('source_line')==reference_line if reference_line is not None else
+                          np.allclose(f.positions,source_analysis.reference.positions,atol=2.e-6,rtol=0))]
             if matches:reference_index=matches[-1]
         self.change_frame(reference_index, switch_doc=doc_index)
         self._active_vibration = (doc_index, analysis_index, mode_index)
@@ -1021,6 +1157,7 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
         self.tabs.setTabText(self.tabs.indexOf(self.atom_table), 'Coordinates (reference)')
         suffix = ' · imaginary' if mode.imaginary else ''
         description = f'Mode {mode.number} · {mode.frequency_cm1:.4f} cm⁻¹{suffix}'
+        if hasattr(mode,'qpoint'):description+='\n'+analysis.purpose
         if mode.ir_intensity is not None:
             description += f'\nIR: {mode.ir_intensity:.4f} {mode.ir_intensity_unit}'
         if mode.raman_activity is not None:
@@ -1079,6 +1216,7 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
         self._render_vibration()
 
     def _advance_vibration(self):
+        if ui_busy():return
         if self._active_vibration is None:
             return
         from math import tau
@@ -1089,10 +1227,8 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
 
     def _vibration_preview(self):
         _, analysis, mode = self._active_vibration
-        preview = self.frame.clone()
-        preview.positions = self.doc.vibrations[analysis].modes[mode].positions_at(
-            self.frame, self._vibration_phase, self.vibration_controls.amplitude.value())
-        return preview
+        return self.doc.vibrations[analysis].modes[mode].preview_frame(
+            self.frame,self._vibration_phase,self.vibration_controls.amplitude.value(),self.render_options.bond_cutoff)
 
     def _render_vibration(self):
         if self._active_vibration is None:
@@ -1117,32 +1253,36 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
         Blocking both itemChanged and selectionChanged prevents a structural
         transform from feeding its own formatted values back into the model.
         """
-        frame = self.frame
-        self._ignore_table = True
-        self.atom_table.setUpdatesEnabled(False)
-        try:
-            with QSignalBlocker(self.atom_table):
-                if frame is None:
-                    self.atom_table.setRowCount(0)
-                    return
-                from .core import coordinate_table_rows
-                rows = coordinate_table_rows(frame)
-                self.atom_table.setRowCount(len(rows))
-                for i, row in enumerate(rows):
-                    for j, value in enumerate(row):
-                        item = self.atom_table.item(i, j)
-                        if item is None:
-                            item = QTableWidgetItem()
-                            self.atom_table.setItem(i, j, item)
-                        item.setText(value)
-                        if j == 0 or self._active_vibration is not None or self._alignment_enabled():
-                            item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-                        else:
-                            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEditable)
-        finally:
-            self._ignore_table = False
-            self.atom_table.setUpdatesEnabled(True)
-            self.atom_table.viewport().update()
+        from .operations import ui_operation
+        with ui_operation(self,'Updating coordinate table'):
+            frame = self.frame
+            self._ignore_table = True
+            self.atom_table.setUpdatesEnabled(False)
+            try:
+                with QSignalBlocker(self.atom_table):
+                    if frame is None:
+                        self.atom_table.setRowCount(0)
+                        return
+                    from .core import coordinate_table_rows
+                    rows = coordinate_table_rows(frame)
+                    self.atom_table.setRowCount(len(rows))
+                    for i, row in enumerate(rows):
+                        from .operations import ui_checkpoint
+                        ui_checkpoint('Building coordinate table',i,len(rows))
+                        for j, value in enumerate(row):
+                            item = self.atom_table.item(i, j)
+                            if item is None:
+                                item = QTableWidgetItem()
+                                self.atom_table.setItem(i, j, item)
+                            item.setText(value)
+                            if j == 0 or self._active_vibration is not None or self._alignment_enabled():
+                                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                            else:
+                                item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEditable)
+            finally:
+                self._ignore_table = False
+                self.atom_table.setUpdatesEnabled(True)
+                self.atom_table.viewport().update()
 
     def _refresh_element_choices(self):
         """Synchronize the Edit-page element selector with the active frame."""
@@ -1157,16 +1297,21 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
             if choices:
                 self.element_combo.setCurrentText(previously if previously in choices else choices[0])
 
-    def _refresh_after_geometry_edit(self):
+    def _refresh_after_geometry_edit(self,*,preserve_results=False):
         """Publish new coordinates, selection, rendering and document details."""
         if getattr(self, 'renderer', None) is not None:
             self.renderer.periodic_preview = None
-        if getattr(self,'undo_stack',None):
+        if getattr(self,'undo_stack',None) and not preserve_results:
             old=self.undo_stack[-1]
             if old[0:2]==(self.current_doc,self.frame_index):
                 from .energy_units import rigid_equivalent
                 if not rigid_equivalent(old[2],self.frame):
                     self.frame.energy_ev=None;self.frame.info.pop('energy_source',None)
+                    self.frame.info.pop('optimization_converged',None)
+                    if str(self.frame.info.get('source_kind','')).startswith('qe'):
+                        for key in ('qe_total_energy_ry','qe_energy_source_line','qe_forces_ev_ang',
+                                    'cartesian_max_force_ev_ang','cartesian_rms_force_ev_ang'):
+                            self.frame.info.pop(key,None)
                     self._refresh_frame_tree_label()
         self._refresh_element_choices()
         self._refresh_coordinates()
@@ -1186,6 +1331,7 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
         self.frame.info['charge_override'] = int(new_charge)
         self._refresh_info()
 
+    @gui_operation('Analyzing structure')
     def _refresh_info(self):
         doc, frame = self.doc, self.frame
         if doc is None:
@@ -1199,29 +1345,45 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
                 from ase.units import Hartree
                 step = doc.calculation_results.steps[self._energy_only_context[1]]
                 cycle = step.cycle if step.cycle is not None else self._energy_only_context[1]+1
-                text = (f'Selected energy step: {cycle}\n'
-                        f'Energy: {step.energy_ev/Hartree:.12f} Eh\n'
-                        f'        {step.energy_ev:.9f} eV\n'
-                        f'        {step.energy_ev*23.0605478306:.8f} kcal/mol\n'
+                if doc.calculation_results.program == 'VASP':
+                    from .vasp_results import energy_lines
+                    energy_text = '\n'.join(energy_lines(step.info))+'\n'
+                else:
+                    energy_text = (f'Energy: {step.energy_ev/Hartree:.12f} Eh\n'
+                                   f'        {step.energy_ev:.9f} eV\n'
+                                   f'        {step.energy_ev*23.0605478306:.8f} kcal/mol\n')
+                text = (f'Selected energy step: {cycle}\n'+energy_text+
                         f'Source line: {step.source_line}\nNo structure for this energy record.\n\n' + text)
             self.results_only_title.setText(doc.path.name+' · calculation results')
             self.results_only_info.setPlainText(text);self.info_view.setPlainText(text)
             self.summary_label.setText('No structure in this file')
             return
-        from .structure_summary import molecular_formula
+        from .site_occupancy import composition,is_disordered
         from .chemical_analysis import electron_parity
         from .periodic_geometry import short_contacts
         lines = [f'File: {doc.path}', f'Reader: {doc.format_name}',
                  ('View: frequency reference geometry' if self._active_vibration is not None
                   else f'Frame: {self.frame_index + 1} of {len(doc.frames)}'),
                  f'Atoms: {len(frame.symbols)}', f'Periodic flags: {frame.pbc}']
+        if is_disordered(frame):
+            lines.append('Occupancy-weighted composition: '+composition(frame))
+            lines.append('Fractional occupancies describe average sites; bonding uses the representative species, not a uniquely ordered microscopic configuration.')
+        if frame.info.get('vacuum_adjustment'):
+            data=frame.info['vacuum_adjustment'];lines.append(f'Last vacuum spacing: {data["gap"]:.6f} → {data["new_gap"]:.6f} Å (atomic-plane convention; Cartesian coordinates unchanged)')
         if frame.info.get('series_label'):lines.insert(2,'Result series: '+frame.info['series_label'])
+        if frame.info.get('optimization_converged'):lines.append('Geometry optimization: converged')
         if 'stage_index' in frame.info and doc.calculation_results is not None:
             stage=doc.calculation_results.stages[frame.info['stage_index']]
             lines.insert(2,'Stage: '+stage.name+' · '+stage.status)
         from .energy_units import display_energy
         energy,unit=display_energy(frame,doc.format_name)
-        if energy is not None:lines.append(f"Energy: {energy:.8f} {unit} ({frame.info.get('energy_source','reader result')})")
+        if energy is not None:
+            if doc.calculation_results is not None and doc.calculation_results.program == 'VASP':
+                lines.append(f'E0 (σ→0): {energy:.9f} {unit}')
+            else:lines.append(f"Energy: {energy:.8f} {unit} ({frame.info.get('energy_source','reader result')})")
+            if 'qe_total_energy_ry' in frame.info:lines.append(f'QE source total energy: {frame.info["qe_total_energy_ry"]:.10f} Ry')
+        if frame.info.get('source_kind') in ('vasp_out', 'vasp_xdatcar'):
+            if 'vasp_nelect' in frame.info:lines.append(f'Valence electrons (NELECT): {frame.info["vasp_nelect"]:g}')
         supercell = frame.info.get('supercell')
         if supercell is not None:
             repeats = ' × '.join(str(n) for n in supercell['repeats'])
@@ -1238,7 +1400,7 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
         if doc.vibrations:
             lines.append(f'Frequency calculations: {len(doc.vibrations)}')
             for n, analysis in enumerate(doc.vibrations, 1):
-                lines.append(f'  {n}: {len(analysis.modes)} modes, '
+                lines.append(f'  {n}: '+(analysis.purpose+' · ' if analysis.purpose else '')+f'{len(analysis.modes)} modes, '
                              f'{sum(m.imaginary for m in analysis.modes)} imaginary')
                 if analysis.note:
                     lines.append(analysis.note)
@@ -1261,6 +1423,12 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
             lines.extend('  ' + '  '.join(f'{v: .9f}' for v in row)
                          for row in alignment['rotation'])
             lines.append('Translation (Å): ' + ', '.join(f'{v:.9f}' for v in alignment['translation']))
+        reorientation=frame.info.get('coordinate_reorientation')
+        if reorientation is not None:
+            lines.append('\nLast coordinate reorientation: r_new = (r_old + image_shift @ cell_old) @ Q + t')
+            lines.append('Q (row vectors; cell_new = cell_old @ Q):')
+            lines.extend('  '+' '.join(f'{v: .12f}' for v in row) for row in reorientation['row_rotation'])
+            lines.append('Translation (Å): '+', '.join(f'{v:.12f}' for v in reorientation['translation']))
         if doc.note:
             lines.append('\nReader note: ' + doc.note)
         if self._alignment_enabled():
@@ -1279,13 +1447,36 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
         parity = electron_parity(frame)
         self.summary_label.setText(
             f'Atoms {len(frame.symbols)}  |  '
-            f'{system} {molecular_formula(frame.symbols)}  |  '
+            f'{system} {composition(frame)}  |  '
             f'electrons {parity.split()[0].lower()}  |')
         self.summary_label.setToolTip(
             f'Electron parity: {parity}\nComposition and counts refer to the active source geometry.')
         count, _ = short_contacts(frame)
         self.short_contacts_button.setText(f'Short contacts {count}')
         self.short_contacts_button.setEnabled(True)
+        self._align_summary_footer()
+
+    def _align_summary_footer(self):
+        from shiboken6 import isValid
+        if not isValid(self):return
+        if not hasattr(self,'footer_row') or self.footer_row.isHidden():return
+        from PySide6.QtCore import QPoint
+        # A resize can deliver several events before QStatusBar applies its
+        # pending layout. Never accumulate a correction against stale geometry.
+        self._summary_status_bar.layout().activate()
+        target=self.tabs.mapToGlobal(QPoint(0,0)).x()
+        current=self.footer_row.mapToGlobal(QPoint(0,0)).x()
+        if abs(target-current)>1:
+            self.status_message_label.setFixedWidth(max(0,self.status_message_label.width()+target-current))
+            self._summary_status_bar.layout().activate()
+
+    def _queue_summary_alignment(self):
+        timer=getattr(self,'_footer_alignment_timer',None)
+        if timer is not None and not timer.isActive():timer.start()
+
+    def resizeEvent(self,event):
+        super().resizeEvent(event)
+        self._queue_summary_alignment()
 
     def show_short_contacts(self):
         if self.frame is None:
@@ -1296,13 +1487,17 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
             context = f'{self.doc.path.name} · Frequency reference {self._active_vibration[1]+1}'
         return self._show_analysis_window(ShortContactsDialog(self.frame, context, self))
 
+    @gui_operation('Updating structure view')
     def refresh_scene(self, reset_camera=False):
+        self.save_project_action.setEnabled(bool(self.documents));self.save_project_as_action.setEnabled(bool(self.documents))
         self._refresh_trajectory_controls()
         self._prepare_analysis_scene()
         self._update_fitted_plane()
         self.orbital_btn.setEnabled(bool(self.doc is not None and self.doc.calculation_results
                                         and self.doc.calculation_results.orbitals))
         self.results_orbital_button.setEnabled(self.orbital_btn.isEnabled())
+        self.results_spectrum_button.setEnabled(bool(self.doc is not None and self.doc.electronic_spectra))
+        self.results_transition_button.setEnabled(self.results_spectrum_button.isEnabled())
         from .result_availability import has_curve_data
         available=has_curve_data(self.doc)
         self.energy_curve_action.setEnabled(available);self.results_energy_button.setEnabled(available)
@@ -1316,6 +1511,7 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
         if self.frame is None:
             self.supercell_action.setEnabled(False)
             self._refresh_atom_panel()
+            self._refresh_crystal_controls()
             return
         from .core import valid_lattice
         self.supercell_action.setEnabled(bool(self.frame.symbols) and any(self.frame.pbc)
@@ -1337,6 +1533,7 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
                 self.renderer.set_scene(self.frame,self.doc.volume,reset_camera=False)
                 self.statusBar().showMessage('Boundary disabled for this frame: '+str(ex),7000)
         self._apply_document_camera(reset_camera)
+        self._refresh_crystal_controls()
         self._sync_corner_axes()
         self.vtk.GetRenderWindow().Render()
         self._refresh_measurement()
@@ -1498,11 +1695,13 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
         opts = self.render_options
         controls = [self.style_combo, self.atom_slider, self.bond_slider,
                     self.atom_palette_combo, self.bond_palette_combo,
-                    self.finish_combo, self.bond_check]
+                    self.finish_combo, self.bond_check, self.sf_radii_combo]
         blockers = [QSignalBlocker(widget) for widget in controls]
         try:
             self.style_combo.setCurrentText(opts.style)
-            self.atom_slider.setValue(round(opts.atom_scale * 100))
+            self.atom_slider.setValue(round((opts.space_filling_scale if opts.style == 'Space filling' else opts.atom_scale) * 100))
+            self.sf_radii_combo.setCurrentText(opts.space_filling_radii)
+            self.sf_radii_combo.setEnabled(opts.style == 'Space filling')
             self.bond_slider.setValue(round(opts.bond_scale * 100))
             self.atom_palette_combo.setCurrentText(opts.atom_palette)
             self.bond_palette_combo.setCurrentText(opts.bond_palette)
@@ -1556,15 +1755,38 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
         self.statusBar().showMessage(f'Saved display preset: {name}', 3500)
 
     def _set_option(self, option, value):
+        previous=getattr(self.render_options,option)
         setattr(self.render_options, option, value)
+        if option == 'style':
+            self._sync_style_widgets()
         if option in STYLE_KEYS:
             self._custom_style_state = snapshot(self.render_options)
             with QSignalBlocker(self.preset_combo):
                 self.preset_combo.setCurrentIndex(self.preset_combo.findData(CUSTOM_KEY))
             if option == 'background':
                 self.bg_btn.setText('Background colour… (' + value + ')')
-        if option == 'bond_cutoff' and self.renderer is not None:
-            self.renderer.periodic_preview = None
+        if option in ('bond_cutoff', 'bond_model'):
+            if option == 'bond_model':
+                value = 1.0 if value == 'Chemcraft pair ranges' else 1.18
+                self.render_options.bond_cutoff = value
+            with QSignalBlocker(self.cutoff_slider):self.cutoff_slider.setValue(round(value*100))
+            with QSignalBlocker(self.cutoff_spin):self.cutoff_spin.setValue(value)
+            if (value!=previous or option == 'bond_model') and self.doc is not None:
+                # An explicit cutoff change is an explicit graph rebuild.
+                # Ordinary geometry edits continue to preserve frozen bonds.
+                frames = [*self.doc.frames,*[a.reference for a in self.doc.vibrations],
+                          *[f for (di,_),f in self._vibration_references.items() if di==self.current_doc]]
+                with ui_operation(self, 'Rebuilding automatic bonds'):
+                    for index, frame in enumerate(frames):
+                        frame.info['bond_model'] = self.render_options.bond_model
+                        frame.bond_snapshot=frame.periodic_bond_snapshot=None
+                        if index % 256 == 0:ui_checkpoint('Rebuilding automatic bonds', value=index, total=len(frames))
+                note='Automatic bonds rebuilt for the new cutoff; manual bonds retained.'
+                if self.render_options.element_pair_rules:
+                    note+=' Explicit element-pair rules keep their own distance ranges.'
+                self.statusBar().showMessage(note,6500)
+            if self.renderer is not None:
+                self.renderer.periodic_preview = None;self.renderer.fixed_bonds=None
         if self.frame is not None:
             self.refresh_scene()
 
@@ -1572,9 +1794,9 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
         symbol = self.element_combo.currentText()
         if not symbol:
             return
-        from .core import colour
         colors = self.render_options.element_colors
-        picked = QColorDialog.getColor(QColor(colors.get(symbol, colour(symbol))),
+        from .style_presets import element_palette_color
+        picked = QColorDialog.getColor(QColor(element_palette_color(self.render_options,symbol)),
                                        self, f'{symbol} colour')
         if picked.isValid():
             self._set_option('element_colors', {**colors, symbol: picked.name()})
@@ -1649,9 +1871,18 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
         self.fragment_btn.setEnabled(frame is not None and n > 0)
         self.origin_btn.setEnabled(editable and n == 1)
         self.align_btn.setEnabled(editable and n == 2)
+        self.reorient_btn.setEnabled(editable and bool(frame.symbols))
+        self.reorient_action.setEnabled(self.reorient_btn.isEnabled())
+        from .core import valid_lattice
+        vacuum_ok=editable and any(frame.pbc) and valid_lattice(frame) if frame is not None else False
+        self.vacuum_action.setEnabled(vacuum_ok);self.vacuum_btn.setEnabled(vacuum_ok)
         self.invert_btn.setEnabled(frame is not None and bool(frame.symbols))
         self.delete_btn.setEnabled(editable and n > 0)
         self.measurement_label.clear()
+        self.measurement_value.hide();self.measurement_set.hide()
+        self._measurement_context=None;self._measurement_pending=False
+        self.footer_row.setVisible(frame is not None)
+        self._status_message_changed(self.statusBar().currentMessage())
         if frame is None or not self.selection:
             self.selected_label.setText('No atoms selected')
             return
@@ -1666,10 +1897,54 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
                 units = 'Å' if quantity == 'distance' else '°'
                 label += f'\n{quantity}: {value:.4f} {units}'
                 name = {'distance': 'Bond length', 'angle': 'Bond angle', 'dihedral': 'Dihedral'}[quantity]
-                self.measurement_label.setText(f'{name}  {"—".join(atoms)}  {value:.4f} {units}')
+                self.measurement_label.setText(f'{name}  {"—".join(atoms)}')
+                with QSignalBlocker(self.measurement_value):
+                    self.measurement_value.setRange(0., max(10000.,value*2) if quantity=='distance' else 180.)
+                    if quantity=='angle':self.measurement_value.setRange(0.,180.)
+                    elif quantity=='dihedral':self.measurement_value.setRange(-180.,180.)
+                    self.measurement_value.setSuffix(' '+units)
+                    self.measurement_value.setValue(value)
+                    self.measurement_value.setSingleStep(.01 if quantity=='distance' else 1.)
+                self.measurement_value.setEnabled(editable);self.measurement_set.setEnabled(editable)
+                self.measurement_value.show();self.measurement_set.setVisible(editable)
+                self._measurement_context=(id(self.doc),self.frame_index,tuple(self.selection))
             except (ValueError, IndexError):
                 self.measurement_label.setText('Selected geometry undefined')
         self.selected_label.setText(label)
+
+    def _status_message_changed(self,text):
+        label=self.status_message_label
+        label.setVisible(not self.footer_row.isHidden())
+        label.setText(label.fontMetrics().elidedText(text,Qt.TextElideMode.ElideRight,label.width()-10))
+        label.setToolTip(text)
+
+    def _measurement_value_changed(self,_value):
+        self._measurement_pending=True
+
+    def _apply_measurement_value(self):
+        if not self._measurement_pending:return
+        self._measurement_pending=False
+        context=(id(self.doc),self.frame_index,tuple(self.selection))
+        if context!=self._measurement_context or self.frame is None or not self._geometry_edit_allowed():
+            self._refresh_measurement();return
+        from .core import measure
+        from .internal_coordinates import plan_internal_edit
+        value=self.measurement_value.value()
+        try:
+            quantity,current=measure(self.frame,self.selection)
+            if abs(value-current)<.00005:return
+            edit=plan_internal_edit(self.frame,self.selection,value,self.render_options.bond_cutoff)
+        except (ValueError,IndexError) as exc:
+            QMessageBox.warning(self,'Cannot change selected geometry',str(exc))
+            self._refresh_measurement();return
+        self.playback.stop();self.play_btn.setText('Play')
+        self._record_undo()
+        self.frame.positions[:]=edit.positions
+        if edit.periodic_edges is not None:self.frame.periodic_bond_snapshot=edit.periodic_edges
+        self.frame.hbond_added=edit.hbond_added
+        self.doc.modified=True
+        self._refresh_after_geometry_edit()
+        self.statusBar().showMessage(f'Set {quantity} to {value:.4f}; moved {len(edit.moving)} atom(s). Ctrl+Z to undo.',6000)
 
     def _right_click_clear(self):
         if self.selection:
@@ -1863,6 +2138,7 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
             from .energy_units import display_energy
             energy,unit=display_energy(self.frame,self.doc.format_name)
             suffix = f' • {energy:.5f} {unit}' if energy is not None else ''
+            if self.frame.info.get('optimization_converged'):suffix+=' · converged'
             info=self.frame.info
             label=(f'Conformer {info["goat_conformer"]}' if 'goat_conformer' in info else
                    f'Image {info["neb_image"]}' if 'neb_image' in info else
@@ -1883,8 +2159,8 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
             return False
         from .supercell import make_supercell
         try:
-            expanded = make_supercell(self.frame, repeats, wrap=wrap,
-                                      bond_cutoff=self.render_options.bond_cutoff)
+            frame=self.frame;cutoff=self.render_options.bond_cutoff
+            expanded = run_data_task(self,'Building supercell',lambda:make_supercell(frame,repeats,wrap=wrap,bond_cutoff=cutoff))
         except (ValueError, TypeError) as ex:
             QMessageBox.warning(self, 'Could not build supercell', str(ex))
             return False
@@ -1969,23 +2245,105 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
             return
         from .core import align_pair_to_axis
         axis = self.align_combo.currentText()
-        if self.doc.volume is not None:
+        if self.doc.volume is not None and axis.lower() in ('a','b','c'):
             QMessageBox.warning(self, 'Volume attached',
-                'Aligning to any axis now keeps the lattice and volumetric grid fixed '
+                'Aligning to a/b/c keeps the lattice and volumetric grid fixed '
                 'while rotating atoms only. This would invalidate the geometry-to-grid '
                 'relationship, so alignment is disabled for files with attached volume data.')
             return
         self._record_undo()
         try:
-            align_pair_to_axis(self.frame, self.selection[0], self.selection[1], axis)
+            rotation,pivot,cell_rotated=align_pair_to_axis(self.frame, self.selection[0], self.selection[1], axis)
         except (ValueError, IndexError) as ex:
-            self.undo_stack.pop()
+            old=self.undo_stack.pop();self.doc.frames[self.frame_index]=old[2]
             QMessageBox.warning(self, 'Alignment unavailable', str(ex))
             return
+        if self.doc.volume is not None:
+            self.doc.volume.origin=(self.doc.volume.origin-pivot)@rotation.T+pivot
+            self.doc.volume.voxel_vectors=self.doc.volume.voxel_vectors@rotation.T
         self.doc.modified = True
         self._refresh_after_geometry_edit()
         self.statusBar().showMessage(
-            f'Pair aligned to {axis}; atomic positions updated, cell and camera unchanged.', 6000)
+            f'Pair aligned to {axis}; '+('complete periodic structure and cell rotated.' if cell_rotated else 'atomic positions rotated within the fixed cell.'), 6000)
+
+    def configure_coordinate_reorientation(self):
+        if not self._geometry_edit_allowed() or self.frame is None or not self.frame.symbols:return
+        from .reorientation_dialog import ReorientationDialog
+        dialog=ReorientationDialog(self.frame,self.selection,self)
+        if dialog.exec()!=QDialog.DialogCode.Accepted:return
+        try:rotation,translation,center,details=dialog.plan()
+        except ValueError as exc:QMessageBox.warning(self,'Orientation unavailable',str(exc));return
+        self.apply_coordinate_reorientation(rotation,translation,nearest_origin=center,details=details)
+
+    def apply_coordinate_reorientation(self,rotation,translation,*,nearest_origin=None,details=None):
+        if not self._geometry_edit_allowed() or self.frame is None:return
+        from .coordinate_reorientation import transform_complete_frame
+        from .operations import run_data_task
+        self._record_undo()
+        source=self.frame.clone()
+        def calculate():
+            transform_complete_frame(source,rotation,translation,nearest_origin=nearest_origin,details=details)
+            return source
+        try:transformed=run_data_task(self,'Reorienting complete crystal',calculate)
+        except (ValueError,IndexError) as exc:
+            old=self.undo_stack.pop();self.doc.frames[self.frame_index]=old[2]
+            QMessageBox.warning(self,'Orientation unavailable',str(exc));return
+        self.doc.frames[self.frame_index]=transformed
+        if self.doc.volume is not None:
+            import numpy as np
+            self.doc.volume.origin=self.doc.volume.origin@np.asarray(rotation).T+translation
+            self.doc.volume.voxel_vectors=self.doc.volume.voxel_vectors@np.asarray(rotation).T
+        self.doc.modified=True;self._fragment_gesture=None
+        self._refresh_after_geometry_edit()
+        self.statusBar().showMessage('Origin and axes reset with a proper rotation; coordinates, cell and grid transformed together. Ctrl+Z to undo.',7000)
+
+    def _atom_context_from_canvas(self,x,y):
+        if self.frame is None:return
+        from .interaction import vtk_display_from_qt
+        rw=self.vtk.GetRenderWindow();width,height=rw.GetSize()
+        try:dx,dy=vtk_display_from_qt(x,y,self.vtk.width(),self.vtk.height(),width,height)
+        except ValueError:return
+        atom=self.renderer.pick_index(dx,dy,width,height)
+        if atom is None:self._right_click_clear();return
+        if atom not in self.selection:
+            self.selection=[atom];self._sync_selection_to_table();self.refresh_scene()
+        from .structure_edit_dialogs import AtomIndexDialog
+        editable=self._active_vibration is None and not self._alignment_enabled()
+        dialog=AtomIndexDialog(self.frame,atom,self.selection,editable=editable,parent=self)
+        if dialog.exec()==QDialog.DialogCode.Accepted and editable:
+            self.apply_atom_index(atom,dialog.index.value()-1,swap=dialog.swap if dialog.operation=='swap' else None)
+
+    def apply_atom_index(self,atom,target,*,swap=None):
+        if not self._geometry_edit_allowed() or self.frame is None:return
+        from .atom_indices import index_order,reorder_atoms
+        try:order=index_order(len(self.frame.symbols),atom,target,swap=swap)
+        except ValueError as exc:QMessageBox.warning(self,'Invalid atom index',str(exc));return
+        if order==list(range(len(order))):return
+        self._record_undo();mapping=reorder_atoms(self.frame,order)
+        self.selection=[mapping[i] for i in self.selection]
+        self.doc.modified=True;self._refresh_after_geometry_edit(preserve_results=True)
+        self.statusBar().showMessage('Atom indices updated; positions and properties follow their atoms. Ctrl+Z to undo.',5000)
+
+    def configure_vacuum(self):
+        if not self._geometry_edit_allowed() or self.frame is None:return
+        if self.doc.volume is not None:
+            QMessageBox.warning(self,'Volume grid attached','Open a structure without a fixed volumetric grid to change the periodic cell.');return
+        from .structure_edit_dialogs import VacuumDialog
+        dialog=VacuumDialog(self.frame,self)
+        if dialog.exec()==QDialog.DialogCode.Accepted:self.apply_vacuum(dialog.requested_gap(),dialog.selected_axis())
+
+    def apply_vacuum(self,gap,axis=None):
+        if not self._geometry_edit_allowed() or self.frame is None or self.doc.volume is not None:return
+        from .vacuum import change_vacuum
+        candidate=self.frame.clone()
+        try:result=change_vacuum(candidate,gap,axis)
+        except ValueError as exc:QMessageBox.warning(self,'Vacuum adjustment unavailable',str(exc));return
+        if not result['changed']:
+            self.statusBar().showMessage('Vacuum is unchanged; calculation results preserved.',5000);return
+        self._record_undo();candidate.bond_snapshot=self.frame.bond_snapshot;candidate.periodic_bond_snapshot=self.frame.periodic_bond_snapshot
+        self.doc.frames[self.frame_index]=candidate;self.doc.modified=True;self._refresh_after_geometry_edit()
+        self._refresh_frame_tree_label()
+        self.statusBar().showMessage(f'Vacuum {result["gap"]:.6f} → {gap:.6f} Å; Cartesian coordinates unchanged. Ctrl+Z to undo.',6000)
 
     def _coordinate_edited(self, item):
         if self._ignore_table or item.column() == 0 or self.frame is None:
@@ -2011,6 +2369,9 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
         if not self.undo_stack:
             return
         item = self.undo_stack.pop()
+        if item[0] == 'pair_rules':
+            self._undo_element_pair_rules(item)
+            return
         if item[0] in ('selection', 'appearance'):
             kind, doc_idx, frame_idx, old_selection, vibration = item[:5]
             if kind == 'appearance':
@@ -2048,6 +2409,7 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
         if sequence:self.change_frame(sequence[max(0,sequence.index(self.frame_index)-1)])
 
     def _step_next(self):
+        if ui_busy():return
         doc = self.doc
         if doc is not None:
             sequence=self._navigation_indices()
@@ -2165,6 +2527,12 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
         dialog.show()
         return dialog
 
+    def show_atom_legend(self):
+        if self.frame is None or self.renderer is None:
+            self.statusBar().showMessage('Open a structure before showing its atom legend.',5000);return
+        from .atom_legend_dialog import AtomLegendDialog
+        return self._show_analysis_window(AtomLegendDialog(self))
+
     def show_calculation_overview(self):
         if self.doc is None:
             return
@@ -2203,26 +2571,32 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
             lambda index: self._jump_to_result_frame(doc, index), self))
 
     def save_png(self,suffix=None):
-        if self.frame is None:
+        if self.frame is None or self._png_exporting:
             return
-        path, _ = QFileDialog.getSaveFileName(self, 'Save rendering', self._save_path(suffix if isinstance(suffix,str) else '_view.png'), 'PNG image (*.png)')
-        if not path:
-            return
+        self._png_exporting = True
+        timers = [timer for timer in (self.playback, self.vibration_timer) if timer.isActive()]
+        for timer in timers:
+            timer.stop()
         try:
-            from vtkmodules.vtkRenderingCore import vtkWindowToImageFilter
-            from vtkmodules.vtkIOImage import vtkPNGWriter
-            image = vtkWindowToImageFilter()
-            image.SetInput(self.vtk.GetRenderWindow())
-            image.SetScale(2)
-            image.ReadFrontBufferOff()
-            image.Update()
-            writer = vtkPNGWriter()
-            writer.SetFileName(path)
-            writer.SetInputConnection(image.GetOutputPort())
-            writer.Write()
-            self.statusBar().showMessage(f'Saved image: {path}', 5000)
+            path, _ = QFileDialog.getSaveFileName(self, 'Save rendering', self._save_path(suffix if isinstance(suffix,str) else '_view.png'), 'PNG image (*.png)')
+            if not path:
+                return
+            from .png_dialog import PngExportDialog
+            from .png_export import export_png
+            window = self.vtk.GetRenderWindow()
+            dialog = PngExportDialog(self, view_size=window.GetSize())
+            if dialog.exec() != QDialog.DialogCode.Accepted:
+                return
+            settings = dialog.settings()
+            with ui_operation(self, 'Saving high-resolution PNG'):
+                export_png(path, window, settings, mesh_items=self.renderer._keepalive, progress=ui_checkpoint)
+            self.statusBar().showMessage(f'Saved image: {path} · {settings.width} × {settings.height} px', 5000)
         except Exception as ex:
             QMessageBox.warning(self, 'Export failed', str(ex))
+        finally:
+            self._png_exporting = False
+            for timer in timers:
+                timer.start()
 
     def _update_gif_action(self):
         available = self.doc is not None and len(self._navigation_indices()) > 1
@@ -2361,7 +2735,8 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
             return
         try:
             from .formats import export_frame
-            notices = export_frame(self.frame, path, target)
+            frame=self.frame
+            notices = run_data_task(self,'Exporting structure',lambda:export_frame(frame,path,target))
             self.statusBar().showMessage('Exported ' + path + (' | ' + '; '.join(notices) if notices else ''), 10000)
         except Exception as ex:
             QMessageBox.warning(self, 'Export failed', str(ex))
@@ -2372,7 +2747,7 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
             'Open files: Ctrl+O; save PNG: Ctrl+S; export structure: Ctrl+Shift+S.\n\n'
             'File > Export animation GIF saves a trajectory or the selected vibration mode.\n'
             'Drag files into the window. Left-drag: rotate; right-drag: roll clockwise/counterclockwise; mouse wheel: zoom.\n'
-            'Click atoms to add/remove from selection; right-click to clear, right-drag to roll.\n'
+            'Click atoms to select; right-click an atom to edit indices, empty space to clear; right-drag to roll.\n'
             'Ctrl+B toggles selected internal bonds; two atoms toggle regardless of distance.\n'
             'Ctrl+H draws/removes a dashed hydrogen bond between two selected atoms; Ctrl+Z undoes it.\n'
             'Switching files restores each file\'s camera, colours and display settings for this session.\n'
@@ -2388,11 +2763,12 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
             'Ctrl+A selects all atoms; box selection always adds atoms and Ctrl+Z undoes the last addition.\n'
             'Ctrl+I inverts selection; Delete removes selected atoms; Ctrl+Z restores them.\n'
             'Edit > Build supercell repeats the current periodic frame and enlarges the unit cell.\n'
-            'Choose hidden/corner/world-origin axes and XYZ or periodic abc.\n'
+            'Axes default to periodic abc or molecular XYZ; explicit XYZ/abc and hidden/corner/world-origin modes remain available.\n'
             'Labels are centred on their atoms with global or POSCAR-group numbering.\n'
             'Double-click X/Y/Z cells to edit atomic coordinates; Ctrl+Z to undo.\n\n'
             'This version does not calculate chemical bonds, wavefunctions, spectra, or DFT results.\n'
-            'The default bonds are covalent-radius estimates; manual bond overrides are visualization-only and are not saved in XYZ/POSCAR/CIF.')
+            'Ordinary bonds use Chemcraft pair limits by default. Default uses slightly lighter element colors, with Glossy lighting.\n'
+            'Space filling uses VESTA radii (Atomic by default). Manual bond overrides are visualization-only and are not saved in XYZ/POSCAR/CIF.')
 
     def dragEnterEvent(self, event):
         if event.mimeData().hasUrls():
@@ -2407,6 +2783,9 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
         event.acceptProposedAction()
 
     def closeEvent(self, event):
+        if self._png_exporting:
+            event.ignore()
+            return
         if self._gif_exporting:
             self._gif_close_requested = True
             if self._gif_progress is not None:
@@ -2414,6 +2793,7 @@ class LELEWindow(RestoredActions, TrajectoryAnalysisActions, DocumentViewActions
             event.ignore()
             return
         self._closing = True
+        self._cancel_file_imports()
         self._backend_start_timer.stop()
         self._pending_open_paths.clear()
         self.playback.stop()

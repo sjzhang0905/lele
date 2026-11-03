@@ -215,7 +215,7 @@ def test_live_display_alignment_preserves_raw_coordinates_measurements_and_docum
     np.testing.assert_allclose(w.renderer.frame.positions, a.positions, atol=1e-12)
     np.testing.assert_array_equal(w.frame.positions, raw)
     assert not w.doc.modified and not w.undo_stack
-    gui.select([0,1]); assert '1.0000 Å' in w.measurement_label.text()
+    gui.select([0,1]); assert w.measurement_value.text() == '1.0000 Å'
     assert not w._geometry_edit_allowed()
     w.trajectory_align_check.setChecked(False)
     np.testing.assert_array_equal(w.renderer.frame.positions, raw)

@@ -1,0 +1,58 @@
+{
+  "baseline_filename": "LELE_v2.10.1_fixed_20261102.zip",
+  "baseline_sha256": "4663b306cf48f6dac12c33332f1d210974b1cad787cad4a5438bf6e9a915ac5d",
+  "baseline_files": 469,
+  "missing_files": [],
+  "changed_files": [
+    {
+      "path": "CHANGELOG.md",
+      "before_sha256": "919afa78422362009534cb2da6cda5a28a3c361f04723c5750a14b29e6c71a49",
+      "after_sha256": "e8ab60c145257eb6eedee579d6f6cc28d1f3f45cbe7e8d33b08b5df05923451d"
+    },
+    {
+      "path": "README.md",
+      "before_sha256": "3f7447b2c9241fb5aaf4fbf0ca1b67b4be4a57d429ea60ef4514c1d0ad87c5c2",
+      "after_sha256": "f325a2eee69d16c711e90c149ba0bc184fa5c0f4fff70fc35cd2c1d171f49ec4"
+    },
+    {
+      "path": "README_CN.md",
+      "before_sha256": "d16477e84786772cd8c24b211ef6789922af64372eaa7f85d25c7531cb1b45a4",
+      "after_sha256": "0721b999e44cdc57456bbe5cb8be776ecc3ee0b68db4f61f51ee8fe053b42bf8"
+    },
+    {
+      "path": "lele/__init__.py",
+      "before_sha256": "32fb2db118eace9617df408296af3f2cb88dbb4e687ccac9df5ed304e6490ce7",
+      "after_sha256": "e8dd717a0ca1633c2cdc5f1100b569c0ce08b26894c7d7f489d2f6f0efd651f4"
+    },
+    {
+      "path": "lele/app.py",
+      "before_sha256": "a7d7c7aab8568eb5e1df8e22cb3c3c2232a75f3bc55ce8cd2db9f89d1dff56d0",
+      "after_sha256": "5df3fb48840e002400ff28da695426abe37f205ec499593363a880bcd260fb49"
+    },
+    {
+      "path": "lele/core.py",
+      "before_sha256": "34d312ec711b46b46c4403aad56fefa6694e31db9746f6743c29f836b9e76a9d",
+      "after_sha256": "1f804258101721fd9e1372ed09a371bed4e70601eae8f81546ac2375a0a7f5f1"
+    },
+    {
+      "path": "lele/energy_units.py",
+      "before_sha256": "7ba72825bf6fbfff2fec5432e1ad053495a7cee75692f0a4073607083bdde7ba",
+      "after_sha256": "c751edb108c8bff3ead22bfa7b27a302278d84ec973ee26347417d0ed78d9881"
+    },
+    {
+      "path": "lele/formats.py",
+      "before_sha256": "4ae35792cc3364350c2dc30cac7326ffe1573374b3e0976927ce1082ca71e0c1",
+      "after_sha256": "245001e5bae67ddce140d009a6acb8ecb9f51247933094e62330361333602a8c"
+    },
+    {
+      "path": "tests/test_coordinate_frame_contract.py",
+      "before_sha256": "2dd4cc0ade154958286d7f3c3a7f8e6a6dd463ef13e9191224673c05ea3b341e",
+      "after_sha256": "71b4d7f77ff8821229a38ce8dfb6907587ffb219669ebf01212491af55cc858a"
+    },
+    {
+      "path": "tests/test_edit_actions.py",
+      "before_sha256": "a1ebed89a96c18daa790e74011ef1354dedc1ac97ce771f1ed2de87b0e92be3b",
+      "after_sha256": "0463fefcfa1efbba646bd1c3da4d3c9abf03852bec669277c163b52b6c4a649a"
+    }
+  ]
+}

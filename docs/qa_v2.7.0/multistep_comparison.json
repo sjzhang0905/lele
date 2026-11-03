@@ -1,0 +1,146 @@
+[
+  {
+    "file": "cp2k_1000.out",
+    "frames": 1000,
+    "steps": 1000,
+    "baseline_seconds": 0.12958571650051454,
+    "current_seconds": 0.10520179100058158,
+    "speedup": 1.231782418036953,
+    "numeric_and_record_equivalence": true
+  },
+  {
+    "file": "cp2k_4000.out",
+    "frames": 4000,
+    "steps": 4000,
+    "baseline_seconds": 0.8448863029998392,
+    "current_seconds": 0.4242673874996399,
+    "speedup": 1.9914005362963618,
+    "numeric_and_record_equivalence": true
+  },
+  {
+    "file": "xtb_1000.out",
+    "frames": 0,
+    "steps": 1000,
+    "baseline_seconds": 0.06216505649899773,
+    "current_seconds": 0.04632350850079092,
+    "speedup": 1.3419764286190958,
+    "numeric_and_record_equivalence": true
+  },
+  {
+    "file": "xtb_4000.out",
+    "frames": 0,
+    "steps": 4000,
+    "baseline_seconds": 0.43143305700050405,
+    "current_seconds": 0.15225472299971443,
+    "speedup": 2.8336267571897475,
+    "numeric_and_record_equivalence": true
+  },
+  {
+    "file": "qe_1000.pwo",
+    "frames": 1000,
+    "steps": 0,
+    "baseline_seconds": 0.08657894049974857,
+    "current_seconds": 0.025931443499757734,
+    "speedup": 3.3387628614102196,
+    "numeric_and_record_equivalence": true
+  },
+  {
+    "file": "qe_4000.pwo",
+    "frames": 4000,
+    "steps": 0,
+    "baseline_seconds": 0.5625242820005951,
+    "current_seconds": 0.09827770900028554,
+    "speedup": 5.723823720788615,
+    "numeric_and_record_equivalence": true
+  },
+  {
+    "file": "vasp_1000.out",
+    "frames": 1000,
+    "steps": 1000,
+    "baseline_seconds": 0.06361107750035444,
+    "current_seconds": 0.06560742049987311,
+    "speedup": 0.969571384085699,
+    "numeric_and_record_equivalence": true
+  },
+  {
+    "file": "vasp_4000.out",
+    "frames": 4000,
+    "steps": 4000,
+    "baseline_seconds": 0.2645708290010589,
+    "current_seconds": 0.26754845150026085,
+    "speedup": 0.9888707167524045,
+    "numeric_and_record_equivalence": true
+  },
+  {
+    "file": "siesta_1000.out",
+    "frames": 1000,
+    "steps": 0,
+    "baseline_seconds": 0.03291768599956413,
+    "current_seconds": 0.03134046250033862,
+    "speedup": 1.0503254698046804,
+    "numeric_and_record_equivalence": true
+  },
+  {
+    "file": "siesta_4000.out",
+    "frames": 4000,
+    "steps": 0,
+    "baseline_seconds": 0.11983764000069641,
+    "current_seconds": 0.11383804250090179,
+    "speedup": 1.0527029222216913,
+    "numeric_and_record_equivalence": true
+  },
+  {
+    "file": "gaussian_1000.out",
+    "frames": 1000,
+    "steps": 1000,
+    "baseline_seconds": 0.14883812600055535,
+    "current_seconds": 0.13339543499932915,
+    "speedup": 1.115766262925743,
+    "numeric_and_record_equivalence": true
+  },
+  {
+    "file": "gaussian_4000.out",
+    "frames": 4000,
+    "steps": 4000,
+    "baseline_seconds": 0.5311656285002755,
+    "current_seconds": 0.5077401899998222,
+    "speedup": 1.0461366639116385,
+    "numeric_and_record_equivalence": true
+  },
+  {
+    "file": "xyz_1000.xyz",
+    "frames": 1000,
+    "steps": 0,
+    "baseline_seconds": 0.029796915999213525,
+    "current_seconds": 0.02814615550050803,
+    "speedup": 1.0586495906581521,
+    "numeric_and_record_equivalence": true
+  },
+  {
+    "file": "xyz_4000.xyz",
+    "frames": 4000,
+    "steps": 0,
+    "baseline_seconds": 0.08436996550062759,
+    "current_seconds": 0.08160782699997071,
+    "speedup": 1.0338464900022135,
+    "numeric_and_record_equivalence": true
+  },
+  {
+    "file": "xdatcar_1000.xdatcar",
+    "frames": 1000,
+    "steps": 1000,
+    "baseline_seconds": 0.030428039501202875,
+    "current_seconds": 0.030718013500518282,
+    "speedup": 0.99056013178357,
+    "numeric_and_record_equivalence": true
+  },
+  {
+    "file": "xdatcar_4000.xdatcar",
+    "frames": 4000,
+    "steps": 4000,
+    "baseline_seconds": 0.1198062094999841,
+    "current_seconds": 0.11654200700104411,
+    "speedup": 1.0280088062917154,
+    "numeric_and_record_equivalence": true
+  }
+]

@@ -1,0 +1,839 @@
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -1,4 +1,12 @@
+ # Changelog
++
++## 2.11.0 — 2026-11-02
++
++- Fix periodic XYZ pair alignment: use the nearest periodic bond and rotate coordinates and lattice together. Keep the first atom fixed and co-rotate attached volume grids. Clearly label a/b/c as fixed-cell relative-geometry edits.
++- Add origin/X/Z crystal reorientation with automatic proper rotation and Z-priority Gram–Schmidt axes matching the supplied rotation script. Accept a pasted row-vector rotation matrix, preview its values and reject collinear axes, scale, shear and reflection.
++- Center periodic atom representatives around the selected origin with the complete lattice metric; remap frozen ordinary/hydrogen-bond image shifts, preserve scalar energies and convergence for rigidly equivalent periodic structures, and rotate available QE force vectors.
++- Preserve reorientation matrices in frame information and projects, support undo of cell/coordinates/grids, process nearest-image centering with background progress, and preserve atom order in reoriented POSCAR exports.
++- Add synthetic geometry, live GUI, project/export round-trip, supplied-script convention and actual POSCAR1/POSCAR2 compatibility regressions. Retain the v2.10.1 acceptance fixes.
+ 
+ ## 2.10.1 — 2026-11-02
+ 
+--- a/README.md
++++ b/README.md
+@@ -1,6 +1,12 @@
+ # LELE
+ 
+ **Local Environment and Lattice Explorer**
++
++Version **2.11.0** reorients periodic structures with a proper rotation of both
++coordinates and lattice. Use **Edit → Reorient complete structure / crystal…**
++to set origin/X/Z together or paste the analyzer script's row-vector matrix.
++Nearest-image centering, volume grids, image bonds, undo and projects follow
++the same transform. See the [guide](docs/FEATURES_v2.11.0_CN.md) and [validation](docs/VALIDATION_v2.11.0.md).
+ 
+ Version **2.10.1** fixes the independent acceptance findings: QE optimization
+ convergence now requires explicit success; CP2K cell and coordinate repetitions
+--- a/README_CN.md
++++ b/README_CN.md
+@@ -1,6 +1,8 @@
+ # LELE
+ 
+ **Local Environment and Lattice Explorer — 局域环境与晶格探索工具**
++
++v2.11.0 修复周期结构重设方向：**XYZ 对齐同步旋转原子与晶胞**。新增 **Edit → Reorient complete structure / crystal…**，可一次设置原点、X 提示和 Z 方向，自动生成正交旋转矩阵，也可粘贴分析脚本的行向量矩阵。支持最近周期像、体数据同步变换、撤销和项目保存。见[使用说明](docs/FEATURES_v2.11.0_CN.md)和[验证记录](docs/VALIDATION_v2.11.0.md)。
+ 
+ v2.10.1 修复独立验收发现的 **A1–A3**：QE 优化状态必须有明确收敛证据；CP2K 晶胞扩展与原子重复分别读取；支持 `ANGLES` 别名及显式角度单位，保留斜晶胞。见[修复说明](docs/FIX_A1_A3_v2.10.1_CN.md)和[复验记录](docs/VALIDATION_v2.10.1.md)。
+ 
+--- a/lele/__init__.py
++++ b/lele/__init__.py
+@@ -1,6 +1,6 @@
+ #!/usr/bin/env python3
+ """Local Environment and Lattice Explorer."""
+-__version__ = "2.10.1"
++__version__ = "2.11.0"
+ APP_NAME = "LELE"
+ APP_FULL_NAME = "Local Environment and Lattice Explorer"
+ APP_CONTACT_EMAIL = "sjzhang0905@hotmail.com"
+--- a/lele/app.py
++++ b/lele/app.py
+@@ -189,6 +189,8 @@
+         self.edit_menu.addSeparator()
+         self.supercell_action = self._action(self.edit_menu, 'Build supercell…', self.build_supercell)
+         self.supercell_action.setEnabled(False)
++        self.reorient_action=self._action(self.edit_menu,'Reorient complete structure / crystal…',self.configure_coordinate_reorientation)
++        self.reorient_action.setEnabled(False)
+         self.edit_menu.addSeparator()
+         self.fit_plane_action = self._action(
+             self.edit_menu, 'Fit selected plane', self.fit_selected_plane)
+@@ -721,11 +723,15 @@
+         alignment_row.addWidget(self.align_combo)
+         alignment_row.addWidget(self.align_btn)
+         m_layout.addLayout(alignment_row)
+-        alignment_help = QLabel('All axes (XYZ/abc): rotate atomic coordinates only.\n'
+-                                'The lattice and camera remain unchanged.\n'
+-                                'The first selected atom remains fixed.')
++        alignment_help = QLabel('XYZ: periodic coordinates and cell rotate together.\n'
++                                'a/b/c: rotate atoms within the fixed cell (changes crystal geometry).\n'
++                                'The first selected atom remains fixed. Use Origin + X/Z to define both axes at once.')
+         alignment_help.setWordWrap(True)
+         m_layout.addWidget(alignment_help)
++        self.reorient_btn=QPushButton('Set origin + X/Z axes…')
++        self.reorient_btn.setToolTip('Select origin, X hint, Z in order, or enter atom indices. Uses a proper rotation of the complete crystal; also accepts a rotation matrix from the analyzer script.')
++        self.reorient_btn.clicked.connect(self.configure_coordinate_reorientation)
++        m_layout.addWidget(self.reorient_btn)
+         edit_outer.addWidget(measurements)
+         plane_group = QGroupBox('Best-fit selection plane')
+         plane_layout = QVBoxLayout(plane_group)
+@@ -771,6 +777,7 @@
+         self.fragment_btn.setEnabled(False)
+         self.origin_btn.setEnabled(False)
+         self.align_btn.setEnabled(False)
++        self.reorient_btn.setEnabled(False)
+         self.invert_btn.setEnabled(False)
+         self.delete_btn.setEnabled(False)
+         self._install_restored_controls()
+@@ -1386,6 +1393,12 @@
+             lines.extend('  ' + '  '.join(f'{v: .9f}' for v in row)
+                          for row in alignment['rotation'])
+             lines.append('Translation (Å): ' + ', '.join(f'{v:.9f}' for v in alignment['translation']))
++        reorientation=frame.info.get('coordinate_reorientation')
++        if reorientation is not None:
++            lines.append('\nLast coordinate reorientation: r_new = (r_old + image_shift @ cell_old) @ Q + t')
++            lines.append('Q (row vectors; cell_new = cell_old @ Q):')
++            lines.extend('  '+' '.join(f'{v: .12f}' for v in row) for row in reorientation['row_rotation'])
++            lines.append('Translation (Å): '+', '.join(f'{v:.12f}' for v in reorientation['translation']))
+         if doc.note:
+             lines.append('\nReader note: ' + doc.note)
+         if self._alignment_enabled():
+@@ -1805,6 +1818,8 @@
+         self.fragment_btn.setEnabled(frame is not None and n > 0)
+         self.origin_btn.setEnabled(editable and n == 1)
+         self.align_btn.setEnabled(editable and n == 2)
++        self.reorient_btn.setEnabled(editable and bool(frame.symbols))
++        self.reorient_action.setEnabled(self.reorient_btn.isEnabled())
+         self.invert_btn.setEnabled(frame is not None and bool(frame.symbols))
+         self.delete_btn.setEnabled(editable and n > 0)
+         self.measurement_label.clear()
+@@ -2174,23 +2189,57 @@
+             return
+         from .core import align_pair_to_axis
+         axis = self.align_combo.currentText()
+-        if self.doc.volume is not None:
++        if self.doc.volume is not None and axis.lower() in ('a','b','c'):
+             QMessageBox.warning(self, 'Volume attached',
+-                'Aligning to any axis now keeps the lattice and volumetric grid fixed '
++                'Aligning to a/b/c keeps the lattice and volumetric grid fixed '
+                 'while rotating atoms only. This would invalidate the geometry-to-grid '
+                 'relationship, so alignment is disabled for files with attached volume data.')
+             return
+         self._record_undo()
+         try:
+-            align_pair_to_axis(self.frame, self.selection[0], self.selection[1], axis)
++            rotation,pivot,cell_rotated=align_pair_to_axis(self.frame, self.selection[0], self.selection[1], axis)
+         except (ValueError, IndexError) as ex:
+-            self.undo_stack.pop()
++            old=self.undo_stack.pop();self.doc.frames[self.frame_index]=old[2]
+             QMessageBox.warning(self, 'Alignment unavailable', str(ex))
+             return
++        if self.doc.volume is not None:
++            self.doc.volume.origin=(self.doc.volume.origin-pivot)@rotation.T+pivot
++            self.doc.volume.voxel_vectors=self.doc.volume.voxel_vectors@rotation.T
+         self.doc.modified = True
+         self._refresh_after_geometry_edit()
+         self.statusBar().showMessage(
+-            f'Pair aligned to {axis}; atomic positions updated, cell and camera unchanged.', 6000)
++            f'Pair aligned to {axis}; '+('complete periodic structure and cell rotated.' if cell_rotated else 'atomic positions rotated within the fixed cell.'), 6000)
++
++    def configure_coordinate_reorientation(self):
++        if not self._geometry_edit_allowed() or self.frame is None or not self.frame.symbols:return
++        from .reorientation_dialog import ReorientationDialog
++        dialog=ReorientationDialog(self.frame,self.selection,self)
++        if dialog.exec()!=QDialog.DialogCode.Accepted:return
++        try:rotation,translation,center,details=dialog.plan()
++        except ValueError as exc:QMessageBox.warning(self,'Orientation unavailable',str(exc));return
++        self.apply_coordinate_reorientation(rotation,translation,nearest_origin=center,details=details)
++
++    def apply_coordinate_reorientation(self,rotation,translation,*,nearest_origin=None,details=None):
++        if not self._geometry_edit_allowed() or self.frame is None:return
++        from .coordinate_reorientation import transform_complete_frame
++        from .operations import run_data_task
++        self._record_undo()
++        source=self.frame.clone()
++        def calculate():
++            transform_complete_frame(source,rotation,translation,nearest_origin=nearest_origin,details=details)
++            return source
++        try:transformed=run_data_task(self,'Reorienting complete crystal',calculate)
++        except (ValueError,IndexError) as exc:
++            old=self.undo_stack.pop();self.doc.frames[self.frame_index]=old[2]
++            QMessageBox.warning(self,'Orientation unavailable',str(exc));return
++        self.doc.frames[self.frame_index]=transformed
++        if self.doc.volume is not None:
++            import numpy as np
++            self.doc.volume.origin=self.doc.volume.origin@np.asarray(rotation).T+translation
++            self.doc.volume.voxel_vectors=self.doc.volume.voxel_vectors@np.asarray(rotation).T
++        self.doc.modified=True;self._fragment_gesture=None
++        self._refresh_after_geometry_edit()
++        self.statusBar().showMessage('Origin and axes reset with a proper rotation; coordinates, cell and grid transformed together. Ctrl+Z to undo.',7000)
+ 
+     def _coordinate_edited(self, item):
+         if self._ignore_table or item.column() == 0 or self.frame is None:
+--- a/lele/core.py
++++ b/lele/core.py
+@@ -239,6 +239,12 @@
+     pairs = set(find_bonds(frame, multiplier) if frame.bond_snapshot is None else frame.bond_snapshot)
+     pairs.difference_update(frame.bond_removed)
+     pairs.update(frame.bond_added)
++    if frame.periodic_bond_snapshot is not None:
++        # Image representatives may change during crystal reorientation. Draw
++        # only zero-shift edges here; Boundary renders translated-image edges.
++        captured={(i,j) for i,j,_ in frame.periodic_bond_snapshot}
++        local={(i,j) for i,j,s in frame.periodic_bond_snapshot if not any(s)}
++        pairs.difference_update(captured-local)
+     return sorted(pairs)
+ 
+ 
+@@ -359,15 +365,12 @@
+ 
+ 
+ def align_pair_to_axis(frame: Frame, first: int, second: int, axis: str) -> tuple[np.ndarray, np.ndarray, bool]:
+-    """Rotate the atomic positions around the first atom, keeping the cell fixed.
+-
+-    Both XYZ (Cartesian) and abc (lattice direction) alignments update only
+-    frame.positions; frame.cell always remains unchanged. This is a real
+-    geometry edit relative to a periodic lattice, not a camera rotation or
+-    a change of basis for the complete infinite crystal.
+-
+-    Returns (column-vector rotation matrix, pivot, cell_rotated=False).
+-    The final False retains the public return shape of earlier versions.
++    """Align a pair, co-rotating the periodic cell for Cartesian XYZ targets.
++
++    XYZ uses the nearest periodic pair direction and rotates the entire crystal.
++    a/b/c retains the explicitly fixed-cell relative-geometry edit; it cannot
++    change the bond/lattice angle by co-rotating both. The pivot stays fixed.
++    Returns (column-vector rotation matrix, pivot, cell_rotated).
+     """
+     if not (0 <= first < len(frame.symbols) and 0 <= second < len(frame.symbols)) or first == second:
+         raise ValueError('Select two different atoms')
+@@ -382,7 +385,16 @@
+         raise ValueError('Axis must be X, Y, Z, a, b or c')
+     pivot = frame.positions[first].copy()
+     vector = frame.positions[second] - pivot
++    periodic=any(frame.pbc) and valid_lattice(frame)
++    if periodic and axis.lower() in ('x','y','z'):
++        from .periodic_geometry import minimum_image
++        vector,_=minimum_image(vector,frame)
+     R = rotation_between_vectors(vector, target)
++    if periodic and axis.lower() in ('x','y','z'):
++        from .coordinate_reorientation import transform_complete_frame
++        transform_complete_frame(frame,R,pivot-pivot@R.T,
++                                 details={'selection':[first,second],'target_axis':axis.upper()})
++        return R,pivot,True
+     frame.positions = (frame.positions - pivot) @ R.T + pivot
+     return R, pivot, False
+ 
+--- a/lele/energy_units.py
++++ b/lele/energy_units.py
+@@ -24,6 +24,19 @@
+ def rigid_equivalent(old,new):
+     if old.symbols!=new.symbols:return False
+     if not len(old.symbols):return True
++    if old.pbc!=new.pbc:return False
++    if any(old.pbc):
++        if min(abs(np.linalg.det(old.cell)),abs(np.linalg.det(new.cell)))<1.e-9:return False
++        rotation=np.linalg.solve(old.cell,new.cell)
++        if (not np.allclose(rotation@rotation.T,np.eye(3),atol=1.e-8,rtol=0)
++                or not np.isclose(np.linalg.det(rotation),1.,atol=1.e-8,rtol=0)):return False
++        # Translation is common modulo periodic lattice vectors. This remains
++        # valid when atoms are recentered into different nearest images.
++        delta=(new.positions-old.positions@rotation)@np.linalg.inv(new.cell)
++        delta=delta-delta[0]
++        axes=np.asarray(old.pbc,dtype=bool)
++        delta[:,axes]-=np.rint(delta[:,axes])
++        return np.allclose(delta@new.cell,0,atol=2.e-5,rtol=0)
+     a=old.positions-old.positions.mean(axis=0);b=new.positions-new.positions.mean(axis=0)
+     u,_,vt=np.linalg.svd(a.T@b);d=np.eye(3);d[-1,-1]=np.linalg.det(u@vt);r=u@d@vt
+     return (np.allclose(a@r,b,atol=2e-5,rtol=0) and
+--- a/lele/formats.py
++++ b/lele/formats.py
+@@ -332,6 +332,10 @@
+             except (ValueError, TypeError):
+                 pass
+     prepared, notices = legacy.prepare_for_target(atoms, target, float(box_size))
+-    legacy.write_target(Path(filename), prepared, target,
+-                        Path(filename).stem, legacy.DEFAULT_GAUSSIAN_ROUTE)
++    if target in ('poscar-direct','poscar-cartesian') and 'coordinate_reorientation' in frame.info:
++        from ase.io import write
++        write(str(filename),prepared,format='vasp',direct=target=='poscar-direct',sort=False,vasp5=True)
++    else:
++        legacy.write_target(Path(filename), prepared, target,
++                            Path(filename).stem, legacy.DEFAULT_GAUSSIAN_ROUTE)
+     return notices
+--- a/tests/test_coordinate_frame_contract.py
++++ b/tests/test_coordinate_frame_contract.py
+@@ -11,7 +11,7 @@
+ 
+ 
+ class CoordinateFrameContractTests(unittest.TestCase):
+-    def test_every_axis_preserves_skew_periodic_cell(self):
++    def test_xyz_rotates_complete_crystal_and_abc_is_explicit_fixed_cell_edit(self):
+         cell = np.array([[4., 0., 0.], [1., 5., 0.], [0.5, 0.7, 6.]])
+         points = np.array([[2., 1., 1.], [3., 3., 2.], [3., 4., 6.]])
+         for axis in ('X', 'Y', 'Z', 'a', 'b', 'c'):
+@@ -20,8 +20,8 @@
+                           (True, True, True))
+                 old = f.clone()
+                 rot, pivot, changed_cell = align_pair_to_axis(f, 0, 1, axis)
+-                self.assertFalse(changed_cell)
+-                np.testing.assert_array_equal(f.cell, old.cell)
++                self.assertEqual(changed_cell,axis.isupper())
++                np.testing.assert_allclose(f.cell,old.cell@rot.T if axis.isupper() else old.cell,atol=1.e-11)
+                 np.testing.assert_array_equal(f.positions[0], pivot)
+                 self.assertAlmostEqual(np.linalg.det(rot), 1., places=12)
+                 self.assertAlmostEqual(np.linalg.norm(f.positions[2]-f.positions[1]),
+--- a/tests/test_edit_actions.py
++++ b/tests/test_edit_actions.py
+@@ -64,19 +64,19 @@
+                                    original_positions[2] - original_positions[0])
+         np.testing.assert_allclose(f.cell, original_cell)
+ 
+-    def test_xyz_alignment_preserves_distances_and_keeps_lattice(self):
++    def test_xyz_alignment_preserves_distances_and_rotates_lattice(self):
+         cell = np.array([[3., 0., 0.], [1., 4., 0.], [0., 0., 5.]])
+         f = Frame(['O', 'C', 'H'], [[2, 3, 1], [2, 4, 1], [3, 5, 6]],
+                   cell=cell, pbc=(True, True, True))
+         original = f.positions.copy()
+         pivot_before = f.positions[0].copy()
+         R, pivot, rotated_cell = align_pair_to_axis(f, 0, 1, 'X')
+-        self.assertFalse(rotated_cell)
++        self.assertTrue(rotated_cell)
+         np.testing.assert_allclose(pivot, pivot_before)
+         np.testing.assert_allclose(f.positions[0], pivot_before)
+         np.testing.assert_allclose((f.positions[1] - f.positions[0]) / 1., [1., 0., 0.], atol=1e-11)
+         self.assertAlmostEqual(np.linalg.det(R), 1., places=11)
+-        np.testing.assert_array_equal(f.cell, cell)
++        np.testing.assert_allclose(f.cell, cell@R.T,atol=1.e-12)
+         self.assertAlmostEqual(np.linalg.norm(f.positions[2] - f.positions[1]),
+                                np.linalg.norm(original[2] - original[1]))
+ 
+--- /dev/null
++++ b/lele/coordinate_reorientation.py
+@@ -0,0 +1,105 @@
++"""Rigid coordinate changes of an entire crystal, including periodic images.
++
++Cell vectors and positions are rows: r_new = r_old @ R.T + t. R is a proper
++Cartesian column-vector rotation; lattice-vector indices never change.
++"""
++import numpy as np
++from .periodic_geometry import minimum_image,periodic_basis
++from .output_text import load_progress,check_load_cancelled
++
++
++def proper_rotation(matrix):
++    rotation=np.asarray(matrix,dtype=float)
++    if rotation.shape!=(3,3) or not np.isfinite(rotation).all():
++        raise ValueError('Enter a finite 3 × 3 rotation matrix.')
++    if (not np.allclose(rotation@rotation.T,np.eye(3),atol=1.e-8,rtol=0)
++            or not np.isclose(np.linalg.det(rotation),1.,atol=1.e-8,rtol=0)):
++        raise ValueError('The matrix must be orthogonal with determinant +1; scaling, shear and reflection are not rotations.')
++    return rotation.copy()
++
++
++def local_axis_rotation(frame,origin,x_atom,z_atom,*,nearest_images=True):
++    """Z is exact; X is the X-hint projected perpendicular to Z (script convention)."""
++    ids=(origin,x_atom,z_atom)
++    if len(set(ids))!=3 or any(i<0 or i>=len(frame.symbols) for i in ids):
++        raise ValueError('Choose three different atoms: origin, X hint, then Z direction.')
++    x=frame.positions[x_atom]-frame.positions[origin]
++    z=frame.positions[z_atom]-frame.positions[origin]
++    shifts=[]
++    for vector in (x,z):
++        _,shift=minimum_image(vector,frame) if nearest_images else (vector,(0,0,0))
++        shifts.append(shift)
++    x=x+np.asarray(shifts[0])@frame.cell
++    z=z+np.asarray(shifts[1])@frame.cell
++    nx,nz=np.linalg.norm(x),np.linalg.norm(z)
++    if min(nx,nz)<1.e-10:raise ValueError('Coincident atoms or periodic images cannot define an axis.')
++    angle=float(np.degrees(np.arccos(np.clip(x@z/(nx*nz),-1.,1.))))
++    z=z/nz;x=x-(x@z)*z
++    if np.linalg.norm(x)<1.e-8*nx:
++        raise ValueError('The X and Z directions are parallel; choose a non-collinear X hint.')
++    x=x/np.linalg.norm(x);y=np.cross(z,x);y=y/np.linalg.norm(y);x=np.cross(y,z)
++    rotation=proper_rotation(np.stack([x,y,z]))
++    return rotation,{'selection':list(ids),'raw_x_z_angle_deg':angle,
++                     'axis_image_shifts':[list(s) for s in shifts],'axes_convention':'Z exact; X projected perpendicular to Z'}
++
++
++def transform_complete_frame(frame,rotation,translation,*,nearest_origin=None,volume=None,details=None):
++    """Validate and prepare before mutation; preserve metric, image bonds and PBC.
++
++    nearest_origin selects each atom's closest periodic representative around a
++    point in the OLD Cartesian frame. It changes image representatives only.
++    """
++    rotation=proper_rotation(rotation)
++    translation=np.asarray(translation,dtype=float)
++    if translation.shape!=(3,) or not np.isfinite(translation).all():
++        raise ValueError('Translation must be a finite Cartesian triplet.')
++    cell=frame.cell.copy();positions=frame.positions.copy()
++    shifts=np.zeros((len(frame.symbols),3),dtype=int)
++    if nearest_origin is not None and periodic_basis(frame) is not None:
++        origin=np.asarray(nearest_origin,dtype=float)
++        if origin.shape!=(3,) or not np.isfinite(origin).all():raise ValueError('Invalid image center.')
++        report=load_progress('Crystal reorientation: nearest periodic images',len(positions))
++        for i,point in enumerate(positions):
++            if i%256==0:report(i);check_load_cancelled()
++            vector,shift=minimum_image(point-origin,frame)
++            positions[i]=origin+vector;shifts[i]=shift
++        report(len(positions));check_load_cancelled()
++    new_positions=positions@rotation.T+translation
++    new_cell=cell@rotation.T
++    edges=frame.periodic_bond_snapshot
++    if edges is not None:
++        edges=tuple((i,j,tuple(int(v) for v in np.asarray(s)+shifts[i]-shifts[j])) for i,j,s in edges)
++    hbonds={pair:tuple(int(v) for v in np.asarray(s)+shifts[pair[0]]-shifts[pair[1]])
++            for pair,s in frame.hbond_added.items()}
++    record={'rotation':rotation.tolist(),'row_rotation':rotation.T.tolist(),
++            'translation':translation.tolist(),'cell_rotated':True,
++            'nearest_images':nearest_origin is not None and periodic_basis(frame) is not None,
++            'image_shifts':shifts.tolist(),'convention':'r_new = (r_old + image_shift @ cell_old) @ R.T + translation'}
++    if details:record.update(details)
++    frame.positions=new_positions;frame.cell=new_cell
++    frame.periodic_bond_snapshot=edges;frame.hbond_added=hbonds
++    if edges is not None and np.any(shifts):
++        frame.bond_snapshot=frozenset((i,j) for i,j,s in edges if i!=j and not any(s))
++    forces=frame.info.get('qe_forces_ev_ang')
++    if forces is not None:
++        forces=np.asarray(forces)@rotation.T
++        frame.info['qe_forces_ev_ang']=forces
++        if forces.size:
++            frame.info['cartesian_max_force_ev_ang']=float(np.abs(forces).max())
++            frame.info['cartesian_rms_force_ev_ang']=float(np.sqrt(np.mean(forces**2)))
++    elif not np.allclose(rotation,np.eye(3),atol=1.e-12,rtol=0):
++        # Component maxima cannot be rotated without the original force vectors.
++        frame.info.pop('cartesian_max_force_ev_ang',None)
++    frame.info.pop('plane_alignment',None)
++    frame.info['coordinate_reorientation']=record
++    if volume is not None:
++        volume.origin=volume.origin@rotation.T+translation
++        volume.voxel_vectors=volume.voxel_vectors@rotation.T
++    return record
++
++
++def reorient_from_atoms(frame,origin,x_atom,z_atom,*,nearest_images=True,volume=None):
++    rotation,details=local_axis_rotation(frame,origin,x_atom,z_atom,nearest_images=nearest_images)
++    center=frame.positions[origin].copy()
++    return transform_complete_frame(frame,rotation,-center@rotation.T,
++        nearest_origin=center if nearest_images else None,volume=volume,details=details)
+--- /dev/null
++++ b/lele/reorientation_dialog.py
+@@ -0,0 +1,89 @@
++"""Origin/X/Z selection and a compatible row-matrix paste mode."""
++import re
++import numpy as np
++from PySide6.QtWidgets import (QDialog,QVBoxLayout,QFormLayout,QLabel,QComboBox,
++    QSpinBox,QPlainTextEdit,QCheckBox,QDialogButtonBox,QMessageBox)
++from .coordinate_reorientation import local_axis_rotation,proper_rotation
++from .periodic_geometry import periodic_basis
++
++
++def parse_row_matrix(text):
++    tokens=re.sub(r'[\s,;\[\]()]',' ',text).split()
++    if len(tokens)!=9:raise ValueError('Paste nine matrix entries in three rows (row-vector convention).')
++    try:matrix=np.asarray([float(v.replace('D','E').replace('d','e')) for v in tokens]).reshape(3,3)
++    except ValueError:raise ValueError('Use nine finite numeric matrix entries.') from None
++    return proper_rotation(matrix).T
++
++
++class ReorientationDialog(QDialog):
++    def __init__(self,frame,selection=(),parent=None):
++        super().__init__(parent);self.frame=frame
++        self.setWindowTitle('Reorient complete structure / crystal');self.resize(610,540)
++        layout=QVBoxLayout(self);form=QFormLayout();layout.addLayout(form)
++        self.mode=QComboBox();self.mode.addItems(['Origin + X/Z atoms','Paste rotation matrix (row vectors)'])
++        form.addRow('Define orientation',self.mode)
++        defaults=list(selection[:3])
++        for i in range(len(frame.symbols)):
++            if len(defaults)>=3:break
++            if i not in defaults:defaults.append(i)
++        self.origin=QSpinBox();self.x_atom=QSpinBox();self.z_atom=QSpinBox()
++        for i,spin in enumerate((self.origin,self.x_atom,self.z_atom)):
++            spin.setRange(1,max(1,len(frame.symbols)))
++            spin.setValue(defaults[i]+1 if i<len(defaults) else 1)
++        form.addRow('Origin atom (1-based)',self.origin)
++        form.addRow('X hint atom (1-based)',self.x_atom)
++        form.addRow('Z direction atom (1-based)',self.z_atom)
++        note=QLabel('Select origin → X hint → Z, or enter their atom indices. '
++            'Z is kept exact; X is projected perpendicular to Z. '
++            'Coordinates and cell rotate together; lengths, angles and volume are preserved.')
++        note.setWordWrap(True);layout.addWidget(note)
++        self.nearest=QCheckBox('Use nearest periodic images around the origin')
++        periodic=periodic_basis(frame) is not None
++        self.nearest.setChecked(periodic);self.nearest.setEnabled(periodic)
++        self.nearest.setToolTip('Also use the nearest periodic bond directions. Atom count and atom order are unchanged; negative Cartesian coordinates are allowed.')
++        layout.addWidget(self.nearest)
++        self.matrix_label=QLabel('Paste Q from the analyzer/rotation script: r_new(row) = r_old(row) @ Q + t')
++        self.matrix_label.setWordWrap(True);layout.addWidget(self.matrix_label)
++        self.matrix=QPlainTextEdit('1 0 0\n0 1 0\n0 0 1');self.matrix.setMaximumHeight(100)
++        layout.addWidget(self.matrix)
++        layout.addWidget(QLabel('Calculated row-vector matrix Q = R.T (copyable):'))
++        self.preview=QPlainTextEdit();self.preview.setReadOnly(True);self.preview.setMaximumHeight(112)
++        layout.addWidget(self.preview)
++        self.quality=QLabel();self.quality.setWordWrap(True);layout.addWidget(self.quality)
++        self.buttons=QDialogButtonBox(QDialogButtonBox.StandardButton.Ok|QDialogButtonBox.StandardButton.Cancel)
++        self.buttons.button(QDialogButtonBox.StandardButton.Ok).setText('Apply rotation')
++        self.buttons.accepted.connect(self._accept_plan);self.buttons.rejected.connect(self.reject)
++        layout.addWidget(self.buttons)
++        self.mode.currentIndexChanged.connect(self._update_preview)
++        for spin in (self.origin,self.x_atom,self.z_atom):spin.valueChanged.connect(self._update_preview)
++        self.nearest.toggled.connect(self._update_preview);self.matrix.textChanged.connect(self._update_preview)
++        self._update_preview()
++
++    def plan(self):
++        origin=self.origin.value()-1;center=self.frame.positions[origin].copy()
++        if self.mode.currentIndex()==0:
++            rotation,details=local_axis_rotation(self.frame,origin,self.x_atom.value()-1,self.z_atom.value()-1,
++                                                nearest_images=self.nearest.isChecked())
++        else:
++            rotation=parse_row_matrix(self.matrix.toPlainText());details={'selection':[origin],'axes_convention':'Imported row-vector matrix Q = R.T'}
++        return rotation,-center@rotation.T,center if self.nearest.isChecked() else None,details
++
++    def _update_preview(self,*_):
++        manual=self.mode.currentIndex()==1
++        self.matrix.setVisible(manual);self.matrix_label.setVisible(manual)
++        self.x_atom.setEnabled(not manual);self.z_atom.setEnabled(not manual)
++        try:
++            rotation,translation,_,details=self.plan()
++            self.preview.setPlainText('\n'.join(' '.join(f'{v: .12f}' for v in row) for row in rotation.T))
++            text=f'det(Q) = {np.linalg.det(rotation):.10f}; origin atom #{self.origin.value()} → (0, 0, 0).'
++            if 'raw_x_z_angle_deg' in details:
++                text+=f' Original X–Z angle: {details["raw_x_z_angle_deg"]:.6f}°. Z stays exact; X uses its perpendicular projection.'
++            self.quality.setText(text);valid=True
++        except ValueError as exc:
++            self.preview.clear();self.quality.setText(str(exc));valid=False
++        self.buttons.button(QDialogButtonBox.StandardButton.Ok).setEnabled(valid)
++
++    def _accept_plan(self):
++        try:self.plan()
++        except ValueError as exc:QMessageBox.warning(self,'Orientation unavailable',str(exc));return
++        self.accept()
+--- /dev/null
++++ b/tests/test_coordinate_reorientation_v2110.py
+@@ -0,0 +1,199 @@
++"""Whole-crystal rotations, image representatives and the actual POSCAR pair."""
++from pathlib import Path
++import ast
++import math
++import os
++from unittest.mock import patch
++import numpy as np
++import pytest
++from lele.core import Frame,Volume,align_pair_to_axis,freeze_bonds,visible_bonds
++from lele.coordinate_reorientation import local_axis_rotation,proper_rotation,reorient_from_atoms,transform_complete_frame
++from lele.periodic_geometry import minimum_image,periodic_bonds,normalized_positions
++from lele.energy_units import rigid_equivalent
++from lele.formats import load_document,export_frame
++from lele.project_file import save_project,load_project
++from lele.render_options import RenderOptions
++from test_periodic_fragment_ui_v171 import gui
++
++
++def crystal():
++    cell=np.array([[4.,0,0],[3.7,1.1,0],[.8,.4,7.]])
++    fractional=np.array([[.95,.1,.4],[.03,.2,.42],[.97,.11,.7],[.3,.6,.2]])
++    return Frame(['Co','Se','S','Li'],fractional@cell,cell,(True,True,True),-12.,{'optimization_converged':True})
++
++
++def distances(frame):
++    from ase import Atoms
++    return Atoms(frame.symbols,positions=frame.positions,cell=frame.cell,pbc=frame.pbc).get_all_distances(mic=True)
++
++
++@pytest.mark.parametrize('axis',['X','Y','Z'])
++@pytest.mark.parametrize('pbc',[(True,True,True),(True,False,True)])
++def test_pair_alignment_preserves_all_periodic_distances_and_cell_metric(axis,pbc):
++    f=crystal();f.pbc=pbc;old=f.clone()
++    source,_=minimum_image(old.positions[1]-old.positions[0],old)
++    rotation,pivot,changed=align_pair_to_axis(f,0,1,axis)
++    assert changed and f.pbc==pbc
++    np.testing.assert_allclose(f.cell,old.cell@rotation.T,atol=1.e-12)
++    np.testing.assert_allclose(f.cell@f.cell.T,old.cell@old.cell.T,atol=1.e-12)
++    np.testing.assert_allclose(source@rotation.T,np.eye(3)['XYZ'.index(axis)]*np.linalg.norm(source),atol=1.e-12)
++    np.testing.assert_allclose(distances(f),distances(old),atol=2.e-12)
++    np.testing.assert_allclose(f.positions[0],pivot,atol=1.e-12)
++    assert rigid_equivalent(old,f) and f.energy_ev==old.energy_ev
++
++
++def test_three_atom_convention_z_exact_and_x_projected_without_distortion():
++    f=Frame(['Co','O','S','He'],[[2,3,4],[3,5,5],[2,4,5],[5,8,9]])
++    old=f.clone();rotation,details=local_axis_rotation(f,0,1,2)
++    z=np.array([0,1,1])/np.sqrt(2);x=np.array([1,.5,-.5])/np.sqrt(1.5);y=np.cross(z,x)
++    np.testing.assert_allclose(rotation,np.stack([x,y,z]),atol=1.e-12)
++    reorient_from_atoms(f,0,1,2)
++    np.testing.assert_allclose(f.positions[0],0,atol=1.e-12)
++    np.testing.assert_allclose(f.positions[2],[0,0,np.sqrt(2)],atol=1.e-12)
++    assert f.positions[1,0]>0 and abs(f.positions[1,1])<1.e-12
++    assert f.positions[1,2]>0  # A nonorthogonal hint cannot itself lie on X.
++    np.testing.assert_allclose(distances(f),distances(old),atol=1.e-12)
++
++
++def test_nearest_images_remap_frozen_bonds_and_hydrogen_bonds():
++    f=Frame(['O','H','He'],[[9.8,0,0],[.2,.5,0],[9.8,0,1]],np.eye(3)*10,(True,True,True))
++    f.bond_snapshot=frozenset();f.periodic_bond_snapshot=((0,1,(1,0,0)),)
++    f.bond_added={(0,1)};f.hbond_added={(0,1):(1,0,0)}
++    old=f.clone();reorient_from_atoms(f,0,1,2)
++    assert f.periodic_bond_snapshot==((0,1,(0,0,0)),)
++    assert f.hbond_added=={(0,1):(0,0,0)} and visible_bonds(f)==[(0,1)]
++    assert f.bond_added==old.bond_added and f.symbols==old.symbols
++    np.testing.assert_allclose(distances(f),distances(old),atol=1.e-12)
++    assert rigid_equivalent(old,f)
++
++
++def test_reimaged_cross_cell_bond_does_not_become_long_visible_diagonal():
++    f=Frame(['O','H'],[[4.8,0,0],[5.2,0,0]],np.eye(3)*10,(True,True,True))
++    f.bond_snapshot=frozenset({(0,1)});f.periodic_bond_snapshot=((0,1,(0,0,0)),);f.bond_added={(0,1)}
++    transform_complete_frame(f,np.eye(3),np.zeros(3),nearest_origin=np.zeros(3))
++    assert f.periodic_bond_snapshot==((0,1,(1,0,0)),)
++    assert visible_bonds(f)==[]
++    xyz,_=normalized_positions(f)
++    i,j,s=periodic_bonds(f)[0]
++    assert np.linalg.norm(xyz[j]+np.asarray(s)@f.cell-xyz[i])==pytest.approx(.4)
++
++
++@pytest.mark.parametrize('matrix',[np.diag([1.,1.,-1.]),np.eye(3)*2,np.ones((3,3)),np.full((3,3),np.nan)])
++def test_deformation_or_reflection_is_rejected_without_mutation(matrix):
++    f=crystal();old=f.clone()
++    with pytest.raises(ValueError):transform_complete_frame(f,matrix,np.zeros(3))
++    np.testing.assert_array_equal(f.positions,old.positions);np.testing.assert_array_equal(f.cell,old.cell)
++
++
++@pytest.mark.parametrize('indices',[(0,0,2),(0,1,8)])
++def test_invalid_atom_axes_are_atomic_errors(indices):
++    f=crystal();old=f.clone()
++    with pytest.raises(ValueError):reorient_from_atoms(f,*indices)
++    np.testing.assert_array_equal(f.positions,old.positions)
++
++
++def test_parallel_and_periodically_coincident_axes_are_rejected():
++    f=Frame(['H']*3,[[0,0,0],[1,0,0],[2,0,0]],np.eye(3)*10,(True,True,True))
++    with pytest.raises(ValueError,match='parallel'):reorient_from_atoms(f,0,1,2)
++    f.positions[1]=[10,0,0]
++    with pytest.raises(ValueError,match='Coincident'):reorient_from_atoms(f,0,1,2)
++
++
++def test_complete_grid_and_qe_force_vectors_rotate_and_scalar_energy_survives():
++    f=crystal();old=f.clone();f.info['qe_forces_ev_ang']=np.array([[1.,2,3]]*4)
++    volume=Volume(np.arange(27).reshape(3,3,3),[1,2,3],np.diag([.2,.3,.4]));v0=volume.origin.copy();voxel=volume.voxel_vectors.copy()
++    r=np.array([[0,-1.,0],[1.,0,0],[0,0,1.]])
++    transform_complete_frame(f,r,[-1,-2,-3],volume=volume)
++    np.testing.assert_array_equal(volume.data,np.arange(27).reshape(3,3,3))
++    np.testing.assert_allclose(volume.origin,v0@r.T+[-1,-2,-3])
++    np.testing.assert_allclose(volume.voxel_vectors,voxel@r.T)
++    np.testing.assert_allclose(f.info['qe_forces_ev_ang'],[[-2,1,3]]*4)
++    assert rigid_equivalent(old,f) and f.energy_ev==-12
++
++
++def test_rigid_equivalence_rejects_original_atoms_only_bug_and_real_geometry_edits():
++    old=crystal();new=old.clone();r=np.array([[0,-1.,0],[1.,0,0],[0,0,1.]])
++    new.positions=new.positions@r.T
++    assert not rigid_equivalent(old,new)
++    new=old.clone();transform_complete_frame(new,r,np.ones(3),nearest_origin=old.positions[0])
++    assert rigid_equivalent(old,new)
++    new.positions[1,0]+=.01
++    assert not rigid_equivalent(old,new)
++
++
++@pytest.mark.parametrize('target',['poscar-cartesian','poscar-direct'])
++def test_reoriented_poscar_export_preserves_cell_atom_order_and_coordinates(tmp_path,target):
++    f=crystal();reorient_from_atoms(f,0,1,2)
++    path=tmp_path/'POSCAR';export_frame(f,path,target)
++    restored=load_document(path).frames[0]
++    assert restored.symbols==f.symbols
++    np.testing.assert_allclose(restored.cell,f.cell,atol=1.e-12)
++    np.testing.assert_allclose(restored.positions,f.positions,atol=1.e-12)
++
++
++def test_gui_dialog_defaults_matrix_convention_apply_undo_and_project(gui,tmp_path):
++    from PySide6.QtWidgets import QDialog
++    from lele.reorientation_dialog import ReorientationDialog
++    f=crystal();gui.attach(f);w=gui.window;gui.select([0,1,2]);old=w.frame.clone()
++    dialog=ReorientationDialog(w.frame,w.selection,w);gui.addCleanup(dialog.deleteLater)
++    assert (dialog.origin.value(),dialog.x_atom.value(),dialog.z_atom.value())==(1,2,3)
++    assert dialog.nearest.isChecked()
++    rotation,translation,center,details=dialog.plan()
++    with patch.object(ReorientationDialog,'exec',return_value=QDialog.DialogCode.Accepted):w.configure_coordinate_reorientation()
++    assert w.frame.info['coordinate_reorientation']['selection']==[0,1,2]
++    assert w.frame.energy_ev==-12 and w.frame.info['optimization_converged']
++    np.testing.assert_allclose(w.frame.cell,old.cell@rotation.T,atol=1.e-12)
++    np.testing.assert_allclose(w.frame.positions[0],0,atol=1.e-12)
++    assert w.atom_table.item(0,1).text()=='0.000000'
++    path=tmp_path/'reoriented.lele'
++    save_project(path,dict(documents=[dict(document=w.doc,options=RenderOptions(),frame_index=0)],current_document=0))
++    loaded=load_project(path)['documents'][0]['document'].frames[0]
++    assert loaded.info['coordinate_reorientation']==w.frame.info['coordinate_reorientation']
++    np.testing.assert_array_equal(loaded.cell,w.frame.cell)
++    w.undo_edit()
++    np.testing.assert_array_equal(w.frame.positions,old.positions);np.testing.assert_array_equal(w.frame.cell,old.cell)
++    assert w.frame.bond_snapshot==old.bond_snapshot
++    dialog.mode.setCurrentIndex(1);dialog.matrix.setPlainText('0 1 0; -1 0 0; 0 0 1')
++    r,_,_,_=dialog.plan();np.testing.assert_array_equal(r,[[0,-1,0],[1,0,0],[0,0,1]])
++
++
++def test_gui_xyz_rotates_periodic_grid_and_undo_restores_it(gui):
++    f=crystal();volume=Volume(np.ones((2,2,2)),[1.,2,3],np.diag([.2,.3,.4]))
++    gui.attach(f,volume=volume);w=gui.window;old=f.clone();v=volume.origin.copy();voxel=volume.voxel_vectors.copy()
++    gui.select([0,1]);w.align_combo.setCurrentText('X');w.align_selected_pair()
++    record=w.frame.info['coordinate_reorientation'];r=np.asarray(record['rotation']);t=np.asarray(record['translation'])
++    np.testing.assert_allclose(volume.origin,v@r.T+t,atol=1.e-12)
++    np.testing.assert_allclose(volume.voxel_vectors,voxel@r.T,atol=1.e-12)
++    w.undo_edit();np.testing.assert_array_equal(w.frame.cell,old.cell);np.testing.assert_array_equal(volume.origin,v)
++
++
++def test_actual_poscar_pair_is_a_rigid_reorientation(tmp_path):
++    directory=os.environ.get('LELE_ROTATION_EXAMPLE_DIR')
++    if not directory:pytest.skip('Set LELE_ROTATION_EXAMPLE_DIR to the supplied private POSCAR1/POSCAR2.')
++    root=Path(directory);a=load_document(root/'POSCAR1').frames[0];b=load_document(root/'POSCAR2').frames[0]
++    q=np.linalg.solve(a.cell,b.cell);origin=int(np.argmin(np.linalg.norm(b.positions,axis=1)))
++    assert origin==19 and a.symbols==b.symbols and len(a.symbols)==100
++    old=a.clone();transform_complete_frame(a,q.T,-a.positions[origin]@q,nearest_origin=a.positions[origin])
++    np.testing.assert_allclose(a.cell,b.cell,atol=1.e-11)
++    np.testing.assert_allclose(a.positions,b.positions,atol=8.e-8)
++    np.testing.assert_allclose(distances(a),distances(old),atol=1.e-11)
++    assert rigid_equivalent(old,a)
++    path=tmp_path/'POSCAR_reoriented';export_frame(a,path,'poscar-cartesian')
++    saved=load_document(path).frames[0]
++    assert saved.symbols==b.symbols
++    np.testing.assert_allclose(saved.cell,b.cell,atol=1.e-11)
++    np.testing.assert_allclose(saved.positions,b.positions,atol=8.e-8)
++
++
++def test_local_axes_match_supplied_rotation_script_without_pymatgen():
++    path=os.environ.get('LELE_ROTATION_SCRIPT')
++    if not path:pytest.skip('Set LELE_ROTATION_SCRIPT to the supplied v13 rotation script.')
++    tree=ast.parse(Path(path).read_text());wanted={'unit_vector','strict_minimum_image_delta','axis_fractional_delta','build_rotation_from_points'}
++    nodes=[ast.ImportFrom(module='__future__',names=[ast.alias(name='annotations')],level=0)]
++    nodes.extend(n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name in wanted)
++    namespace={'np':np,'math':math};exec(compile(ast.fix_missing_locations(ast.Module(body=nodes,type_ignores=[])),str(path),'exec'),namespace)
++    f=crystal();fractional=f.positions@np.linalg.inv(f.cell)
++    expected,q,_=namespace['build_rotation_from_points'](f.cell,*fractional[:3],'mic')
++    actual,_=local_axis_rotation(f,0,1,2)
++    np.testing.assert_allclose(actual,expected,atol=1.e-12)
++    np.testing.assert_allclose(actual.T,q,atol=1.e-12)
+--- /dev/null
++++ b/docs/FEATURES_v2.11.0_CN.md
+@@ -0,0 +1,67 @@
++# LELE v2.11.0：周期结构的原点与局域坐标轴
++
++日期：2026-11-02。
++
++## 使用方法
++
++在画布或坐标表中依次选择 **原点原子 → X 方向提示原子 → Z 方向原子**，点击 Edit 面板中的 **Set origin + X/Z axes…**。也可从菜单 **Edit → Reorient complete structure / crystal…** 打开窗口，直接填写原子编号。编号采用坐标表的全局编号，从 1 开始。
++
++检查预览矩阵，然后点击 **Apply rotation**：
++
++- 原点原子移至 `(0, 0, 0)`。
++- Z 轴沿原点指向所选 Z 原子的方向。
++- X 轴采用 X 提示方向在垂直于 Z 的平面内的投影，Y 按右手规则生成。该约定与提供的 v13 旋转脚本一致。
++- 周期结构的原子坐标与全部晶胞矢量使用同一个旋转矩阵；长度、键角、晶胞体积和周期性邻接关系保持不变。
++
++如果 X 提示键和 Z 键本来不垂直，刚性旋转无法把两根键同时精确变成正交的 X、Z。窗口显示原始夹角，并以 Z 为准正交化 X；不会拉伸或剪切结构。两方向共线或周期等价原子重合时给出提示。
++
++周期结构默认勾选 **Use nearest periodic images around the origin**。轴方向和各原子代表坐标均使用真实晶格度量下的最近周期像，适用于斜晶胞，也尊重仅部分方向周期的设置。中心周围可出现正、负笛卡尔坐标，这与提供脚本的 `target-mic` 模式一致；原子数及编号不变。
++
++## 使用对称性脚本的推荐矩阵
++
++窗口的 **Define orientation** 选择 **Paste rotation matrix (row vectors)**，粘贴分析脚本的 `rotation_matrix_old_cartesian_row_to_local_row` 或对应 CSV 行向量矩阵。支持空格、逗号、分号和方括号分隔的 9 个数值。原点原子和最近周期像选项仍可独立设置。
++
++采用行向量约定：
++
++```text
++r_new = (r_old + image_shift @ cell_old) @ Q + t
++cell_new = cell_old @ Q
++t = -origin_old @ Q
++Q = R.T
++```
++
++Q 必须为行列式 +1 的正交矩阵。拉伸、剪切、镜像及非有限数值会被拒绝。预览框可直接复制矩阵；应用后的矩阵、平移及周期像平移保存在当前帧，并可在 **Results / info** 查看。保存 `.lele` 项目会保留这些记录。
++
++## 提供的 POSCAR1 → POSCAR2
++
++两份样例均含 100 个原子且顺序一致。目标原点是 **第 20 个原子**。要复现 POSCAR2，在 POSCAR1 中打开重定向窗口，选择粘贴矩阵模式、原点编号 `20`，保留最近周期像选项，粘贴：
++
++```text
++ 0.286149357930  0.921945681546 -0.261026253918
++-0.944978566688  0.316605205643  0.082320424321
++ 0.158537230506  0.223108278731  0.961815285024
++```
++
++该 Q 由两份样例的晶胞对应关系求得，用于验证完整晶体的刚性等价性。它不表示通过任意三个原子都能重现对称性分析脚本推荐的同一组轴；推荐轴也可以是配位环境拟合得到的方向。
++
++采用完整精度矩阵时，100 个原子的最大笛卡尔坐标差约 **7.53×10⁻⁸ Å**，晶胞分量误差约 **1.78×10⁻¹⁵ Å**，体积由 4695.6302560431 Å³ 保持到浮点误差范围内。原始 POSCAR2 的原点有约 10⁻⁸ Å 的打印/生成残差，LELE 将选定原点置于数值零附近。使用上面的 12 位矩阵也通过独立实际文件断言。
++
++## 原有单键对齐
++
++选择两个原子后，**Align 1st → 2nd** 的 X/Y/Z 在周期结构中改为整体旋转晶胞与坐标，方向采用最近周期像；第一个原子保持在原位置。需要原点为零时可先移动原点，或使用新的原点＋X/Z 窗口。
++
++`a/b/c` 指向当前晶格方向，保留为明确标注的“晶胞固定、旋转内部原子”的几何编辑。它会改变原子相对晶格的方向；整体同时旋转键与晶格无法改变它们的夹角。周期结构的坐标系重设请使用 X/Y/Z 或新的完整重定向窗口。
++
++依次执行 X、Z 两次单轴对齐时，后一次旋转可能改变前一次对齐方向；同时定义两轴应使用新窗口。
++
++## 数据、连接关系与保存
++
++体数据的网格原点和体素矢量同步旋转/平移，数值不变。冻结的普通键、人工键和氢键的周期像平移会随原子代表坐标更新；跨边界键不会变成穿过画布的错误长线，Boundary 可继续显示其周期连接。
++
++完整晶体的刚性重定向保留能量和优化收敛标记；如果只在固定晶胞中改变内部几何，则沿用已有失效处理。有完整 QE 力矢量时同步旋转，并更新笛卡尔分量统计；没有力矢量时不保留无法重新确定的最大分量。
++
++**Ctrl+Z** 撤销坐标、晶胞、连接关系及附带网格几何。重定向后的 POSCAR（Cartesian 或 Direct）导出保留当前原子顺序和旋转后的晶胞。导出 Direct 时，分数坐标显示方式不同，但晶体与 Cartesian 输出相同。
++
++操作作用于当前结构帧，同文件的其他轨迹帧保留原数据。耗时的最近周期像重排在后台处理，沿用长操作进度提示。
++
++验证结果见 [v2.11.0 复验记录](VALIDATION_v2.11.0.md)。
+--- /dev/null
++++ b/docs/VALIDATION_v2.11.0.md
+@@ -0,0 +1,52 @@
++# LELE v2.11.0 复验记录
++
++日期：2026-11-02。
++
++**781 项测试和 78 个子测试全部通过，0 失败、0 错误、0 跳过，耗时约 47.3 秒。** 本次包括原始 QE 四份文件、CP2K Molden、POSCAR1/POSCAR2 和用户提供的旋转脚本约定检查。
++
++| 检查 | 结果 | 证据 |
++| --- | --- | --- |
++| 全量回归 | 781 测试与 78 子测试通过，无失败或跳过 | [完整 XML](qa_v2.11.0/full_v2110.xml)、[日志](qa_v2.11.0/full_v2110.log) |
++| 针对性回归 | 54 测试、6 子测试通过，无跳过 | [针对性 XML](qa_v2.11.0/targeted_v2110.xml)、[日志](qa_v2.11.0/targeted_v2110.log) |
++| 实际 POSCAR 对照 | 同一旋转作用于晶胞与原子，并采用第 20 个原子为中心的最近周期像；100 原子顺序保留 | [样例记录](qa_v2.11.0/supplied_poscar_pair.json) |
++| 脚本约定 | 与提供的 v13 脚本的原始单胞最近像及 Z 优先正交化矩阵一致 | `test_local_axes_match_supplied_rotation_script_without_pymatgen` |
++| 图形界面 | 真实 Qt 重定向窗口、矩阵预览/粘贴、实际处理入口、表格刷新、撤销、网格同步和项目恢复通过 | 新增 GUI 用例；窗口已离屏渲染并目视检查 |
++| A1–A3 回归 | 上一版的验收及扩展用例继续通过 | 全量报告中的 v2.10.1 用例 |
++
++JUnit `tests` 汇总为 859，包含 78 个子测试；实际 `<testcase>` 元素为 781，不将汇总值当成 859 个独立测试函数。
++
++## 本次修复的科学问题
++
++旧版 `align_pair_to_axis` 使用了旋转矩阵，但周期结构在 XYZ 对齐时只旋转原子、保持晶胞不动。周期镜像平移仍沿旧晶胞方向，因而这不是完整无限晶体的刚性坐标变换。旧版两个测试明确要求晶胞固定；本次按照用户要求更新了这些过时断言，同时保留 a/b/c 固定晶胞编辑的回归。
++
++新增测试直接核对晶胞 Gram 矩阵、全部周期原子间距离、原点、正交性、行列式和能量等价性，覆盖斜晶胞、跨边界键及部分周期方向。最近周期像变换同步更新冻结的普通键和氢键平移；不会把跨边界短键画成错误的长对角线。
++
++新窗口的三原子模式与提供的旋转脚本采用相同的 Z 优先约定：X 方向投影到垂直于 Z 的平面，再按右手规则生成 Y。非垂直的原始两根键不会被剪切成直角。共线或重合方向、非正交矩阵、镜像矩阵及非有限数值会被拒绝。
++
++体数据的网格几何与结构同步变换，数据数组不变；QE 完整力矢量同步旋转。刚性重定向保留能量和收敛标记；真实内部坐标改变仍使相应数据失效。项目保存、撤销和 Cartesian/Direct POSCAR 重新读取覆盖原子顺序与旋转晶胞。
++
++## POSCAR1 → POSCAR2 实测
++
++- 两份文件均为 100 原子，元素顺序相同；目标原点对应全局第 20 个原子。
++- 由晶胞对应关系得到的行矩阵 Q 行列式约为 1.0000000000000067，正交误差处于 10⁻¹⁴ 量级。
++- 完整精度矩阵下，最大原子坐标差为 **7.528901058151405×10⁻⁸ Å**，最大晶胞分量差约 **1.7763568394002505×10⁻¹⁵ Å**。
++- 原始体积约 **4695.6302560431 Å³**，变换后只出现浮点舍入差。
++- 使用操作说明中的 12 位小数矩阵也实际重建核对，最大坐标差仍小于 8×10⁻⁸ Å。
++- 实际文件测试还逐一比较全部周期原子间距离，并导出 Cartesian POSCAR 后重新读取核对。样例和脚本只用于验收，未将其原始内容放入发布包。
++
++## 运行方法与边界
++
++```bash
++LELE_QE_EXAMPLE_DIR=/path/to/four/QE/files \
++LELE_CP2K_MOLDEN_EXAMPLE=/path/to/COF2_O2_a_freq-VIBRATIONS-1.mol \
++LELE_ROTATION_EXAMPLE_DIR=/path/to/POSCAR1_and_POSCAR2 \
++LELE_ROTATION_SCRIPT=/path/to/rotate_structure_from_analyzer_v32_v33_csv_v13_20260809.py \
++QT_QPA_PLATFORM=offscreen VTK_DEFAULT_OPENGL_WINDOW=vtkEGLRenderWindow \
++python -m pytest tests -q --junitxml=full_retest.xml
++```
++
++未提供私人文件路径时，相应实际文件用例会跳过；本次全部文件路径已设置，实际没有跳过。
++
++环境：Python 3.12.14、ASE 3.29.0、NumPy 2.3.5、SciPy 1.17.0、PySide6 6.12.0、VTK 9.7.1、pytest 9.2.0；Linux，Qt offscreen / VTK EGL。窗口布局已实际截图检查，截图仅用于内部验证。未构建或运行 Windows EXE，未对 Windows 显卡、高 DPI 或安装分发作出验收声明。
++
++操作步骤和矩阵约定见 [使用说明](FEATURES_v2.11.0_CN.md)。

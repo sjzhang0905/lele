@@ -1,0 +1,25 @@
+{
+  "baseline_members": 572,
+  "missing_baseline_files": [],
+  "changed_baseline_files": [
+    "CHANGELOG.md",
+    "README.md",
+    "README_CN.md",
+    "lele/__init__.py",
+    "lele/formats.py",
+    "lele/legacy_converter.py"
+  ],
+  "new_implementation_files": [
+    "lele/cube_input.py",
+    "lele/pqr_input.py",
+    "tests/test_pqr_cube_v2132.py",
+    "docs/FIX_PQR_CUBE_v2.13.2_CN.md",
+    "docs/VALIDATION_v2.13.2.md"
+  ],
+  "production_modules": 108,
+  "unchanged_acceptance_scripts": {
+    "test_independent_full.py": "d648ffec3e6a9cffc3454d4e82b586ac52c36f9a987f169147549155db921719",
+    "test_format_coverage.py": "0d4461280ba1a90b2d2357f077924536e4a6877eaf844ad14be8bc9c43d53eea",
+    "test_long_integrity.py": "c1a2a73dab7dbb3a316331b265981ac1e81fbc6bc410ec835a334229e29d84f4"
+  }
+}

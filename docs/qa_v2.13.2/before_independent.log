@@ -1,0 +1,317 @@
+.....................................................................F   [100%]
+=================================== FAILURES ===================================
+_ test_cube_both_declared_unit_branches_load_complete_aligned_geometry_and_grid[-2] _
+
+path = PosixPath('/tmp/pytest-of-root/pytest-10/test_cube_both_declared_unit_b1/unit.cube')
+detection = Detection(kind='ase_generic', label='Gaussian CUBE', ase_format='cube')
+
+    def read_structure(path: Path, detection: Optional[Detection] = None) -> tuple[Atoms, Detection]:
+        detection = detection or detect_format(path)
+        kind = detection.kind
+    
+        try:
+            if kind == "xyz":
+                atoms = ase_read(str(path), index=-1, format="extxyz")
+            elif kind == "cif":
+                atoms = ase_read(str(path), index=-1, format="cif", fractional_occupancies=True)
+            elif kind == "vasp_in":
+                atoms = ase_read(str(path), index=-1, format="vasp")
+            elif kind == "vasp_out":
+                atoms = ase_read(str(path), index=-1, format="vasp-out")
+            elif kind == "vasp_xdatcar":
+                atoms = ase_read(str(path), index=-1, format="vasp-xdatcar")
+            elif kind == "gaussian_in":
+                atoms = ase_read(str(path), index=-1, format="gaussian-in")
+            elif kind == "gaussian_out":
+                atoms = ase_read(str(path), index=-1, format="gaussian-out")
+            elif kind == "orca_in":
+                atoms = parse_orca_input(path)
+            elif kind == "orca_out":
+                atoms = ase_read(str(path), index=-1, format="orca-output")
+            elif kind == 'molden_vib':
+                from .molden_vibrations import read_molden_vibrations
+                frame,_,_,_=read_molden_vibrations(path)
+                atoms=Atoms(frame.symbols,positions=frame.positions,cell=frame.cell,pbc=frame.pbc,info=dict(frame.info))
+            elif kind in ("xtb_out","xtb_trj"):
+                from .xtb_results import read_xtb_results
+                result=read_xtb_results(path,trajectory=kind=="xtb_trj")
+                frame=next((s.geometry for s in reversed(result.steps) if s.geometry is not None),None)
+                if frame is None:raise ConversionError('No complete xTB geometry found')
+                atoms=Atoms(frame.symbols,positions=frame.positions,info=dict(frame.info))
+            elif kind == "nwchem_in":
+                atoms = ase_read(str(path), index=-1, format="nwchem-in")
+            elif kind == "nwchem_out":
+                atoms = ase_read(str(path), index=-1, format="nwchem-out")
+            elif kind == "cp2k_in":
+                atoms = parse_cp2k_input(path)
+            elif kind == "cp2k_out":
+                atoms = parse_cp2k_output(path)
+            elif kind == "qe_in":
+                atoms = ase_read(str(path), index=-1, format="espresso-in")
+            elif kind == "qe_out":
+                atoms = ase_read(str(path), index=-1, format="espresso-out", results_required=False)
+            elif kind == "siesta_in":
+                atoms = parse_siesta_input(path)
+            elif kind == "siesta_out":
+                atoms = parse_siesta_output(path)
+            elif kind == "mol2":
+                atoms = parse_mol2(path)
+            elif kind == "pqr":
+                atoms = parse_pqr(path)
+            elif kind == "ase_generic":
+                if not detection.ase_format:
+                    raise ConversionError("Generic ASE reader has no format identifier")
+>               atoms = ase_read(str(path), index=-1, format=detection.ase_format)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+audit/source/LELE/lele/legacy_converter.py:1123: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/root/.local/lib/python3.12/site-packages/ase/io/formats.py:821: in read
+    return next(_iread(filename, slice(index, None), format, io,
+/root/.local/lib/python3.12/site-packages/ase/parallel.py:301: in new_generator
+    for result in generator(*args, **kwargs):
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.local/lib/python3.12/site-packages/ase/io/formats.py:887: in _iread
+    for dct in io.read(fd, *args, **kwargs):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.local/lib/python3.12/site-packages/ase/io/formats.py:643: in wrap_read_function
+    yield read(filename, **kwargs)
+          ^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+file_obj = <_io.TextIOWrapper name='/tmp/pytest-of-root/pytest-10/test_cube_both_declared_unit_b1/unit.cube' mode='rt' encoding='UTF-8'>
+read_data = True, program = None, verbose = False
+
+    def read_cube(file_obj, read_data=True, program=None, verbose=False):
+        """Read atoms and data from CUBE file.
+    
+        file_obj : str or file
+            Location to the cube file.
+        read_data : boolean
+            If set true, the actual cube file content, i.e. an array
+            containing the electronic density (or something else )on a grid
+            and the dimensions of the corresponding voxels are read.
+        program: str
+            Use program='castep' to follow the PBC convention that first and
+            last voxel along a direction are mirror images, thus the last
+            voxel is to be removed.  If program=None, the routine will try
+            to catch castep files from the comment lines.
+        verbose : bool
+            Print some more information to stdout.
+    
+        Returns a dict with the following keys:
+    
+        * 'atoms': Atoms object
+        * 'data' : (Nx, Ny, Nz) ndarray
+        * 'origin': (3,) ndarray, specifying the cube_data origin.
+        * 'spacing': (3, 3) ndarray, representing voxel size
+        """
+    
+        readline = file_obj.readline
+        line = readline()  # the first comment line
+        line = readline()  # the second comment line
+    
+        # The second comment line *CAN* contain information on the axes
+        # But this is by far not the case for all programs
+        axes = []
+        if 'OUTER LOOP' in line.upper():
+            axes = ['XYZ'.index(s[0]) for s in line.upper().split()[2::3]]
+        if not axes:
+            axes = [0, 1, 2]
+    
+        # castep2cube files have a specific comment in the second line ...
+        if 'castep2cube' in line:
+            program = CASTEP
+            if verbose:
+                print('read_cube identified program: castep')
+    
+        # Third line contains actual system information:
+        line = readline().split()
+        num_atoms = int(line[0])
+    
+        # num_atoms can be negative.
+        # Negative num_atoms indicates we have extra data to parse after
+        # the coordinate information.
+        has_labels = num_atoms < 0
+        num_atoms = abs(num_atoms)
+    
+        # There is an optional last field on this line which indicates
+        # the number of values at each point. It is typically 1 (the default)
+        # in which case it can be omitted, but it may also be > 1,
+        # for example if there are multiple orbitals stored in the same cube.
+        num_val = int(line[4]) if len(line) == 5 else 1
+    
+        # Origin around which the volumetric data is centered
+        # (at least in FHI aims):
+        origin = np.array([float(x) * Bohr for x in line[1:4:]])
+    
+        cell = np.empty((3, 3))
+        shape = []
+        spacing = np.empty((3, 3))
+    
+        # The upcoming three lines contain the cell information
+        for i in range(3):
+            n, x, y, z = (float(s) for s in readline().split())
+            shape.append(int(n))
+    
+            # different PBC treatment in castep, basically the last voxel row is
+            # identical to the first one
+            if program == CASTEP:
+                n -= 1
+            cell[i] = n * Bohr * np.array([x, y, z])
+            spacing[i] = np.array([x, y, z]) * Bohr
+        pbc = [(v != 0).any() for v in cell]
+    
+        numbers = np.empty(num_atoms, int)
+        positions = np.empty((num_atoms, 3))
+        for i in range(num_atoms):
+            line = readline().split()
+            numbers[i] = int(line[0])
+            positions[i] = [float(s) for s in line[2:]]
+    
+        positions *= Bohr
+    
+        atoms = Atoms(numbers=numbers, positions=positions, cell=cell, pbc=pbc)
+    
+        # CASTEP will always have PBC, although the cube format does not
+        # contain this kind of information
+        if program == CASTEP:
+            atoms.pbc = True
+    
+        dct = {ATOMS: atoms}
+        labels = []
+    
+        # If we originally had a negative num_atoms, parse the extra fields now.
+        # The first field of the first line tells us how many other fields there
+        # are to parse, but we have to guess how many rows this information is
+        # split over.
+        if has_labels:
+            # Can't think of a more elegant way of doing this...
+            fields = readline().split()
+            nfields = int(fields[0])
+            labels.extend(fields[1:])
+    
+            while len(labels) < nfields:
+                fields = readline().split()
+                labels.extend(fields)
+    
+        labels = [int(x) for x in labels]
+    
+        if read_data:
+            # Cube files can contain more than one density,
+            # so we need to be a little bit careful about where one ends
+            # and the next begins.
+            raw_volume = [float(s) for s in file_obj.read().split()]
+            # Split each value at each point into a separate list.
+            raw_volumes = [
+                np.array(raw_volume[offset::num_val]) for offset in range(num_val)
+            ]
+    
+            datas = []
+    
+            # Adjust each volume in turn.
+            for data in raw_volumes:
+>               data = data.reshape(shape)
+                       ^^^^^^^^^^^^^^^^^^^
+E               ValueError: can only specify one unknown dimension
+
+/root/.local/lib/python3.12/site-packages/ase/io/cube.py:201: ValueError
+
+The above exception was the direct cause of the following exception:
+
+tmp_path = PosixPath('/tmp/pytest-of-root/pytest-10/test_cube_both_declared_unit_b1')
+n = -2
+
+    @pytest.mark.parametrize('n',[2,-2])
+    def test_cube_both_declared_unit_branches_load_complete_aligned_geometry_and_grid(tmp_path,n):
+        # formats._cube_grid explicitly defines n<0 as Angstrom and n>0 as Bohr.
+        from lele.formats import BOHR_ANG
+        path=tmp_path/'unit.cube';path.write_text(CUBE.format(n=n))
+>       document=load_document(path);factor=BOHR_ANG if n>0 else 1.
+                 ^^^^^^^^^^^^^^^^^^^
+
+audit/repro/test_independent_full.py:149: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+audit/source/LELE/lele/formats.py:294: in load_document
+    document = _load_complete_document(filename, max_frames)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+audit/source/LELE/lele/formats.py:300: in _load_complete_document
+    document = _load_document(filename, max_frames)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+audit/source/LELE/lele/formats.py:227: in _load_document
+    atoms, detection = legacy.read_structure(path, detection)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+path = PosixPath('/tmp/pytest-of-root/pytest-10/test_cube_both_declared_unit_b1/unit.cube')
+detection = Detection(kind='ase_generic', label='Gaussian CUBE', ase_format='cube')
+
+    def read_structure(path: Path, detection: Optional[Detection] = None) -> tuple[Atoms, Detection]:
+        detection = detection or detect_format(path)
+        kind = detection.kind
+    
+        try:
+            if kind == "xyz":
+                atoms = ase_read(str(path), index=-1, format="extxyz")
+            elif kind == "cif":
+                atoms = ase_read(str(path), index=-1, format="cif", fractional_occupancies=True)
+            elif kind == "vasp_in":
+                atoms = ase_read(str(path), index=-1, format="vasp")
+            elif kind == "vasp_out":
+                atoms = ase_read(str(path), index=-1, format="vasp-out")
+            elif kind == "vasp_xdatcar":
+                atoms = ase_read(str(path), index=-1, format="vasp-xdatcar")
+            elif kind == "gaussian_in":
+                atoms = ase_read(str(path), index=-1, format="gaussian-in")
+            elif kind == "gaussian_out":
+                atoms = ase_read(str(path), index=-1, format="gaussian-out")
+            elif kind == "orca_in":
+                atoms = parse_orca_input(path)
+            elif kind == "orca_out":
+                atoms = ase_read(str(path), index=-1, format="orca-output")
+            elif kind == 'molden_vib':
+                from .molden_vibrations import read_molden_vibrations
+                frame,_,_,_=read_molden_vibrations(path)
+                atoms=Atoms(frame.symbols,positions=frame.positions,cell=frame.cell,pbc=frame.pbc,info=dict(frame.info))
+            elif kind in ("xtb_out","xtb_trj"):
+                from .xtb_results import read_xtb_results
+                result=read_xtb_results(path,trajectory=kind=="xtb_trj")
+                frame=next((s.geometry for s in reversed(result.steps) if s.geometry is not None),None)
+                if frame is None:raise ConversionError('No complete xTB geometry found')
+                atoms=Atoms(frame.symbols,positions=frame.positions,info=dict(frame.info))
+            elif kind == "nwchem_in":
+                atoms = ase_read(str(path), index=-1, format="nwchem-in")
+            elif kind == "nwchem_out":
+                atoms = ase_read(str(path), index=-1, format="nwchem-out")
+            elif kind == "cp2k_in":
+                atoms = parse_cp2k_input(path)
+            elif kind == "cp2k_out":
+                atoms = parse_cp2k_output(path)
+            elif kind == "qe_in":
+                atoms = ase_read(str(path), index=-1, format="espresso-in")
+            elif kind == "qe_out":
+                atoms = ase_read(str(path), index=-1, format="espresso-out", results_required=False)
+            elif kind == "siesta_in":
+                atoms = parse_siesta_input(path)
+            elif kind == "siesta_out":
+                atoms = parse_siesta_output(path)
+            elif kind == "mol2":
+                atoms = parse_mol2(path)
+            elif kind == "pqr":
+                atoms = parse_pqr(path)
+            elif kind == "ase_generic":
+                if not detection.ase_format:
+                    raise ConversionError("Generic ASE reader has no format identifier")
+                atoms = ase_read(str(path), index=-1, format=detection.ase_format)
+            else:
+                raise ConversionError(f"No reader is configured for {kind}")
+        except ConversionError:
+            raise
+        except Exception as exc:
+>           raise ConversionError(f"Reader failed for {detection.label}: {exc}") from exc
+E           lele.legacy_converter.ConversionError: Reader failed for Gaussian CUBE: can only specify one unknown dimension
+
+audit/source/LELE/lele/legacy_converter.py:1129: ConversionError
+=========================== short test summary info ============================
+FAILED audit/repro/test_independent_full.py::test_cube_both_declared_unit_branches_load_complete_aligned_geometry_and_grid[-2]
+1 failed, 69 passed in 1.66s

@@ -4,13 +4,12 @@ from .atom_appearance import DEFAULT_APPEARANCE, appearance
 
 
 def _targets(window):
-    symbols = window.frame.symbols
     doc = window.doc
-    result = [('frame', i, frame) for i, frame in enumerate(doc.frames) if frame.symbols == symbols]
+    result = [('frame', i, frame) for i, frame in enumerate(doc.frames)]
     result += [('reference', i, analysis.reference) for i, analysis in enumerate(doc.vibrations)
-               if analysis.reference.symbols == symbols]
+               ]
     result += [('preview', key, frame) for key, frame in window._vibration_references.items()
-               if key[0] == window.current_doc and frame.symbols == symbols]
+               if key[0] == window.current_doc]
     return result
 
 
@@ -18,9 +17,13 @@ def apply_appearance(window, indices, values, reset=False):
     targets = _targets(window)
     changes = []
     for kind, key, frame in targets:
+        from .atom_indices import atom_mapping
+        mapping=atom_mapping(window.frame,frame,allow_partial=True)
+        if mapping is None:continue
         updated = frame.atom_appearance.copy()
         for i in dict.fromkeys(indices):
-            if 0 <= i < len(frame.symbols):
+            if 0 <= i < len(mapping) and mapping[i] is not None:
+                i=mapping[i]
                 style = DEFAULT_APPEARANCE if reset else replace(appearance(frame, i), **values)
                 if style == DEFAULT_APPEARANCE:
                     updated.pop(i, None)

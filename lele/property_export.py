@@ -6,6 +6,7 @@ from pathlib import Path
 import numpy as np
 from ase.units import Hartree
 from .gaussian_properties import AU_TO_DEBYE
+from .output_text import progress_items
 
 
 def _moment(row,prefix,vector,unit):
@@ -18,7 +19,7 @@ def transition_rows(document,calculation=None):
     result=[]
     for i,spectrum in enumerate(document.electronic_spectra):
         if calculation is not None and i!=calculation:continue
-        for t in spectrum.transitions:
+        for t in progress_items(spectrum.transitions,'Preparing transition records'):
             from .gaussian_properties import contribution_text
             row=dict(calculation=i+1,from_state=0,to_state=t.number,state_description=t.state,
                      calculation_label=spectrum.label,source_label=t.source_label,source_line=t.source_line,
@@ -32,6 +33,10 @@ def transition_rows(document,calculation=None):
             _moment(row,'electric',t.electric_dipole_au,'au')
             _moment(row,'electric',None if t.electric_dipole_au is None else t.electric_dipole_au*AU_TO_DEBYE,'D')
             _moment(row,'velocity',t.velocity_dipole_au,'au');_moment(row,'magnetic',t.magnetic_dipole_au,'au')
+            if t.metadata:
+                row['source_metadata_json']=json.dumps(t.metadata)
+                row['dipole_form']=t.metadata.get('dipole_form','')
+                _moment(row,'component_magnitude',t.metadata.get('component_magnitudes_au'),'au')
             result.append(row)
     return result
 
@@ -40,7 +45,7 @@ def write_rows(path,rows):
     if not rows:raise ValueError('No printed records to export')
     fields=list(dict.fromkeys(key for row in rows for key in row))
     with Path(path).open('w',encoding='utf-8-sig',newline='') as f:
-        writer=csv.DictWriter(f,fieldnames=fields);writer.writeheader();writer.writerows(rows)
+        writer=csv.DictWriter(f,fieldnames=fields);writer.writeheader();writer.writerows(progress_items(rows,'Writing CSV records'))
     return len(rows)
 
 

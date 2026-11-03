@@ -1,0 +1,69 @@
+{
+  "version": "2.4.0",
+  "python": "3.12.14",
+  "repeat": 3,
+  "timing": "warm imports; complete parse, no GUI; wall seconds",
+  "explicit_legacy_api_limit": 20000,
+  "cases": {
+    "long_cp2k.xyz": {
+      "source_bytes": 37646671,
+      "frames": 10000,
+      "records": 10000,
+      "seconds": [
+        3.9973095279997324,
+        3.736693209999885,
+        3.7444319589999395
+      ],
+      "median_seconds": 3.7444319589999395,
+      "science_sha256": "9bcd3a82cbf0e139e2ba063a77ee33cbe94a9870a5f4e31c07f8b3f3df8f9af8"
+    },
+    "long_plain.xyz": {
+      "source_bytes": 37268890,
+      "frames": 10000,
+      "records": 0,
+      "seconds": [
+        2.242608158999701,
+        2.2775408359998437,
+        2.26534641499984
+      ],
+      "median_seconds": 2.26534641499984,
+      "science_sha256": "7caf61c8076d26539b38bff71a52d931a41d34a05099eadd2f09982afd301032"
+    },
+    "XDATCAR_long": {
+      "source_bytes": 34828922,
+      "frames": 10000,
+      "records": 10000,
+      "seconds": [
+        6.279312237999875,
+        6.315056321999691,
+        6.216326569000103
+      ],
+      "median_seconds": 6.279312237999875,
+      "science_sha256": "cd9ccfbbdf8c983c5f6342392fefa9233673349e31caa99ed9247dacc63aa1e1"
+    },
+    "long_noisy_cp2k.out": {
+      "source_bytes": 71048059,
+      "frames": 0,
+      "records": 4000,
+      "seconds": [
+        7.2304135950003,
+        7.244494516000032,
+        7.1786430369998016
+      ],
+      "median_seconds": 7.2304135950003,
+      "science_sha256": "1dbb1725e2513616da71ab62d5ca4765cc338b0e7a2b556384ef312de94ef7a2"
+    },
+    "long_staged.out": {
+      "source_bytes": 2825920,
+      "frames": 4000,
+      "records": 4000,
+      "seconds": [
+        0.49174912800026505,
+        0.49447693599995546,
+        0.48875016900001356
+      ],
+      "median_seconds": 0.49174912800026505,
+      "science_sha256": "92c2c9bb4135857b550a95a13e614763dfbc759939580e1571164f96cbe08a3c"
+    }
+  }
+}

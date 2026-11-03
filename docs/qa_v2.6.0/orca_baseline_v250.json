@@ -1,0 +1,48 @@
+{
+  "version": "2.5.0",
+  "python": "3.12.14",
+  "synthetic": true,
+  "repeat": 3,
+  "timing": "warm imports, entire parse; digest excluded; seconds",
+  "cases": {
+    "orca_1500.out": {
+      "bytes": 2356994,
+      "frames": 1500,
+      "steps": 1500,
+      "dipoles": 1500,
+      "seconds": [
+        1.37793064699963,
+        1.2910899179996704,
+        1.3090352150002218
+      ],
+      "median_seconds": 1.3090352150002218,
+      "complete_document_sha256": "2cbd8a253a2332d5b371dd2eff9788829aae23424f379e9e3c8836e763645f5b"
+    },
+    "orca_6000.out": {
+      "bytes": 9430994,
+      "frames": 6000,
+      "steps": 6000,
+      "dipoles": 6000,
+      "seconds": [
+        5.522683309000058,
+        5.65217368499998,
+        5.384418452999853
+      ],
+      "median_seconds": 5.522683309000058,
+      "complete_document_sha256": "32795bc44031caa66b4aba0f28cdb5b95f0542ded736a5a344308c9a7ec4cb4c"
+    },
+    "orca_12000.out": {
+      "bytes": 18864995,
+      "frames": 12000,
+      "steps": 12000,
+      "dipoles": 12000,
+      "seconds": [
+        12.817821175000063,
+        12.808598849999726,
+        12.529719329999352
+      ],
+      "median_seconds": 12.808598849999726,
+      "complete_document_sha256": "5d71cb9122468a560c9ecb860a16d61823426d01bffad361b8ab677cf9acc6af"
+    }
+  }
+}

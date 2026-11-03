@@ -1,0 +1,30 @@
+{
+  "version": "2.3.1",
+  "actual_files": {
+    "OUTCAR_opt": {
+      "frames": 20,
+      "atoms": 166,
+      "modes": 0,
+      "max_E0_difference_eV": 0.0,
+      "max_E0_vs_TOTEN_difference_eV": 0.03541354999993018
+    },
+    "XDATCAR": {
+      "frames": 20,
+      "atoms": 166,
+      "modes": 0,
+      "energy_unavailable": true
+    },
+    "OUTCAR_freq": {
+      "frames": 25,
+      "atoms": 4,
+      "modes": 12,
+      "max_E0_difference_eV": 0.0,
+      "max_E0_vs_TOTEN_difference_eV": 0.0
+    }
+  },
+  "checks": {
+    "actual_curve_csv_E0_only": true,
+    "project_frame_and_job_E0_roundtrip": true,
+    "synthetic_E0_curve_visually_rendered": true
+  }
+}

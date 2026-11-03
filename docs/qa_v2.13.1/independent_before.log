@@ -1,0 +1,172 @@
+.FFF.F.F...                                                              [100%]
+=================================== FAILURES ===================================
+_____________ test_equivalent_boundary_site_in_skew_cell[angles1] ______________
+
+tmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_equivalent_boundary_site_1')
+angles = (76, 88, 105)
+
+    @pytest.mark.parametrize('angles',[(90,90,90),(76,88,105)])
+    def test_equivalent_boundary_site_in_skew_cell(tmp_path, angles):
+        rows = 'Co1 Co 0 .5 .25 .6\nNi1 Ni 0 .5 .25 .4\nO1 O .4 .3 .2 1\n'
+>       f = load_document(make_cif(tmp_path/'face.cif',rows,angles)).frames[0]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+../../acceptance_v213/repro/test_delta_213.py:44: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+lele/formats.py:294: in load_document
+    document = _load_complete_document(filename, max_frames)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+lele/formats.py:300: in _load_complete_document
+    document = _load_document(filename, max_frames)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+lele/formats.py:282: in _load_document
+    atoms=read_cif_atoms(path)
+          ^^^^^^^^^^^^^^^^^^^^
+lele/cif_input.py:28: in read_cif_atoms
+    tree=cKDTree(fractions,boxsize=1.)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+>   ???
+E   ValueError: Some input data are greater than the size of the periodic box.
+
+scipy/spatial/_ckdtree.pyx:589: ValueError
+______________ test_three_component_occupancy_survives_saved_cif _______________
+
+tmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_three_component_occupancy0')
+
+    def test_three_component_occupancy_survives_saved_cif(tmp_path):
+        rows = ('Co1 Co .25 .5 .25 .1666667\nNi1 Ni .25 .5 .25 .1666667\n'
+                'Fe1 Fe .25 .5 .25 .6666666\nO1 O .75 .5 .4 1\n')
+        f=load_document(make_cif(tmp_path/'mixture.cif',rows)).frames[0]
+        expected={'Co':.1666667,'Ni':.1666667,'Fe':.6666666}
+        assert f.info['site_occupancies'][0]==expected
+        out=tmp_path/'out.cif';export_frame(f,out,'cif')
+>       reread=load_document(out).frames[0]
+               ^^^^^^^^^^^^^^^^^^
+
+../../acceptance_v213/repro/test_delta_213.py:55: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+lele/formats.py:294: in load_document
+    document = _load_complete_document(filename, max_frames)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+lele/formats.py:300: in _load_complete_document
+    document = _load_document(filename, max_frames)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+lele/formats.py:282: in _load_document
+    atoms=read_cif_atoms(path)
+          ^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+path = PosixPath('/tmp/pytest-of-root/pytest-0/test_three_component_occupancy0/out.cif')
+
+    def read_cif_atoms(path):
+        blocks=[block for block in parse_cif(str(path)) if block.has_structure()]
+        if not blocks:raise ValueError('No CIF structure block found.')
+        block=blocks[-1];sitesym=block._get_sitesym()
+        if (sitesym and block._get_spacegroup_number() is None and block._get_spacegroup_name() is None):
+            rotations,translations=parse_sitesym(sitesym)
+            if (np.allclose(rotations,np.eye(3),atol=1.e-12,rtol=0)
+                    and np.allclose(translations,np.rint(translations),atol=1.e-12,rtol=0)):
+                # Identity is explicit input evidence, not a guessed space group.
+                block._tags['_space_group_it_number']=1
+            else:
+                raise ValueError('CIF has nonidentity symmetry operations but no space-group number or name.')
+        atoms=block.get_atoms(fractional_occupancies=True)
+        weights=block._get_fractional_occupancies()
+        if weights is None or atoms.cell.rank!=3:return atoms
+        raw=block.get_unsymmetrized_structure();group=block.get_spacegroup(subtrans_included=True)
+        # ASE's occupancy dictionary compares unsymmetrized Cartesian positions;
+        # it does not merge components written as different orbit representatives.
+        # Match each original component's unique orbit to the actual expanded sites.
+        fractions=np.mod(atoms.get_scaled_positions(wrap=False),1.)
+        tree=cKDTree(fractions,boxsize=1.)
+        merged=[{} for _ in atoms]
+        for symbol,position,weight in zip(raw.get_chemical_symbols(),raw.get_scaled_positions(wrap=False),weights):
+            weight=float(weight)
+            if not np.isfinite(weight) or weight<0 or weight>1+1.e-6:raise ValueError('Invalid CIF site occupancy.')
+            orbit,_=group.equivalent_sites([position],onduplicates='keep',symprec=.001)
+            distance,indices=tree.query(np.mod(orbit,1.),p=np.inf)
+            if np.any(distance>.001+1.e-10):raise ValueError('CIF symmetry orbit does not match the expanded structure.')
+            for index in set(int(i) for i in indices):
+                previous=merged[index].get(symbol)
+                if previous is not None and abs(previous-weight)>1.e-8:
+                    raise ValueError('Conflicting occupancies for equivalent CIF representatives of '+symbol)
+                # Redundant representatives of the same elemental component are
+                # not additional atoms or extra probability.
+                merged[index][symbol]=weight
+        if any(not values or sum(values.values())>1+1.e-6 for values in merged):
+>           raise ValueError('Invalid total occupancy at a symmetry-equivalent CIF site.')
+E           ValueError: Invalid total occupancy at a symmetry-equivalent CIF site.
+
+lele/cif_input.py:44: ValueError
+__________ test_append_after_a_mixed_site_preserves_raw_cif_row_order __________
+
+tmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_append_after_a_mixed_site0')
+
+    def test_append_after_a_mixed_site_preserves_raw_cif_row_order(tmp_path):
+        rows='Co1 Co .1 .2 .3 .6\nNi1 Ni .1 .2 .3 .4\nO1 O .3 .4 .5 1\n'
+        f=load_document(make_cif(tmp_path/'start.cif',rows)).frames[0]
+        paste_atoms(f,Frame(['H'],[[0.,0.,0.]]),[2,3,3])
+        path=tmp_path/'add.cif';export_frame(f,path,'cif')
+        g=load_document(path).frames[0]
+        assert g.symbols==['Co','O','H']  # Site order and raw atom-loop rows are distinct.
+>       assert next(parse_cif(str(path)))['_atom_site_type_symbol']==['Co','Ni','O','H']
+E       AssertionError: assert ['Co', 'O', 'H', 'Ni'] == ['Co', 'Ni', 'O', 'H']
+E         
+E         At index 1 diff: 'O' != 'Ni'
+E         Use -v to get more diff
+
+../../acceptance_v213/repro/test_delta_213.py:67: AssertionError
+_________ test_unedited_blocks_survive_swapping_two_other_atoms[True] __________
+
+tmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_unedited_blocks_survive_s1')
+swap = True
+
+    @pytest.mark.parametrize('swap', [False,True])
+    def test_unedited_blocks_survive_swapping_two_other_atoms(tmp_path,swap):
+        path=tmp_path/'POSCAR';path.write_text(POSCAR)
+        f=load_document(path).frames[0]
+        if swap:reorder_atoms(f,index_order(4,2,3,swap=3))
+        out=tmp_path/'edited.POSCAR';export_frame(f,out,'poscar-direct')
+        lines=out.read_text().splitlines()
+>       assert (lines[5].split(),lines[6].split()) == (['C','C','O'],['1','1','2'])
+E       AssertionError: assert (['C', 'O'], ['2', '2']) == (['C', 'C', '...1', '1', '2'])
+E         
+E         At index 0 diff: ['C', 'O'] != ['C', 'C', 'O']
+E         Use -v to get more diff
+
+../../acceptance_v213/repro/test_delta_213.py:93: AssertionError
+________ test_unchanged_h_identity_after_editing_unrelated_carbon[True] ________
+
+replace_last_atom = True
+
+    @pytest.mark.parametrize('replace_last_atom',[False,True])
+    def test_unchanged_h_identity_after_editing_unrelated_carbon(replace_last_atom):
+        initial=Frame(['O','H','H','C'],[[0,0,0],[1,0,0],[0,2,0],[5,5,0]])
+        doc=Document(Path('same.xyz'),'XYZ',[initial.clone(),initial.clone()])
+        f=doc.frames[0];reorder_atoms(f,index_order(4,1,2,swap=2))
+        probe=GeometryParameter('Distance',(0,1),reference_symbols=tuple(f.symbols),
+                                reference_order=source_order(f))
+        if replace_last_atom:
+            delete_selected_atoms(f,[3]);paste_atoms(f,Frame(['C'],[[0,0,0]]),[5,5,0])
+        curve=parameter_values(doc,[0,1],probe,f.symbols)
+        # A monitor must never return the distance to the other H.
+>       assert np.all(np.isnan(curve) | np.isclose(curve,2.)),curve
+E       AssertionError: array([1., 2.])
+E       assert np.False_
+E        +  where np.False_ = <function all at 0x7f006150a8b0>((array([False, False]) | array([False,  True])))
+E        +    where <function all at 0x7f006150a8b0> = np.all
+E        +    and   array([False, False]) = <ufunc 'isnan'>(array([1., 2.]))
+E        +      where <ufunc 'isnan'> = np.isnan
+E        +    and   array([False,  True]) = <function isclose at 0x7f0061581ff0>(array([1., 2.]), 2.0)
+E        +      where <function isclose at 0x7f0061581ff0> = np.isclose
+
+../../acceptance_v213/repro/test_delta_213.py:107: AssertionError
+=========================== short test summary info ============================
+FAILED ../../acceptance_v213/repro/test_delta_213.py::test_equivalent_boundary_site_in_skew_cell[angles1]
+FAILED ../../acceptance_v213/repro/test_delta_213.py::test_three_component_occupancy_survives_saved_cif
+FAILED ../../acceptance_v213/repro/test_delta_213.py::test_append_after_a_mixed_site_preserves_raw_cif_row_order
+FAILED ../../acceptance_v213/repro/test_delta_213.py::test_unedited_blocks_survive_swapping_two_other_atoms[True]
+FAILED ../../acceptance_v213/repro/test_delta_213.py::test_unchanged_h_identity_after_editing_unrelated_carbon[True]
+5 failed, 6 passed in 1.47s

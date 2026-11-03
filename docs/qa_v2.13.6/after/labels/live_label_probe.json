@@ -1,0 +1,128 @@
+{
+  "molecule": {
+    "viewport": [
+      0.015,
+      0.015,
+      0.225,
+      0.225
+    ],
+    "canvas": [
+      1022,
+      620
+    ],
+    "viewport_top_in_image": 480.5,
+    "letters": {
+      "X": {
+        "original": {
+          "x": 60,
+          "y": 572,
+          "width": 10,
+          "height": 11,
+          "pixels": 62
+        },
+        "inset_control": {
+          "x": 71,
+          "y": 565,
+          "width": 10,
+          "height": 12,
+          "pixels": 49
+        }
+      },
+      "Y": {
+        "original": {
+          "x": 175,
+          "y": 572,
+          "width": 9,
+          "height": 11,
+          "pixels": 45
+        },
+        "inset_control": {
+          "x": 164,
+          "y": 565,
+          "width": 8,
+          "height": 12,
+          "pixels": 27
+        }
+      },
+      "Z": {
+        "original": {
+          "x": 118,
+          "y": 483,
+          "width": 8,
+          "height": 11,
+          "pixels": 48
+        },
+        "inset_control": {
+          "x": 118,
+          "y": 494,
+          "width": 7,
+          "height": 11,
+          "pixels": 13
+        }
+      }
+    }
+  },
+  "crystal": {
+    "viewport": [
+      0.015,
+      0.015,
+      0.225,
+      0.225
+    ],
+    "canvas": [
+      1022,
+      620
+    ],
+    "viewport_top_in_image": 480.5,
+    "letters": {
+      "a": {
+        "original": {
+          "x": 60,
+          "y": 574,
+          "width": 10,
+          "height": 9,
+          "pixels": 66
+        },
+        "inset_control": {
+          "x": 71,
+          "y": 567,
+          "width": 10,
+          "height": 10,
+          "pixels": 53
+        }
+      },
+      "b": {
+        "original": {
+          "x": 174,
+          "y": 572,
+          "width": 10,
+          "height": 11,
+          "pixels": 72
+        },
+        "inset_control": {
+          "x": 162,
+          "y": 565,
+          "width": 10,
+          "height": 12,
+          "pixels": 48
+        }
+      },
+      "c": {
+        "original": {
+          "x": 117,
+          "y": 485,
+          "width": 9,
+          "height": 9,
+          "pixels": 45
+        },
+        "inset_control": {
+          "x": 117,
+          "y": 496,
+          "width": 9,
+          "height": 9,
+          "pixels": 19
+        }
+      }
+    }
+  }
+}
