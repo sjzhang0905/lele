@@ -1,0 +1,14 @@
+ O   R   C   A
+Synthetic parser fixture, not a physical calculation.
+CHEMICAL SHIELDINGS (ppm)
+Nucleus 1H :
+Total shielding tensor (ppm):
+ 27.0 1.0 2.0
+ 3.0 28.0 4.0
+ 5.0 6.0 29.0
+CHEMICAL SHIELDING SUMMARY (ppm)
+ Nucleus Element Isotropic Anisotropy
+ 1 H 28.000 3.000
+ 2 H 26.000 6.000
+
+****ORCA TERMINATED NORMALLY****

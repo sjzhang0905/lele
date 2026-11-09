@@ -8,6 +8,9 @@ No third-party dependencies are required to execute this file.
 from __future__ import annotations
 
 from datetime import datetime
+import csv
+import hashlib
+import json
 import os
 from pathlib import Path
 import struct
@@ -25,6 +28,89 @@ CHECK_CMD = (
 IMPORT_CMD = ("import ase, numpy, scipy, PySide6, vtkmodules, matplotlib, PIL; "
               "from PIL import Image, GifImagePlugin; "
               "assert 10 <= int(PIL.__version__.split('.')[0]) < 13")
+VERIFICATION_CACHE = VENV / '.lele_dependencies_verified.json'
+REQUIRED_PACKAGES = ('ase', 'numpy', 'scipy', 'PySide6', 'vtkmodules', 'matplotlib', 'PIL')
+
+
+def dependency_fingerprint():
+    """Cheap installation identity; never imports scientific packages twice.
+
+    Metadata from *all* installed distributions detects dependency updates as
+    well as direct package updates. Top-level package files detect missing
+    modules and replaced native extensions even before pip changes metadata.
+    A failed launch invalidates the cache; explicit verification is always
+    available through LELE_VERIFY_DEPENDENCIES=1.
+    """
+    site = VENV / 'Lib' / 'site-packages'
+    try:
+        paths = [WIN_PY, VENV / 'pyvenv.cfg', ROOT / 'requirements.txt', site]
+        for package in REQUIRED_PACKAGES:
+            directory = site / package
+            # All supported distributions are packages, not single modules.
+            if not (directory / '__init__.py').is_file():
+                return None
+            paths.append(directory)
+            paths.extend(entry for entry in directory.iterdir()
+                         if entry.name != '__pycache__')
+        for directory in site.glob('*.dist-info'):
+            paths.append(directory)
+            for name in ('METADATA', 'RECORD', 'INSTALLER'):
+                path = directory / name
+                if path.exists():paths.append(path)
+            record = directory / 'RECORD'
+            if record.is_file():
+                # A nested DLL/extension can be replaced without changing its
+                # package directory's timestamp. Check every recorded native
+                # runtime file, including transitive dependencies' binaries.
+                with record.open(encoding='utf-8', newline='') as stream:
+                    for row in csv.reader(stream):
+                        if not row:continue
+                        relative = Path(row[0])
+                        if relative.is_absolute() or '..' in relative.parts:continue
+                        name = relative.name.lower()
+                        if name.endswith(('.pyd', '.dll', '.dylib')) or '.so' in name:
+                            paths.append(site / relative)
+        stats = []
+        for path in sorted(set(paths)):
+            stat = path.stat()
+            stats.append((str(path), stat.st_size, stat.st_mtime_ns))
+        return {
+            'schema': 1,
+            'requirements_sha256': hashlib.sha256((ROOT / 'requirements.txt').read_bytes()).hexdigest(),
+            'check_sha256': hashlib.sha256(IMPORT_CMD.encode()).hexdigest(),
+            'files': stats,
+        }
+    except (OSError, UnicodeError, csv.Error):
+        return None
+
+
+def dependencies_verified() -> bool:
+    if os.environ.get('LELE_VERIFY_DEPENDENCIES') == '1':
+        return False
+    current = dependency_fingerprint()
+    if current is None:return False
+    try:
+        # Round-trip the stat tuples for equality with JSON arrays.
+        return json.loads(VERIFICATION_CACHE.read_text(encoding='utf-8')) == json.loads(json.dumps(current))
+    except (OSError, ValueError):
+        return False
+
+
+def save_dependency_verification() -> None:
+    current = dependency_fingerprint()
+    if current is None:return
+    temporary = VERIFICATION_CACHE.with_suffix('.tmp')
+    try:
+        temporary.write_text(json.dumps(current, separators=(',', ':')), encoding='utf-8')
+        temporary.replace(VERIFICATION_CACHE)
+    except OSError:
+        # A read-only environment still launches after normal verification.
+        pass
+
+
+def forget_dependency_verification() -> None:
+    try:VERIFICATION_CACHE.unlink(missing_ok=True)
+    except OSError:pass
 
 
 def describe_python(executable: Path | str) -> tuple[int, int, int] | None:
@@ -84,11 +170,12 @@ def main() -> int:
         if run([sys.executable, "-m", "venv", str(VENV)]) != 0:
             return 4
 
-    r = subprocess.run(
+    verified_cache = dependencies_verified()
+    r = None if verified_cache else subprocess.run(
         [str(WIN_PY), "-c", IMPORT_CMD], cwd=ROOT,
         check=False, capture_output=True, text=True,
     )
-    if r.returncode != 0:
+    if r is not None and r.returncode != 0:
         print("[2/3] Installing Python dependencies...", flush=True)
         if run([WIN_PY, "-m", "pip", "install", "--upgrade", "pip"]) != 0:
             print("[ERROR] pip update failed. Check network and package index.", flush=True)
@@ -110,8 +197,14 @@ def main() -> int:
             print(verified.stderr, flush=True)
             return 7
 
+    if not verified_cache:
+        save_dependency_verification()
+
     print("[3/3] Starting LELE...", flush=True)
-    return run([WIN_PY, "-m", "lele", *sys.argv[1:]])
+    result = run([WIN_PY, "-m", "lele", *sys.argv[1:]])
+    if result:
+        forget_dependency_verification()
+    return result
 
 
 if __name__ == "__main__":

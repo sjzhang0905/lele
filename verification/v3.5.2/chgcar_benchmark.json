@@ -1,0 +1,264 @@
+{
+  "summary": {
+    "CHGCAR": {
+      "baseline": {
+        "seconds": 0.2975368349943892,
+        "peak_rss_mib": 66.80078125
+      },
+      "current": {
+        "seconds": 0.05416311400040286,
+        "peak_rss_mib": 73.26171875
+      },
+      "equal": true,
+      "speedup": 5.49334801895209
+    },
+    "CHGCAR_two_channels": {
+      "baseline": {
+        "seconds": 4.056353505002335,
+        "peak_rss_mib": 108.921875
+      },
+      "current": {
+        "seconds": 0.5701358879960026,
+        "peak_rss_mib": 104.3515625
+      },
+      "equal": true,
+      "speedup": 7.114713510247886
+    }
+  },
+  "runs": [
+    {
+      "case": "CHGCAR",
+      "version": "baseline",
+      "repeat": 0,
+      "seconds": 0.2975368349943892,
+      "peak_rss_mib": 66.76171875,
+      "sha256": "51405ea3a99e3d362e3f9ed7323f4470f2b73a7c2649215eac1f51ea3609f1b1",
+      "shapes": [
+        [
+          48,
+          48,
+          192
+        ]
+      ],
+      "bytes": 8057934
+    },
+    {
+      "case": "CHGCAR",
+      "version": "current",
+      "repeat": 0,
+      "seconds": 0.05416311400040286,
+      "peak_rss_mib": 73.26953125,
+      "sha256": "51405ea3a99e3d362e3f9ed7323f4470f2b73a7c2649215eac1f51ea3609f1b1",
+      "shapes": [
+        [
+          48,
+          48,
+          192
+        ]
+      ],
+      "bytes": 8057934
+    },
+    {
+      "case": "CHGCAR",
+      "version": "current",
+      "repeat": 1,
+      "seconds": 0.05259801999636693,
+      "peak_rss_mib": 73.26171875,
+      "sha256": "51405ea3a99e3d362e3f9ed7323f4470f2b73a7c2649215eac1f51ea3609f1b1",
+      "shapes": [
+        [
+          48,
+          48,
+          192
+        ]
+      ],
+      "bytes": 8057934
+    },
+    {
+      "case": "CHGCAR",
+      "version": "baseline",
+      "repeat": 1,
+      "seconds": 0.29746330800116993,
+      "peak_rss_mib": 66.8046875,
+      "sha256": "51405ea3a99e3d362e3f9ed7323f4470f2b73a7c2649215eac1f51ea3609f1b1",
+      "shapes": [
+        [
+          48,
+          48,
+          192
+        ]
+      ],
+      "bytes": 8057934
+    },
+    {
+      "case": "CHGCAR",
+      "version": "baseline",
+      "repeat": 2,
+      "seconds": 0.3269941389953601,
+      "peak_rss_mib": 66.80078125,
+      "sha256": "51405ea3a99e3d362e3f9ed7323f4470f2b73a7c2649215eac1f51ea3609f1b1",
+      "shapes": [
+        [
+          48,
+          48,
+          192
+        ]
+      ],
+      "bytes": 8057934
+    },
+    {
+      "case": "CHGCAR",
+      "version": "current",
+      "repeat": 2,
+      "seconds": 0.05803212500177324,
+      "peak_rss_mib": 73.25390625,
+      "sha256": "51405ea3a99e3d362e3f9ed7323f4470f2b73a7c2649215eac1f51ea3609f1b1",
+      "shapes": [
+        [
+          48,
+          48,
+          192
+        ]
+      ],
+      "bytes": 8057934
+    },
+    {
+      "case": "CHGCAR_two_channels",
+      "version": "baseline",
+      "repeat": 0,
+      "seconds": 4.056353505002335,
+      "peak_rss_mib": 108.921875,
+      "sha256": "ef714e11b3a55cdf8f57713ca980861b5eef50c0c692969e16601edf8fb037da",
+      "shapes": [
+        [
+          144,
+          144,
+          144
+        ],
+        [
+          144,
+          144,
+          144
+        ]
+      ],
+      "bytes": 119439535
+    },
+    {
+      "case": "CHGCAR_two_channels",
+      "version": "current",
+      "repeat": 0,
+      "seconds": 0.5701358879960026,
+      "peak_rss_mib": 104.33984375,
+      "sha256": "ef714e11b3a55cdf8f57713ca980861b5eef50c0c692969e16601edf8fb037da",
+      "shapes": [
+        [
+          144,
+          144,
+          144
+        ],
+        [
+          144,
+          144,
+          144
+        ]
+      ],
+      "bytes": 119439535
+    },
+    {
+      "case": "CHGCAR_two_channels",
+      "version": "current",
+      "repeat": 1,
+      "seconds": 0.5516686650007614,
+      "peak_rss_mib": 104.3671875,
+      "sha256": "ef714e11b3a55cdf8f57713ca980861b5eef50c0c692969e16601edf8fb037da",
+      "shapes": [
+        [
+          144,
+          144,
+          144
+        ],
+        [
+          144,
+          144,
+          144
+        ]
+      ],
+      "bytes": 119439535
+    },
+    {
+      "case": "CHGCAR_two_channels",
+      "version": "baseline",
+      "repeat": 1,
+      "seconds": 3.9886560199956875,
+      "peak_rss_mib": 97.44921875,
+      "sha256": "ef714e11b3a55cdf8f57713ca980861b5eef50c0c692969e16601edf8fb037da",
+      "shapes": [
+        [
+          144,
+          144,
+          144
+        ],
+        [
+          144,
+          144,
+          144
+        ]
+      ],
+      "bytes": 119439535
+    },
+    {
+      "case": "CHGCAR_two_channels",
+      "version": "baseline",
+      "repeat": 2,
+      "seconds": 4.198843193997163,
+      "peak_rss_mib": 108.92578125,
+      "sha256": "ef714e11b3a55cdf8f57713ca980861b5eef50c0c692969e16601edf8fb037da",
+      "shapes": [
+        [
+          144,
+          144,
+          144
+        ],
+        [
+          144,
+          144,
+          144
+        ]
+      ],
+      "bytes": 119439535
+    },
+    {
+      "case": "CHGCAR_two_channels",
+      "version": "current",
+      "repeat": 2,
+      "seconds": 0.5861644549950142,
+      "peak_rss_mib": 104.3515625,
+      "sha256": "ef714e11b3a55cdf8f57713ca980861b5eef50c0c692969e16601edf8fb037da",
+      "shapes": [
+        [
+          144,
+          144,
+          144
+        ],
+        [
+          144,
+          144,
+          144
+        ]
+      ],
+      "bytes": 119439535
+    }
+  ],
+  "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+  "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "repeats": 3,
+  "measurement": "Fresh subprocess; warmed complete load_document; format detection and document construction included; package imports and GUI excluded; operating-system file cache warm.",
+  "many_small_augmentation_check": {
+    "blocks": 10000,
+    "values_per_block": 10,
+    "baseline_seconds": 0.05870088400115492,
+    "initial_chunk_seconds": 3.784855036996305,
+    "final_chunk_seconds": 0.12336396399769001,
+    "note": "One diagnostic run used to identify and remove repeated MiB copying; not a 3-run median."
+  }
+}

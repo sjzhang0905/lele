@@ -1,0 +1,563 @@
+{
+  "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+  "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "parameters": {
+    "atoms": 128,
+    "frames": 10000,
+    "outcar_frames": 3000,
+    "repeats": 3
+  },
+  "description": "Synthetic trajectories; serial fresh processes; initial scientific imports timed separately; deferred imports included in complete load timing; warm filesystem cache; no GUI rendering.",
+  "comparisons": [
+    {
+      "input": "plain.xyz",
+      "bytes": 48788890,
+      "frames": 10000,
+      "median_load_seconds": {
+        "baseline": 1.2690364959998988,
+        "current": 1.0279288050005562
+      },
+      "speedup": 1.2345567998741043,
+      "output_identical": true,
+      "median_import_seconds": {
+        "baseline": 0.42716301800101064,
+        "current": 0.07089019200066105
+      },
+      "median_total_seconds": {
+        "baseline": 1.6936077749996912,
+        "current": 1.091537578999123
+      },
+      "median_peak_rss_mib": {
+        "baseline": 127.12890625,
+        "current": 129.95703125
+      }
+    },
+    {
+      "input": "cp2k.xyz",
+      "bytes": 49037780,
+      "frames": 10000,
+      "median_load_seconds": {
+        "baseline": 1.4044732420006767,
+        "current": 0.8842379440029617
+      },
+      "speedup": 1.5883431055249677,
+      "output_identical": true,
+      "median_import_seconds": {
+        "baseline": 0.44270205900102155,
+        "current": 0.07918079000228317
+      },
+      "median_total_seconds": {
+        "baseline": 1.8471753010016982,
+        "current": 0.9560945080011152
+      },
+      "median_peak_rss_mib": {
+        "baseline": 187.796875,
+        "current": 150.9140625
+      }
+    },
+    {
+      "input": "XDATCAR",
+      "bytes": 51468928,
+      "frames": 10000,
+      "median_load_seconds": {
+        "baseline": 1.421517855997081,
+        "current": 0.7522508499969263
+      },
+      "speedup": 1.8896859418675158,
+      "output_identical": true,
+      "median_import_seconds": {
+        "baseline": 0.3938647539980593,
+        "current": 0.06369560500024818
+      },
+      "median_total_seconds": {
+        "baseline": 1.81987958499667,
+        "current": 0.8140837389946682
+      },
+      "median_peak_rss_mib": {
+        "baseline": 187.27734375,
+        "current": 148.2734375
+      }
+    },
+    {
+      "input": "OUTCAR_long",
+      "bytes": 59475296,
+      "frames": 3000,
+      "median_load_seconds": {
+        "baseline": 3.210193742001138,
+        "current": 1.755104249001306
+      },
+      "speedup": 1.829061575019154,
+      "output_identical": true,
+      "median_import_seconds": {
+        "baseline": 0.4034846819995437,
+        "current": 0.06306550300359959
+      },
+      "median_total_seconds": {
+        "baseline": 3.613678424000682,
+        "current": 1.8302585990022635
+      },
+      "median_peak_rss_mib": {
+        "baseline": 227.76171875,
+        "current": 190.90625
+      }
+    }
+  ],
+  "observations": [
+    {
+      "input": "plain.xyz",
+      "bytes": 48788890,
+      "import_seconds": 0.42716301800101064,
+      "load_seconds": 1.2664447569986805,
+      "total_seconds": 1.6936077749996912,
+      "peak_rss_mib": 127.12890625,
+      "frames": 10000,
+      "sha256": "0f6791dca8404ca4945d9ec660aedcfc55f9f82d09d2e6e351e9dff2f7f4e8d3",
+      "numpy": "2.3.5",
+      "ase": "3.29.0",
+      "warmed_imports": [
+        "lele.vasp_results",
+        "lele.cp2k_results",
+        "lele.trajectory_io"
+      ],
+      "version": "baseline",
+      "repeat": 1
+    },
+    {
+      "input": "plain.xyz",
+      "bytes": 48788890,
+      "import_seconds": 0.07089019200066105,
+      "load_seconds": 0.9945702960030758,
+      "total_seconds": 1.0654604880037368,
+      "peak_rss_mib": 129.95703125,
+      "frames": 10000,
+      "sha256": "0f6791dca8404ca4945d9ec660aedcfc55f9f82d09d2e6e351e9dff2f7f4e8d3",
+      "numpy": "2.3.5",
+      "ase": "3.29.0",
+      "warmed_imports": [
+        "lele.vasp_results",
+        "lele.cp2k_results",
+        "lele.trajectory_io"
+      ],
+      "version": "current",
+      "repeat": 1
+    },
+    {
+      "input": "plain.xyz",
+      "bytes": 48788890,
+      "import_seconds": 0.08112405899737496,
+      "load_seconds": 1.1350933640060248,
+      "total_seconds": 1.2162174230033997,
+      "peak_rss_mib": 130.0,
+      "frames": 10000,
+      "sha256": "0f6791dca8404ca4945d9ec660aedcfc55f9f82d09d2e6e351e9dff2f7f4e8d3",
+      "numpy": "2.3.5",
+      "ase": "3.29.0",
+      "warmed_imports": [
+        "lele.vasp_results",
+        "lele.cp2k_results",
+        "lele.trajectory_io"
+      ],
+      "version": "current",
+      "repeat": 2
+    },
+    {
+      "input": "plain.xyz",
+      "bytes": 48788890,
+      "import_seconds": 0.4192652520068805,
+      "load_seconds": 1.2690364959998988,
+      "total_seconds": 1.6883017480067792,
+      "peak_rss_mib": 127.125,
+      "frames": 10000,
+      "sha256": "0f6791dca8404ca4945d9ec660aedcfc55f9f82d09d2e6e351e9dff2f7f4e8d3",
+      "numpy": "2.3.5",
+      "ase": "3.29.0",
+      "warmed_imports": [
+        "lele.vasp_results",
+        "lele.cp2k_results",
+        "lele.trajectory_io"
+      ],
+      "version": "baseline",
+      "repeat": 2
+    },
+    {
+      "input": "plain.xyz",
+      "bytes": 48788890,
+      "import_seconds": 0.49763254500430776,
+      "load_seconds": 1.3416213990058168,
+      "total_seconds": 1.8392539440101245,
+      "peak_rss_mib": 127.140625,
+      "frames": 10000,
+      "sha256": "0f6791dca8404ca4945d9ec660aedcfc55f9f82d09d2e6e351e9dff2f7f4e8d3",
+      "numpy": "2.3.5",
+      "ase": "3.29.0",
+      "warmed_imports": [
+        "lele.vasp_results",
+        "lele.cp2k_results",
+        "lele.trajectory_io"
+      ],
+      "version": "baseline",
+      "repeat": 3
+    },
+    {
+      "input": "plain.xyz",
+      "bytes": 48788890,
+      "import_seconds": 0.0636087739985669,
+      "load_seconds": 1.0279288050005562,
+      "total_seconds": 1.091537578999123,
+      "peak_rss_mib": 129.91015625,
+      "frames": 10000,
+      "sha256": "0f6791dca8404ca4945d9ec660aedcfc55f9f82d09d2e6e351e9dff2f7f4e8d3",
+      "numpy": "2.3.5",
+      "ase": "3.29.0",
+      "warmed_imports": [
+        "lele.vasp_results",
+        "lele.cp2k_results",
+        "lele.trajectory_io"
+      ],
+      "version": "current",
+      "repeat": 3
+    },
+    {
+      "input": "cp2k.xyz",
+      "bytes": 49037780,
+      "import_seconds": 0.4556311249980354,
+      "load_seconds": 1.3976435889999266,
+      "total_seconds": 1.853274713997962,
+      "peak_rss_mib": 187.84375,
+      "frames": 10000,
+      "sha256": "5e4a8ab9954eb12a7379ae6bb2b1175604212bfa6d53a739cf16e5354a3a5930",
+      "numpy": "2.3.5",
+      "ase": "3.29.0",
+      "warmed_imports": [
+        "lele.vasp_results",
+        "lele.cp2k_results",
+        "lele.trajectory_io"
+      ],
+      "version": "baseline",
+      "repeat": 1
+    },
+    {
+      "input": "cp2k.xyz",
+      "bytes": 49037780,
+      "import_seconds": 0.06926135099638486,
+      "load_seconds": 0.8842379440029617,
+      "total_seconds": 0.9534992949993466,
+      "peak_rss_mib": 150.78515625,
+      "frames": 10000,
+      "sha256": "5e4a8ab9954eb12a7379ae6bb2b1175604212bfa6d53a739cf16e5354a3a5930",
+      "numpy": "2.3.5",
+      "ase": "3.29.0",
+      "warmed_imports": [
+        "lele.vasp_results",
+        "lele.cp2k_results",
+        "lele.trajectory_io"
+      ],
+      "version": "current",
+      "repeat": 1
+    },
+    {
+      "input": "cp2k.xyz",
+      "bytes": 49037780,
+      "import_seconds": 0.07918079000228317,
+      "load_seconds": 0.876913717998832,
+      "total_seconds": 0.9560945080011152,
+      "peak_rss_mib": 150.9296875,
+      "frames": 10000,
+      "sha256": "5e4a8ab9954eb12a7379ae6bb2b1175604212bfa6d53a739cf16e5354a3a5930",
+      "numpy": "2.3.5",
+      "ase": "3.29.0",
+      "warmed_imports": [
+        "lele.vasp_results",
+        "lele.cp2k_results",
+        "lele.trajectory_io"
+      ],
+      "version": "current",
+      "repeat": 2
+    },
+    {
+      "input": "cp2k.xyz",
+      "bytes": 49037780,
+      "import_seconds": 0.44270205900102155,
+      "load_seconds": 1.4044732420006767,
+      "total_seconds": 1.8471753010016982,
+      "peak_rss_mib": 187.796875,
+      "frames": 10000,
+      "sha256": "5e4a8ab9954eb12a7379ae6bb2b1175604212bfa6d53a739cf16e5354a3a5930",
+      "numpy": "2.3.5",
+      "ase": "3.29.0",
+      "warmed_imports": [
+        "lele.vasp_results",
+        "lele.cp2k_results",
+        "lele.trajectory_io"
+      ],
+      "version": "baseline",
+      "repeat": 2
+    },
+    {
+      "input": "cp2k.xyz",
+      "bytes": 49037780,
+      "import_seconds": 0.4167893439953332,
+      "load_seconds": 1.4207483060017694,
+      "total_seconds": 1.8375376499971026,
+      "peak_rss_mib": 187.78515625,
+      "frames": 10000,
+      "sha256": "5e4a8ab9954eb12a7379ae6bb2b1175604212bfa6d53a739cf16e5354a3a5930",
+      "numpy": "2.3.5",
+      "ase": "3.29.0",
+      "warmed_imports": [
+        "lele.vasp_results",
+        "lele.cp2k_results",
+        "lele.trajectory_io"
+      ],
+      "version": "baseline",
+      "repeat": 3
+    },
+    {
+      "input": "cp2k.xyz",
+      "bytes": 49037780,
+      "import_seconds": 0.07965121400047792,
+      "load_seconds": 0.8842472519972944,
+      "total_seconds": 0.9638984659977723,
+      "peak_rss_mib": 150.9140625,
+      "frames": 10000,
+      "sha256": "5e4a8ab9954eb12a7379ae6bb2b1175604212bfa6d53a739cf16e5354a3a5930",
+      "numpy": "2.3.5",
+      "ase": "3.29.0",
+      "warmed_imports": [
+        "lele.vasp_results",
+        "lele.cp2k_results",
+        "lele.trajectory_io"
+      ],
+      "version": "current",
+      "repeat": 3
+    },
+    {
+      "input": "XDATCAR",
+      "bytes": 51468928,
+      "import_seconds": 0.3938647539980593,
+      "load_seconds": 1.5127146739978343,
+      "total_seconds": 1.9065794279958936,
+      "peak_rss_mib": 187.27734375,
+      "frames": 10000,
+      "sha256": "214acdbd17be3419db78e1b700f378b75e657c648f852c6647ee3d26d18d6c2d",
+      "numpy": "2.3.5",
+      "ase": "3.29.0",
+      "warmed_imports": [
+        "lele.vasp_results",
+        "lele.cp2k_results",
+        "lele.trajectory_io"
+      ],
+      "version": "baseline",
+      "repeat": 1
+    },
+    {
+      "input": "XDATCAR",
+      "bytes": 51468928,
+      "import_seconds": 0.061832888997741975,
+      "load_seconds": 0.7522508499969263,
+      "total_seconds": 0.8140837389946682,
+      "peak_rss_mib": 148.2734375,
+      "frames": 10000,
+      "sha256": "214acdbd17be3419db78e1b700f378b75e657c648f852c6647ee3d26d18d6c2d",
+      "numpy": "2.3.5",
+      "ase": "3.29.0",
+      "warmed_imports": [
+        "lele.vasp_results",
+        "lele.cp2k_results",
+        "lele.trajectory_io"
+      ],
+      "version": "current",
+      "repeat": 1
+    },
+    {
+      "input": "XDATCAR",
+      "bytes": 51468928,
+      "import_seconds": 0.0661684989972855,
+      "load_seconds": 0.733450391999213,
+      "total_seconds": 0.7996188909964985,
+      "peak_rss_mib": 148.2734375,
+      "frames": 10000,
+      "sha256": "214acdbd17be3419db78e1b700f378b75e657c648f852c6647ee3d26d18d6c2d",
+      "numpy": "2.3.5",
+      "ase": "3.29.0",
+      "warmed_imports": [
+        "lele.vasp_results",
+        "lele.cp2k_results",
+        "lele.trajectory_io"
+      ],
+      "version": "current",
+      "repeat": 2
+    },
+    {
+      "input": "XDATCAR",
+      "bytes": 51468928,
+      "import_seconds": 0.38759733400365803,
+      "load_seconds": 1.421517855997081,
+      "total_seconds": 1.809115190000739,
+      "peak_rss_mib": 187.41796875,
+      "frames": 10000,
+      "sha256": "214acdbd17be3419db78e1b700f378b75e657c648f852c6647ee3d26d18d6c2d",
+      "numpy": "2.3.5",
+      "ase": "3.29.0",
+      "warmed_imports": [
+        "lele.vasp_results",
+        "lele.cp2k_results",
+        "lele.trajectory_io"
+      ],
+      "version": "baseline",
+      "repeat": 2
+    },
+    {
+      "input": "XDATCAR",
+      "bytes": 51468928,
+      "import_seconds": 0.40839471700019203,
+      "load_seconds": 1.411484867996478,
+      "total_seconds": 1.81987958499667,
+      "peak_rss_mib": 187.27734375,
+      "frames": 10000,
+      "sha256": "214acdbd17be3419db78e1b700f378b75e657c648f852c6647ee3d26d18d6c2d",
+      "numpy": "2.3.5",
+      "ase": "3.29.0",
+      "warmed_imports": [
+        "lele.vasp_results",
+        "lele.cp2k_results",
+        "lele.trajectory_io"
+      ],
+      "version": "baseline",
+      "repeat": 3
+    },
+    {
+      "input": "XDATCAR",
+      "bytes": 51468928,
+      "import_seconds": 0.06369560500024818,
+      "load_seconds": 0.7628634579959908,
+      "total_seconds": 0.8265590629962389,
+      "peak_rss_mib": 148.26953125,
+      "frames": 10000,
+      "sha256": "214acdbd17be3419db78e1b700f378b75e657c648f852c6647ee3d26d18d6c2d",
+      "numpy": "2.3.5",
+      "ase": "3.29.0",
+      "warmed_imports": [
+        "lele.vasp_results",
+        "lele.cp2k_results",
+        "lele.trajectory_io"
+      ],
+      "version": "current",
+      "repeat": 3
+    },
+    {
+      "input": "OUTCAR_long",
+      "bytes": 59475296,
+      "import_seconds": 0.4034846819995437,
+      "load_seconds": 3.210193742001138,
+      "total_seconds": 3.613678424000682,
+      "peak_rss_mib": 227.7734375,
+      "frames": 3000,
+      "sha256": "93a036373a43b1515578d2749fe5124debba58f15f91ca3d6658302d29f962b1",
+      "numpy": "2.3.5",
+      "ase": "3.29.0",
+      "warmed_imports": [
+        "lele.vasp_results",
+        "lele.cp2k_results",
+        "lele.trajectory_io"
+      ],
+      "version": "baseline",
+      "repeat": 1
+    },
+    {
+      "input": "OUTCAR_long",
+      "bytes": 59475296,
+      "import_seconds": 0.062201556997024454,
+      "load_seconds": 1.8573894439978176,
+      "total_seconds": 1.919591000994842,
+      "peak_rss_mib": 190.91015625,
+      "frames": 3000,
+      "sha256": "93a036373a43b1515578d2749fe5124debba58f15f91ca3d6658302d29f962b1",
+      "numpy": "2.3.5",
+      "ase": "3.29.0",
+      "warmed_imports": [
+        "lele.vasp_results",
+        "lele.cp2k_results",
+        "lele.trajectory_io"
+      ],
+      "version": "current",
+      "repeat": 1
+    },
+    {
+      "input": "OUTCAR_long",
+      "bytes": 59475296,
+      "import_seconds": 0.06306550300359959,
+      "load_seconds": 1.7455906230024993,
+      "total_seconds": 1.808656126006099,
+      "peak_rss_mib": 190.78125,
+      "frames": 3000,
+      "sha256": "93a036373a43b1515578d2749fe5124debba58f15f91ca3d6658302d29f962b1",
+      "numpy": "2.3.5",
+      "ase": "3.29.0",
+      "warmed_imports": [
+        "lele.vasp_results",
+        "lele.cp2k_results",
+        "lele.trajectory_io"
+      ],
+      "version": "current",
+      "repeat": 2
+    },
+    {
+      "input": "OUTCAR_long",
+      "bytes": 59475296,
+      "import_seconds": 0.3851738800003659,
+      "load_seconds": 3.0731959409968113,
+      "total_seconds": 3.458369820997177,
+      "peak_rss_mib": 227.76171875,
+      "frames": 3000,
+      "sha256": "93a036373a43b1515578d2749fe5124debba58f15f91ca3d6658302d29f962b1",
+      "numpy": "2.3.5",
+      "ase": "3.29.0",
+      "warmed_imports": [
+        "lele.vasp_results",
+        "lele.cp2k_results",
+        "lele.trajectory_io"
+      ],
+      "version": "baseline",
+      "repeat": 2
+    },
+    {
+      "input": "OUTCAR_long",
+      "bytes": 59475296,
+      "import_seconds": 0.415598443003546,
+      "load_seconds": 3.282921379999607,
+      "total_seconds": 3.698519823003153,
+      "peak_rss_mib": 227.73828125,
+      "frames": 3000,
+      "sha256": "93a036373a43b1515578d2749fe5124debba58f15f91ca3d6658302d29f962b1",
+      "numpy": "2.3.5",
+      "ase": "3.29.0",
+      "warmed_imports": [
+        "lele.vasp_results",
+        "lele.cp2k_results",
+        "lele.trajectory_io"
+      ],
+      "version": "baseline",
+      "repeat": 3
+    },
+    {
+      "input": "OUTCAR_long",
+      "bytes": 59475296,
+      "import_seconds": 0.07515435000095749,
+      "load_seconds": 1.755104249001306,
+      "total_seconds": 1.8302585990022635,
+      "peak_rss_mib": 190.90625,
+      "frames": 3000,
+      "sha256": "93a036373a43b1515578d2749fe5124debba58f15f91ca3d6658302d29f962b1",
+      "numpy": "2.3.5",
+      "ase": "3.29.0",
+      "warmed_imports": [
+        "lele.vasp_results",
+        "lele.cp2k_results",
+        "lele.trajectory_io"
+      ],
+      "version": "current",
+      "repeat": 3
+    }
+  ]
+}

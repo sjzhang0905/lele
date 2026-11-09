@@ -1,0 +1,182 @@
+[
+  {
+    "version": "baseline",
+    "fixture": "cube_224.cube",
+    "repeat": 0,
+    "seconds": 6.648490339001,
+    "peak_rss_mib": 106.3125,
+    "shape": [
+      224,
+      224,
+      224
+    ],
+    "dtype": "float32",
+    "sha256": "e03fa2f740a6465053dc824631cf074506e1e025964d55fcfb1543a7331123d7",
+    "file_mib": 160.78136348724365
+  },
+  {
+    "version": "baseline",
+    "fixture": "cube_224.cube",
+    "repeat": 1,
+    "seconds": 7.340215629003069,
+    "peak_rss_mib": 105.3203125,
+    "shape": [
+      224,
+      224,
+      224
+    ],
+    "dtype": "float32",
+    "sha256": "e03fa2f740a6465053dc824631cf074506e1e025964d55fcfb1543a7331123d7",
+    "file_mib": 160.78136348724365
+  },
+  {
+    "version": "baseline",
+    "fixture": "cube_224.cube",
+    "repeat": 2,
+    "seconds": 7.317876116998377,
+    "peak_rss_mib": 105.2890625,
+    "shape": [
+      224,
+      224,
+      224
+    ],
+    "dtype": "float32",
+    "sha256": "e03fa2f740a6465053dc824631cf074506e1e025964d55fcfb1543a7331123d7",
+    "file_mib": 160.78136348724365
+  },
+  {
+    "version": "work",
+    "fixture": "cube_224.cube",
+    "repeat": 0,
+    "seconds": 1.1239256620028755,
+    "peak_rss_mib": 109.84765625,
+    "shape": [
+      224,
+      224,
+      224
+    ],
+    "dtype": "float32",
+    "sha256": "e03fa2f740a6465053dc824631cf074506e1e025964d55fcfb1543a7331123d7",
+    "file_mib": 160.78136348724365
+  },
+  {
+    "version": "work",
+    "fixture": "cube_224.cube",
+    "repeat": 1,
+    "seconds": 0.9478125000023283,
+    "peak_rss_mib": 110.2578125,
+    "shape": [
+      224,
+      224,
+      224
+    ],
+    "dtype": "float32",
+    "sha256": "e03fa2f740a6465053dc824631cf074506e1e025964d55fcfb1543a7331123d7",
+    "file_mib": 160.78136348724365
+  },
+  {
+    "version": "work",
+    "fixture": "cube_224.cube",
+    "repeat": 2,
+    "seconds": 0.9080617360014003,
+    "peak_rss_mib": 110.203125,
+    "shape": [
+      224,
+      224,
+      224
+    ],
+    "dtype": "float32",
+    "sha256": "e03fa2f740a6465053dc824631cf074506e1e025964d55fcfb1543a7331123d7",
+    "file_mib": 160.78136348724365
+  },
+  {
+    "version": "baseline",
+    "fixture": "cube_128_single_line.cube",
+    "repeat": 0,
+    "seconds": 0.45468536199769005,
+    "peak_rss_mib": 325.32421875,
+    "shape": [
+      128,
+      128,
+      128
+    ],
+    "dtype": "float32",
+    "sha256": "038287725e744827ce1122548c8de6a22bb612c0a486fd85930e8455e18d3dbe",
+    "file_mib": 30.000113487243652
+  },
+  {
+    "version": "baseline",
+    "fixture": "cube_128_single_line.cube",
+    "repeat": 1,
+    "seconds": 0.5148407180022332,
+    "peak_rss_mib": 325.2890625,
+    "shape": [
+      128,
+      128,
+      128
+    ],
+    "dtype": "float32",
+    "sha256": "038287725e744827ce1122548c8de6a22bb612c0a486fd85930e8455e18d3dbe",
+    "file_mib": 30.000113487243652
+  },
+  {
+    "version": "baseline",
+    "fixture": "cube_128_single_line.cube",
+    "repeat": 2,
+    "seconds": 0.5332724130057613,
+    "peak_rss_mib": 325.296875,
+    "shape": [
+      128,
+      128,
+      128
+    ],
+    "dtype": "float32",
+    "sha256": "038287725e744827ce1122548c8de6a22bb612c0a486fd85930e8455e18d3dbe",
+    "file_mib": 30.000113487243652
+  },
+  {
+    "version": "work",
+    "fixture": "cube_128_single_line.cube",
+    "repeat": 0,
+    "seconds": 0.26023329500458203,
+    "peak_rss_mib": 75.671875,
+    "shape": [
+      128,
+      128,
+      128
+    ],
+    "dtype": "float32",
+    "sha256": "038287725e744827ce1122548c8de6a22bb612c0a486fd85930e8455e18d3dbe",
+    "file_mib": 30.000113487243652
+  },
+  {
+    "version": "work",
+    "fixture": "cube_128_single_line.cube",
+    "repeat": 1,
+    "seconds": 0.17536100200231886,
+    "peak_rss_mib": 75.66015625,
+    "shape": [
+      128,
+      128,
+      128
+    ],
+    "dtype": "float32",
+    "sha256": "038287725e744827ce1122548c8de6a22bb612c0a486fd85930e8455e18d3dbe",
+    "file_mib": 30.000113487243652
+  },
+  {
+    "version": "work",
+    "fixture": "cube_128_single_line.cube",
+    "repeat": 2,
+    "seconds": 0.17810514799930388,
+    "peak_rss_mib": 75.73046875,
+    "shape": [
+      128,
+      128,
+      128
+    ],
+    "dtype": "float32",
+    "sha256": "038287725e744827ce1122548c8de6a22bb612c0a486fd85930e8455e18d3dbe",
+    "file_mib": 30.000113487243652
+  }
+]

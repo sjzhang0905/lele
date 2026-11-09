@@ -27,6 +27,7 @@ def has_curve_data(document):
 
 def results_text(document):
     from ase.units import Hartree
+    from .energy_units import program_energy_unit
     lines=[f'File: {document.path.name}',f'Reader: {document.format_name}',
            ('Structure: not present for the selected energy record.' if document.frames else
             'Structure: not present in this file.')]
@@ -37,7 +38,7 @@ def results_text(document):
         for job in results.jobs:
             lines.extend(['',f'Job {job.index+1}'+(' · '+job.method if job.method else '')])
             if finite(job.energy_ev):
-                if results.program in ('VASP','Quantum ESPRESSO'):
+                if program_energy_unit(results.program) == 'eV':
                     lines.append(f'{"E0 (σ→0)" if results.program=="VASP" else "Total energy"}: {job.energy_ev:.9f} eV')
                 else:
                     lines.append(f'Total energy: {job.energy_ev/Hartree:.12f} Eh')
@@ -59,4 +60,7 @@ def results_text(document):
         lines.append(f'Electronic spectra: {len(document.electronic_spectra)} · printed transitions: '+
                      str(sum(len(s.transitions) for s in document.electronic_spectra)))
     if document.note:lines+=['',document.note]
+    if document.nmr_results:
+        lines.append(f'NMR: {len(document.nmr_results)} dataset(s) · Analysis → NMR spectrum / shielding table')
+        lines.extend(f'  {r.program}: {r.label} · {len(r.nuclei)} printed nuclei' for r in document.nmr_results)
     return '\n'.join(lines)

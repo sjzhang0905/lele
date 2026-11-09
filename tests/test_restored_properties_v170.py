@@ -93,12 +93,12 @@ def test_occluded_long_bond_removed_triangle_and_manual_override_preserved():
 
 def test_boundary_whole_cells_bonds_source_ids_and_skew_ranges():
     f=Frame(['Si'],[[0,0,0]],np.eye(3)*2.2,(True,)*3,atom_appearance={0:AtomAppearance(opacity=.3)})
-    v=boundary_view(f,((0,2),(0,2),(0,1)));assert len(v.source_indices)==4 and len(v.bonds)==4
+    v=boundary_view(f,((0,2),(0,2),(0,1)));assert len(v.source_indices)==18 and len(v.bonds)==33
     assert set(v.source_indices)=={0} and all(s.opacity==.3 for s in v.frame.atom_appearance.values())
     assert len(f.symbols)==1;np.testing.assert_allclose(f.cell,np.eye(3)*2.2)
     f.cell=np.array([[3,0,0],[.5,4,0],[.4,.2,5]])
     v=boundary_view(f,((-1,2),(0,1),(0,1)));fractions=v.frame.positions@np.linalg.inv(f.cell)
-    assert np.all(fractions[:,0]>=-1) and np.all(fractions[:,0]<2)
+    assert np.all(fractions[:,0]>=-1-1.e-10) and np.all(fractions[:,0]<=2+1.e-10)
     for bounds in [((0,0),(0,1),(0,1)),((-10,10),)*3]:
         with pytest.raises(ValueError):boundary_view(f,bounds)
 

@@ -8,7 +8,7 @@ def populate_energy_steps(window, index, doc, head):
     """Energy records without coordinates are selectable results, not frames."""
     from math import isfinite
     from ase.units import Hartree
-    from .energy_units import EV_TO_KCAL_MOL
+    from .energy_units import EV_TO_KCAL_MOL, program_energy_unit
     results=doc.calculation_results
     if results is None:return
     groups={};stages={s.index:s for s in results.stages}
@@ -20,7 +20,7 @@ def populate_energy_steps(window, index, doc, head):
         children=[]
         for i in indices:
             step=results.steps[i];cycle=step.cycle if step.cycle is not None else i+1
-            unit='eV' if results.program=='VASP' else 'kcal/mol'
+            unit=program_energy_unit(results.program)
             value=step.energy_ev if unit=='eV' else step.energy_ev*EV_TO_KCAL_MOL
             energy_label='E0 ' if results.program=='VASP' else ''
             child=QTreeWidgetItem([f'Step {cycle} · {energy_label}{value:.8f} {unit}'])
@@ -111,6 +111,26 @@ def sequence_for(window, index=None):
 
 PAGE_SIZE=256
 LAZY_ROLE=int(Qt.ItemDataRole.UserRole)+17
+FRAME_LABEL_ROLE=int(Qt.ItemDataRole.UserRole)+18
+
+
+def frame_tree_label(frame, frame_index, format_name, *, title=None, series_step=None):
+    """Use the same scientific step names before and after tree selection."""
+    from .energy_units import display_energy
+    info = frame.info
+    if title is None:
+        title = (info['structure_label'] if info.get('structure_label') else
+                 f'Conformer {info["goat_conformer"]}' if 'goat_conformer' in info else
+                 f'Image {info["neb_image"]}' if 'neb_image' in info else
+                 f'Step {info["optimization_cycle"]}' if info.get('optimization_cycle') is not None else
+                 f'Step {series_step}' if series_step is not None else
+                 f'Frame {frame_index + 1}')
+    energy, unit = display_energy(frame, format_name)
+    if energy is not None:
+        title += f' · {energy:.5f} {unit}'
+    if info.get('optimization_converged'):
+        title += ' · converged'
+    return title
 
 
 def expand_tree_item(item):
@@ -128,7 +148,6 @@ def _defer(item,maker):
 
 def add_frame_items(window,index,doc,parent,indices,*,label='',item_labels=None,series=False):
     """Retain every frame while creating only expanded pages of tree widgets."""
-    from .energy_units import display_energy
     sequence=shared_sequence(window,doc,indices)
     if not hasattr(window,'_tree_sequences'):window._tree_sequences={}
     if not hasattr(window,'_sequence_pages'):window._sequence_pages={}
@@ -139,22 +158,22 @@ def add_frame_items(window,index,doc,parent,indices,*,label='',item_labels=None,
         children=[]
         for k in range(start,stop):
             fi=sequence[k];f=doc.frames[fi]
-            title=(item_labels[k] if item_labels is not None else
-                   f'Step {f.info.get("optimization_cycle") or k+1}' if series else f'Frame {fi+1}')
-            energy,unit=display_energy(f,doc.format_name)
-            if energy is not None:title+=f' · {energy:.5f} {unit}'
-            if f.info.get('optimization_converged'):title+=' · converged'
+            custom_title = item_labels[k] if item_labels is not None else None
+            title = frame_tree_label(f, fi, doc.format_name, title=custom_title,
+                                     series_step=k+1 if series else None)
             child=QTreeWidgetItem([title]);child.setData(0,Qt.ItemDataRole.UserRole,data(k));children.append(child)
+            if custom_title is not None:child.setData(0,FRAME_LABEL_ROLE,custom_title)
             window._series_tree_items[index,sequence.key,fi]=child
             window._frame_tree_items.setdefault((index,fi),child)
         target.addChildren(children)
     if len(sequence)<=PAGE_SIZE:
         fill(parent,0,len(sequence))
     else:
+        step_items = series or all(doc.frames[fi].info.get('optimization_cycle') is not None for fi in sequence)
         pages=[]
         for start in range(0,len(sequence),PAGE_SIZE):
             stop=min(start+PAGE_SIZE,len(sequence))
-            page=QTreeWidgetItem([f'{"Steps" if series else "Frames"} {start+1}–{stop}'])
+            page=QTreeWidgetItem([f'{"Steps" if step_items else "Frames"} {start+1}–{stop}'])
             page.setData(0,Qt.ItemDataRole.UserRole,data(start));parent.addChild(page);pages.append(page)
             _defer(page,lambda p=page,a=start,b=stop:fill(p,a,b))
         window._sequence_pages[index,sequence.key]=pages

@@ -1,0 +1,48 @@
+{
+  "baseline": [
+    {
+      "seconds": 2.7037751660027425,
+      "rss_kib": 199900,
+      "frames": 6000,
+      "steps": 6000,
+      "sha256": "a13e28710b85741348ba47620e93af7c49f8875eac70e2f3b37d356ce62f8d50"
+    },
+    {
+      "seconds": 3.0810934850014746,
+      "rss_kib": 199904,
+      "frames": 6000,
+      "steps": 6000,
+      "sha256": "a13e28710b85741348ba47620e93af7c49f8875eac70e2f3b37d356ce62f8d50"
+    },
+    {
+      "seconds": 3.1671070419979515,
+      "rss_kib": 199908,
+      "frames": 6000,
+      "steps": 6000,
+      "sha256": "a13e28710b85741348ba47620e93af7c49f8875eac70e2f3b37d356ce62f8d50"
+    }
+  ],
+  "work": [
+    {
+      "seconds": 2.016520748999028,
+      "rss_kib": 199916,
+      "frames": 6000,
+      "steps": 6000,
+      "sha256": "a13e28710b85741348ba47620e93af7c49f8875eac70e2f3b37d356ce62f8d50"
+    },
+    {
+      "seconds": 2.0821955439969315,
+      "rss_kib": 199916,
+      "frames": 6000,
+      "steps": 6000,
+      "sha256": "a13e28710b85741348ba47620e93af7c49f8875eac70e2f3b37d356ce62f8d50"
+    },
+    {
+      "seconds": 1.9427124020003248,
+      "rss_kib": 199920,
+      "frames": 6000,
+      "steps": 6000,
+      "sha256": "a13e28710b85741348ba47620e93af7c49f8875eac70e2f3b37d356ce62f8d50"
+    }
+  ]
+}

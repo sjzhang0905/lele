@@ -52,8 +52,19 @@ class DocumentViewActions:
         self._remember_document_view()
         state = self._document_views.get(id(document))
         if state is None:
-            # First visits inherit the current appearance, then remain isolated.
-            state = DocumentView(document, deepcopy(self.render_options),
+            # Appearance can carry over, but every new file starts with its
+            # own enabled one-cell Boundary rather than another file's range.
+            from .render_options import RenderOptions
+            options = deepcopy(self.render_options)
+            defaults = RenderOptions()
+            options.boundary_enabled = defaults.boundary_enabled
+            options.boundary_bounds = defaults.boundary_bounds
+            # Dataset references belong to one document. Retain them when
+            # switching back, but never bind them to unrelated newly opened grids.
+            if any(layer.get('dataset', -1) >= 0 or layer.get('map_dataset', -1) >= 0
+                   for layer in options.volume_surfaces):
+                options.volume_surfaces = []
+            state = DocumentView(document, options,
                                  deepcopy(self._custom_style_state), self.preset_combo.currentData())
             self._initialize_document_pair_rules(document, state.options)
             self._document_views[id(document)] = state
@@ -121,7 +132,11 @@ class DocumentViewActions:
         elif reset_camera or self._view_fit_pending:
             self._set_projection_mode('Isometry')
         elif (self._active_vibration is not None or self.render_options.dipole_mode != 'Off'
-              or self.render_options.boundary_enabled):
+              or (self.doc.volume is not None and self.render_options.show_volume)
+              or (self.renderer.boundary_display is not None
+                  and self.renderer.boundary_display.tiles != ((0, 0, 0),))):
+            # New surfaces/isolevels need updated depth bounds. Preserve the
+            # ordinary structure-only camera, including saved clipping values.
             self.scene.ResetCameraClippingRange()
         self._view_fit_pending = False
         self._scene_document = self.doc

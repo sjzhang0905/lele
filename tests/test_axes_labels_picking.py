@@ -104,7 +104,8 @@ class InteractiveRendererTests(unittest.TestCase):
         self.draw.options.label_color = '#FF00CC'
         self.draw.set_scene(f, reset_camera=True)
         self.window.Render()
-        self.assertEqual([a.GetInput() for a in self.draw._label_actors], ['O1', 'O2', 'C1'])
+        self.assertEqual([a.GetInput() for a in self.draw._label_actors],
+                         ['O1','O2','C1']+['O1']*7+['O2']*3+['C1'])
         self.assertEqual(self.draw._label_actors[0].GetTextProperty().GetFontSize(),22)
         self.assertEqual(self.draw._label_actors[0].GetTextProperty().GetJustificationAsString(), 'Centered')
         # XYZ/abc origin arrows have true displacement as matrix column 0.

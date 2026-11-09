@@ -1,0 +1,41 @@
+{
+  "version": "3.4.0",
+  "date": "2026-11-05",
+  "original_package": "LELE_v3.3.0_20261105.zip",
+  "original_sha256": "30ffef3f553eac039e02c7650b5a843519e71bc5b1bb3d6855fe521bea920593",
+  "full": {
+    "passed": 1263,
+    "skipped": 12,
+    "subtests_passed": 78,
+    "failures": 0,
+    "errors": 0,
+    "seconds": 72.686
+  },
+  "targeted_passed": 55,
+  "targeted_overlaps_full": true,
+  "acceptance_regressions": {
+    "passed": 9,
+    "included_in_full": true
+  },
+  "mapping_tests": {
+    "passed": 15,
+    "included_in_full": true
+  },
+  "skip_reasons": {
+    "Set LELE_CHEMCRAFT_CIF_EXAMPLE to the private 22.cif; it is not redistributed.": 1,
+    "Set LELE_ROTATION_EXAMPLE_DIR to the private POSCAR1/POSCAR2 directory.": 3,
+    "Set LELE_ROTATION_EXAMPLE_DIR to the supplied private POSCAR1/POSCAR2.": 1,
+    "Set LELE_ROTATION_SCRIPT to the supplied v13 rotation script.": 1,
+    "Set QA_SIBYL_TCL to the original Sibyl.tcl": 1,
+    "Set LELE_ROTATION_EXAMPLE_DIR to the original POSCAR1 folder": 2,
+    "Set LELE_CP2K_MOLDEN_EXAMPLE to the supplied private example; it is not redistributed.": 1,
+    "Set LELE_QE_EXAMPLE_DIR; private QE examples are not redistributed": 1,
+    "No external standard WAVECAR fixture supplied": 1
+  },
+  "runtime": {
+    "python": "3.12.14",
+    "platform": "Linux"
+  },
+  "windows_native_tested": false,
+  "executables_included": false
+}

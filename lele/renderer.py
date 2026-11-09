@@ -12,12 +12,14 @@ import numpy as np
 import vtkmodules.vtkRenderingOpenGL2  # noqa: F401
 import vtkmodules.vtkInteractionStyle  # noqa: F401
 from vtkmodules.vtkCommonCore import vtkPoints, vtkUnsignedCharArray, vtkFloatArray
-from vtkmodules.vtkCommonDataModel import vtkPolyData, vtkCellArray, vtkStructuredGrid
+from vtkmodules.vtkCommonDataModel import vtkPolyData, vtkCellArray, vtkStructuredGrid, vtkImageData
 from vtkmodules.vtkFiltersSources import vtkSphereSource, vtkArrowSource, vtkPlaneSource
 from vtkmodules.vtkFiltersCore import vtkTubeFilter, vtkContourFilter
 from vtkmodules.vtkRenderingCore import vtkActor, vtkPolyDataMapper, vtkGlyph3DMapper, vtkRenderer, vtkBillboardTextActor3D, vtkPropAssembly, vtkFollower
 from vtkmodules.util.numpy_support import numpy_to_vtk
 from vtkmodules.vtkCommonMath import vtkMatrix4x4
+from vtkmodules.vtkCommonTransforms import vtkTransform
+from vtkmodules.vtkFiltersGeneral import vtkTransformPolyDataFilter
 
 from .core import Frame, Volume, visible_bonds, unit_cell_edges, radius, atom_label_texts, axis_vectors
 from .hydrogen_bonds import hydrogen_bond_links
@@ -34,6 +36,49 @@ def rgb(hex_color):
     return tuple(int(c[i:i+2], 16) / 255.0 for i in (0, 2, 4))
 
 
+
+def volume_surface_specs(options):
+    """Resolve signed contour styles without modifying the sampled scalar field.
+
+    An explicit nonempty layer list replaces the basic positive/negative pair.
+    Zero is a legitimate custom isolevel (e.g. an orbital nodal surface).
+    """
+    custom = getattr(options, 'volume_surfaces', [])
+    if custom:
+        specs = [dict(item) for item in custom if item.get('visible', True)]
+    else:
+        positive = max(MIN_ISOVALUE, abs(float(options.volume_iso)))
+        negative = (max(MIN_ISOVALUE, abs(float(getattr(options, 'volume_negative_iso', positive))))
+                    if getattr(options, 'volume_independent_negative', False) else positive)
+        opacity = float(options.volume_opacity)
+        negative_opacity = (float(getattr(options, 'volume_negative_opacity', opacity))
+                            if getattr(options, 'volume_independent_opacity', False) else opacity)
+        style = getattr(options, 'volume_representation', 'Surface')
+        specs = []
+        if options.volume_signs in ('Both', 'Negative'):
+            specs.append(dict(value=-negative, color=getattr(options, 'volume_negative_color', '#556EE6'),
+                              opacity=negative_opacity, style=style))
+        if options.volume_signs in ('Both', 'Positive'):
+            specs.append(dict(value=positive, color=getattr(options, 'volume_positive_color', '#EC6B46'),
+                              opacity=opacity, style=style))
+    for spec in specs:
+        from .field_mapping import validate_layer_mapping
+        validate_layer_mapping(spec)
+        value = float(spec['value']); opacity = float(spec.get('opacity', options.volume_opacity))
+        if not np.isfinite(value) or not np.isfinite(opacity) or not 0 <= opacity <= 1:
+            raise ValueError('Isosurface values must be finite and opacity must lie between 0 and 1.')
+        color = spec.get('color', '#EC6B46' if value >= 0 else '#556EE6')
+        if not isinstance(color, str) or len(color) != 7 or not color.startswith('#'):
+            raise ValueError('Isosurface colors must use #RRGGBB format.')
+        try: rgb(color)
+        except ValueError: raise ValueError('Invalid isosurface color.') from None
+        style = spec.get('style', 'Surface')
+        if style not in ('Surface', 'Wireframe', 'Points'):
+            raise ValueError('Unknown isosurface representation: '+str(style))
+        spec.update(value=value, opacity=opacity, color=color, style=style)
+    return specs
+
+
 def uchar_rgb(hex_color):
     return tuple(int(round(x * 255)) for x in rgb(hex_color))
 
@@ -45,6 +90,9 @@ class MoleculeRenderer(CrystalRendering):
         self.dynamic = []
         self.frame: Frame | None = None
         self.volume: Volume | None = None
+        self.field_warnings = []
+        self.field_actors = []
+        self.field_scalar_bars = []
         self.selected: list[int] = []
         self.periodic_preview = None
         self.boundary_display = None
@@ -80,13 +128,16 @@ class MoleculeRenderer(CrystalRendering):
 
     def clear(self):
         for actor in self.dynamic:
-            self.renderer.RemoveActor(actor)
+            self.renderer.RemoveViewProp(actor)
         self.dynamic.clear()
         self._keepalive.clear()
         self.atom_highlights.clear()
         self._label_actors.clear()
         self._label_positions.clear()
         self._label_radii.clear()
+        self.field_warnings.clear()
+        self.field_actors.clear()
+        self.field_scalar_bars.clear()
 
     def _add_actor(self, actor):
         self._attach_crystal_clips(actor)
@@ -94,9 +145,14 @@ class MoleculeRenderer(CrystalRendering):
         self.dynamic.append(actor)
         return actor
 
-    def set_scene(self, frame: Frame, volume: Volume | None = None, reset_camera: bool = False):
+    def set_scene(self, frame: Frame, volume: Volume | None = None, reset_camera: bool = False, *, volumes=None):
         report=load_progress('Preparing atoms and boundaries',8)
         source_frame = frame
+        source_volume = volume
+        fields = list(volumes) if volumes is not None else ([] if volume is None else [volume])
+        active_index = next((i for i,v in enumerate(fields) if v is volume), -1)
+        if volume is not None and active_index < 0:
+            fields.append(volume);active_index=len(fields)-1
         self.source_frame = source_frame
         self.display_rotation = np.eye(3)
         self.display_translation = np.zeros(3)
@@ -106,7 +162,7 @@ class MoleculeRenderer(CrystalRendering):
                 frame, self.display_rotation, self.display_translation = self.alignment.apply(frame)
                 if volume is not None:
                     volume = Volume(volume.data, volume.origin @ self.display_rotation + self.display_translation,
-                                    volume.voxel_vectors @ self.display_rotation)
+                                    volume.voxel_vectors @ self.display_rotation, volume.label, volume.unit, volume.periodic)
             except ValueError as exc:
                 self.alignment_note = 'Display alignment unavailable for this frame: ' + str(exc)
         self.frame, self.volume = frame, volume
@@ -115,6 +171,10 @@ class MoleculeRenderer(CrystalRendering):
         self.renderer.SetBackground(rgb(self.options.background))
         self.boundary_display = None
         boundary = self.options.boundary_enabled and periodic_basis(frame) is not None
+        # An explicit fragment preview takes precedence over the default
+        # single-cell boundary, which adds no requested display replicas.
+        if self.periodic_preview is not None and np.array_equal(self.options.boundary_bounds, ((0,1),)*3):
+            boundary = False
         original_fixed = self.fixed_bonds
         if boundary:
             from .boundary import boundary_view
@@ -137,8 +197,9 @@ class MoleculeRenderer(CrystalRendering):
         self._prepare_crystal_geometry()
         report(1)
         polyhedral = self.options.style == 'Polyhedral'
-        show_atoms = not polyhedral or self.options.polyhedra_show_atoms
-        if self.options.style != 'Wireframe' and show_atoms:
+        show_atoms = (not polyhedral or self.options.polyhedra_show_atoms or
+                      any(s.representation!='Global' for s in frame.atom_appearance.values()))
+        if show_atoms:
             self._atoms(frame)
             if self.periodic_preview is not None and not boundary:
                 self._periodic_copy_atoms(frame)
@@ -168,10 +229,13 @@ class MoleculeRenderer(CrystalRendering):
         self._clipping_suspended = True
         if self.dipole_vector is not None and self.options.dipole_mode!='Off':self._dipole_arrows(self.frame)
         if self.options.axes_position == 'Origin':
-            self._world_axes(frame)
+            self._world_axes(self.frame)
         self._clipping_suspended = False
         if volume is not None and self.options.show_volume:
-            self._volume(volume)
+            from .field_mapping import transformed_fields
+            from .surface_rendering import draw_fields
+            fields = transformed_fields(fields, source_volume, self.display_rotation, self.display_translation)
+            draw_fields(self, volume, fields, active_index)
         self._highlights()
         report(5)
         if self.fitted_plane is not None:
@@ -247,12 +311,13 @@ class MoleculeRenderer(CrystalRendering):
         groups = defaultdict(list)
         from .site_occupancy import site_species
         for i, symbol in enumerate(progress_items(frame.symbols,'Preparing atom display')):
-            if atom_is_drawn(frame, i):
+            mode=self._atom_style(frame,i)
+            if atom_is_drawn(frame, i) and mode!='Wireframe' and not self._polyhedral_atom_hidden(frame,i):
                 values=site_species(frame,i)
                 if len(values)!=1 or abs(next(iter(values.values()),0.)-1.)>1.e-8:
                     self._occupied_site(frame,i,values)
                     continue
-                groups[(symbol, self.atom_color(frame, i), appearance(frame, i).opacity)].append(i)
+                groups[(symbol, self.atom_color(frame, i), appearance(frame, i).opacity,mode)].append(i)
         if not groups:
             return
         source = vtkSphereSource()
@@ -261,11 +326,11 @@ class MoleculeRenderer(CrystalRendering):
         source.SetPhiResolution(16)
         source.Update()
         self._keepalive.append(source)
-        for (sym, color, opacity), indices in groups.items():
+        for (sym, color, opacity,mode), indices in groups.items():
             pts = vtkPoints()
             sizes = vtkFloatArray()
             sizes.SetName('atom_radius')
-            ball_size = self._atom_radius(sym)
+            ball_size = self._atom_radius(sym,mode)
             for i in indices:
                 pts.InsertNextPoint(*[float(x) for x in frame.positions[i]])
                 sizes.InsertNextValue(ball_size)
@@ -289,8 +354,7 @@ class MoleculeRenderer(CrystalRendering):
             self._keepalive.append((pts, pdata, sizes, mapper))
 
     def _occupied_site(self,frame,index,values):
-        start=0.;scale=self._atom_radius(frame.symbols[index])
-        if self.options.style=='Sticks':scale=max(.085,self.options.bond_scale*1.18)
+        start=0.;scale=self._atom_radius(frame.symbols[index],self._atom_style(frame,index))
         sectors=list(values.items())
         vacancy=max(0.,1-sum(values.values()))
         if vacancy>1.e-8:sectors.append((None,vacancy))
@@ -346,8 +410,6 @@ class MoleculeRenderer(CrystalRendering):
         return self._add_actor(actor)
 
     def _bonds(self, frame):
-        if self.options.style == 'Space filling':
-            return
         groups = defaultdict(list)
         pairs = self.fixed_bonds if self.fixed_bonds is not None else visible_bonds(frame, self.options.bond_cutoff)
         for a, b in pairs:
@@ -356,10 +418,12 @@ class MoleculeRenderer(CrystalRendering):
                 continue
             p, q = frame.positions[a], frame.positions[b]
             m = (p + q) * 0.5
-            groups[opacity].extend(((p, m, self.atom_color(frame, a, for_bond=True)),
-                                    (m, q, self.atom_color(frame, b, for_bond=True))))
-        width = self.options.bond_scale * (.50 if self.options.style == 'Wireframe' else 1.0)
-        for opacity, segments in groups.items():
+            for i,start,end in ((a,p,m),(b,m,q)):
+                mode=self._atom_style(frame,i)
+                if mode=='Space filling':continue
+                width=self.options.bond_scale*(.5 if mode=='Wireframe' else 1.)
+                groups[opacity,width].append((start,end,self.atom_color(frame,i,for_bond=True)))
+        for (opacity,width), segments in groups.items():
             self._tube_segments(segments, width, opacity)
 
     def _periodic_copy_atoms(self, frame):
@@ -394,7 +458,7 @@ class MoleculeRenderer(CrystalRendering):
 
     def _periodic_fragment_bonds(self, frame):
         preview = self.periodic_preview
-        if preview is None or self.options.style == 'Space filling':
+        if preview is None:
             return
         groups = defaultdict(list)
         for i, j in preview.edges:
@@ -404,10 +468,13 @@ class MoleculeRenderer(CrystalRendering):
             p = preview.image_positions[i] @ self.display_rotation + self.display_translation
             q = preview.image_positions[j] @ self.display_rotation + self.display_translation
             midpoint = (p + q) / 2
-            groups[opacity].extend(((p, midpoint, self.atom_color(frame, i, for_bond=True)),
-                                    (midpoint, q, self.atom_color(frame, j, for_bond=True))))
-        for opacity, segments in groups.items():
-            self._tube_segments(segments, self.options.bond_scale * 1.08, opacity)
+            for atom,start,end in ((i,p,midpoint),(j,midpoint,q)):
+                mode=self._atom_style(frame,atom)
+                if mode=='Space filling':continue
+                width=self.options.bond_scale*(.5 if mode=='Wireframe' else 1.)*1.08
+                groups[opacity,width].append((start,end,self.atom_color(frame,atom,for_bond=True)))
+        for (opacity,width), segments in groups.items():
+            self._tube_segments(segments, width, opacity)
 
     def _hydrogen_bonds(self, frame, *, automatic=True):
         """Dashed manual links and optional geometric candidates."""
@@ -437,8 +504,16 @@ class MoleculeRenderer(CrystalRendering):
         origin = self.display_translation
         self._tube_segments([(p + origin, q + origin, '#7D8CA4') for p, q in edges], .025)
 
-    def _atom_radius(self, symbol):
-        mode = self.options.style
+    def _atom_style(self,frame,index):
+        override=appearance(frame,index).representation
+        return self.options.style if override=='Global' else override
+
+    def _polyhedral_atom_hidden(self,frame,index):
+        return (self.options.style=='Polyhedral' and not self.options.polyhedra_show_atoms
+                and appearance(frame,index).representation=='Global')
+
+    def _atom_radius(self, symbol, mode=None):
+        mode = self.options.style if mode is None else mode
         if mode == 'Wireframe':
             return max(.008, self.options.bond_scale * .50)
         if mode == 'Space filling':
@@ -456,7 +531,7 @@ class MoleculeRenderer(CrystalRendering):
         from .crystal_planes import inside_cuts
         names = {}
         for i, (symbol, pos) in enumerate(zip(frame.symbols, frame.positions)):
-            if not atom_is_drawn(frame, i):
+            if not atom_is_drawn(frame, i) or self._polyhedral_atom_hidden(frame,i):
                 continue
             if self.crystal_cuts and not inside_cuts([pos], self.crystal_cuts)[0]:continue
             style = appearance(frame, i)
@@ -492,7 +567,7 @@ class MoleculeRenderer(CrystalRendering):
             self._add_actor(t)
             self._label_actors.append(t)
             self._label_positions.append(np.asarray(pos, dtype=float).copy())
-            self._label_radii.append(self._atom_radius(symbol))
+            self._label_radii.append(self._atom_radius(symbol,self._atom_style(frame,i)))
 
     def _place_labels(self, *_args):
         if not self._label_actors:
@@ -709,43 +784,9 @@ class MoleculeRenderer(CrystalRendering):
             self._add_actor(actor); self._keepalive.append(resources); self.mode_arrow_actors.append(actor)
 
     def _volume(self, volume):
-        counts = volume.data.shape
-        if volume.data.size > 2_000_000:
-            return
-        # vtkStructuredGrid preserves skewed CUBE voxel basis.
-        ii, jj, kk = np.indices(counts, dtype=np.float32)
-        gridpoints = volume.origin + ii[..., None] * volume.voxel_vectors[0] + jj[..., None] * volume.voxel_vectors[1] + kk[..., None] * volume.voxel_vectors[2]
-        points = vtkPoints()
-        points.SetData(numpy_to_vtk(np.ascontiguousarray(np.column_stack([gridpoints[..., j].ravel(order='F') for j in range(3)])), deep=True))
-        grid = vtkStructuredGrid()
-        grid.SetDimensions(*counts)
-        grid.SetPoints(points)
-        values = numpy_to_vtk(np.ascontiguousarray(volume.data.ravel(order='F')), deep=True)
-        values.SetName('volume_field')
-        grid.GetPointData().SetScalars(values)
-        self._keepalive.append((points, grid, values))
-        iso = max(MIN_ISOVALUE, abs(self.options.volume_iso))
-        low, high = float(volume.data.min()), float(volume.data.max())
-        surfaces = [(iso, '#EC6B46')] if low >= 0 else [(-iso, '#556EE6'), (iso, '#EC6B46')]
-        for value, hex_color in surfaces:
-            if not (low <= value <= high):
-                continue
-            contour = vtkContourFilter()
-            contour.SetInputData(grid)
-            contour.SetValue(0, value)
-            from .operations import ui_checkpoint
-            contour.AddObserver('ProgressEvent',lambda algorithm,_:ui_checkpoint('Computing isosurface',algorithm.GetProgress(),1))
-            contour.Update()
-            mapper = vtkPolyDataMapper()
-            mapper.SetInputConnection(contour.GetOutputPort())
-            mapper.ScalarVisibilityOff()
-            actor = vtkActor()
-            actor.SetMapper(mapper)
-            actor.GetProperty().SetColor(rgb(hex_color))
-            actor.GetProperty().SetOpacity(self.options.volume_opacity)
-            actor.GetProperty().SetSpecular(.25)
-            self._add_actor(actor)
-            self._keepalive.append((contour, mapper))
+        # Backwards-compatible single-field renderer used by utilities/tests.
+        from .surface_rendering import draw_volume
+        draw_volume(self, volume, volume_surface_specs(self.options))
 
     def _highlights(self):
         if self.frame is None:
@@ -779,8 +820,9 @@ class MoleculeRenderer(CrystalRendering):
             actor = vtkFollower();actor.SetCamera(self.renderer.GetActiveCamera())
             actor.SetMapper(mapper)
             actor.SetPosition(*[float(x) for x in location])
-            size=max(.12,self._atom_radius(self.frame.symbols[i])*1.15)
-            if self.options.style=='Sticks':size=max(.085,self.options.bond_scale*1.18)*1.2
+            mode=self._atom_style(self.frame,i)
+            size=max(.12,self._atom_radius(self.frame.symbols[i],mode)*1.15)
+            if mode=='Sticks':size=max(.085,self.options.bond_scale*1.18)*1.2
             actor.SetScale(size)
             actor.GetProperty().SetColor(.08, .78, .27)
             actor.GetProperty().SetOpacity(appearance(self.frame, i).opacity)
@@ -814,12 +856,13 @@ class MoleculeRenderer(CrystalRendering):
             self.renderer.SetWorldPoint(*[float(x) for x in p], 1.)
             self.renderer.WorldToDisplay()
             sx, sy, sz = self.renderer.GetDisplayPoint()
-            rad = self._atom_radius(frame.symbols[i])
+            mode=self._atom_style(frame,i)
+            rad = self._atom_radius(frame.symbols[i],mode)
             self.renderer.SetWorldPoint(*[float(x) for x in p + right * rad], 1.)
             self.renderer.WorldToDisplay()
             xx, yy, _ = self.renderer.GetDisplayPoint()
             px_radius = max(6., float(np.hypot(xx - sx, yy - sy)))
-            if self.options.style == 'Wireframe':
+            if mode == 'Wireframe':
                 px_radius = 9.
             dist = float(np.hypot(sx - display_x, sy - display_y))
             if dist <= px_radius * 1.10:

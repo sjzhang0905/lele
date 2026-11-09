@@ -33,11 +33,22 @@ class RenderOptions:
     axes_length: float = 2.5     # Cartesian axis length in Angstrom at origin
     volume_iso: float = 0.035
     volume_opacity: float = 0.65
+    volume_signs: str = "Both"
+    volume_independent_negative: bool = False
+    volume_negative_iso: float = .035
+    volume_positive_color: str = '#EC6B46'
+    volume_negative_color: str = '#556EE6'
+    volume_independent_opacity: bool = False
+    volume_negative_opacity: float = .65
+    volume_representation: str = 'Surface'
+    volume_line_width: float = 1.0
+    volume_smooth_normals: bool = True
+    volume_surfaces: list[dict] = field(default_factory=list)
     show_volume: bool = True
     dipole_mode: str = 'Off'
     dipole_source: str = 'permanent'
     dipole_scale: float = .3
-    boundary_enabled: bool = False
+    boundary_enabled: bool = True
     boundary_bounds: tuple = ((0.,1.),(0.,1.),(0.,1.))
     lattice_planes: list[dict] = field(default_factory=list)
     polyhedra_centers: str = 'Auto'

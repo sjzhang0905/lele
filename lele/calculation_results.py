@@ -167,7 +167,7 @@ def _route(job, text):
         job.method, job.basis = match[1], match[2]
     solvent = re.search(r'solvent\s*=\s*([^,\s)]+)', text, re.I)
     if solvent:job.solvent = solvent[1]
-    for token, name in [('opt', 'Optimization'), ('freq', 'Frequency'), ('scan', 'Scan'), ('td', 'Excited states'), ('irc', 'IRC')]:
+    for token, name in [('opt', 'Optimization'), ('freq', 'Frequency'), ('scan', 'Scan'), ('td', 'Excited states'), ('irc', 'IRC'),('nmr','NMR')]:
         if re.search(r'\b'+token+r'\b', text, re.I):job.tasks.add(name)
     if not job.tasks:job.tasks.add('Single point / properties')
 

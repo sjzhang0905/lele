@@ -98,7 +98,7 @@ def test_dipole_scale_can_be_typed_without_mid_edit_resets(gui):
     from PySide6.QtTest import QTest
     w = gui.window
     gui.attach_properties()
-    w.sidebar_tabs.setCurrentWidget(w.dipole_panel)
+    w.dipole_action.trigger()
     w.show()
     gui.app.processEvents()
     scale = w.dipole_panel.scale
@@ -195,9 +195,11 @@ def test_boundary_panel_repeats_whole_cells_without_changing_source(gui):
     w.boundary_panel.spins[1][1].setValue(2)
     w.boundary_panel.apply.click()
     view = w.renderer.boundary_display
-    assert len(view.source_indices) == 4
+    assert len(view.source_indices) == 18
     assert len(view.tiles) == 4
     np.testing.assert_allclose(view.frame.cell, frame.cell)
-    np.testing.assert_allclose(view.frame.positions, [[0, 0, 0], [0, 2.2, 0], [2.2, 0, 0], [2.2, 2.2, 0]])
+    np.testing.assert_allclose(view.frame.positions[:4], [[0, 0, 0], [0, 2.2, 0], [2.2, 0, 0], [2.2, 2.2, 0]])
+    assert set(view.source_indices) == {0}
+    assert np.max(view.frame.positions[:,2]) == 2.2
     assert w.atom_table.rowCount() == 1 and w.doc.frames[0] is frame
     assert '4 cells' in w.boundary_panel.count.text()

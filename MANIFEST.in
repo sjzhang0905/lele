@@ -4,6 +4,9 @@ include *.bat .gitignore .gitattributes
 recursive-include examples *
 recursive-include tests *.py
 recursive-include docs *.md *.txt *.patch
+recursive-include tools/performance *.py
+recursive-include verification/v3.5.1 *.json *.xml
+recursive-include verification/v3.5.2 *.json *.xml
 recursive-include lele/assets *.png *.ico
 recursive-include .github *.yml
 global-exclude __pycache__ *.py[cod]

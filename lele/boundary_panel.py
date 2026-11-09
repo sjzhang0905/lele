@@ -1,5 +1,5 @@
 """Integer whole-cell display ranges; no scientific startup import."""
-from PySide6.QtCore import Signal,QSignalBlocker
+from PySide6.QtCore import Qt,Signal,QSignalBlocker
 from PySide6.QtWidgets import QWidget,QVBoxLayout,QGridLayout,QSpinBox,QCheckBox,QPushButton,QLabel
 
 
@@ -7,9 +7,10 @@ class BoundaryPanel(QWidget):
     applyRequested=Signal(bool,object)
     def __init__(self,parent=None):
         super().__init__(parent);layout=QVBoxLayout(self)
-        self.enabled=QCheckBox('Enable boundary display');layout.addWidget(self.enabled)
-        grid=QGridLayout();layout.addLayout(grid);self.spins=[]
-        for j,text in enumerate(('Cells','Start (included)','End (excluded)')):grid.addWidget(QLabel(text),0,j)
+        self.enabled=QCheckBox('Enable boundary display');self.enabled.setChecked(True);layout.addWidget(self.enabled)
+        grid=QGridLayout();grid.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        layout.addLayout(grid);self.spins=[]
+        for j,text in enumerate(('Cells','Start','End (cell limit)')):grid.addWidget(QLabel(text),0,j)
         for i,name in enumerate(('a / x','b / y','c / z')):
             grid.addWidget(QLabel(name),i+1,0);row=[]
             for j,value in enumerate((0,1)):
@@ -22,6 +23,7 @@ class BoundaryPanel(QWidget):
         self.count=QLabel();layout.addWidget(self.count)
         note=QLabel('Repeat complete cells: 0–2, 0–2, 0–1 displays 2×2×1 cells.\n'
                     'Every cell keeps its original size and all its atoms; cell edges separate the copies.\n'
+                    'Atoms on outer cell faces are shown on both sides with the same index and count once.\n'
                     'Display copies retain source atom IDs; source coordinates and unit cell are unchanged.\n'
                     'For real atoms and a larger cell, use Edit → Build supercell.')
         note.setWordWrap(True);layout.addWidget(note);layout.addStretch();self.setEnabled(False)

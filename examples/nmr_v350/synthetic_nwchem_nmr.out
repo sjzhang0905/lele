@@ -1,0 +1,18 @@
+ Northwest Computational Chemistry Package (NWChem)
+ Chemical Shielding Tensors (GIAO, in ppm)
+ Atom: 3 H
+ Diamagnetic
+ 50 0 0
+ 0 50 0
+ 0 0 50
+ Paramagnetic
+ -26 1 2
+ 3 -24 4
+ 5 6 -22
+ Total Shielding Tensor
+ 24 1 2
+ 3 26 4
+ 5 6 28
+ isotropic = 26.0
+ anisotropy = 6.0
+ Task  times cpu: 10

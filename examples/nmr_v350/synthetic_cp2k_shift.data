@@ -1,0 +1,11 @@
+ Shielding atom at atomic positions. # tensors printed 1
+     3H_kind  H  0.000000 1.800000 0.000000
+ SIGMA from SOFT J
+ XX=999 XY=0 XZ=0
+ YX=0 YY=999 YZ=0
+ ZX=0 ZY=0 ZZ=999
+ SIGMA TOTAL
+ XX=24 XY=1 XZ=2
+ YX=3 YY=26 YZ=4
+ ZX=5 ZY=6 ZZ=28
+ ISOTROPY = 26.0 ANISOTROPY = 6.0

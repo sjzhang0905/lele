@@ -1,0 +1,6 @@
+{
+  "source": "https://github.com/dceresoli/qe-gipaw/blob/master/examples/quartz/quartz-nmr.out",
+  "datasets": 1,
+  "nuclei": 9,
+  "first_shielding_ppm": 431.33
+}

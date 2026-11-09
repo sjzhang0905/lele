@@ -17,7 +17,7 @@ STYLE_KEYS = (
 )
 
 STYLE_MODES = ('Ball and stick', 'Space filling', 'Sticks', 'Wireframe', 'Polyhedral')
-ATOM_PALETTES = ('Default', 'GaussView style (Chemcraft)', 'Element', 'Pastel', 'Monochrome', 'Legacy LELE')
+ATOM_PALETTES = ('Default', 'VESTA', 'GaussView style (Chemcraft)', 'Element', 'Pastel', 'Monochrome', 'Legacy LELE')
 BOND_PALETTES = ('Element', 'Neutral gray')
 SURFACE_FINISHES = ('Balanced', 'Glossy', 'Matte')
 CUSTOM_KEY = '__custom__'
@@ -133,5 +133,8 @@ def element_palette_color(options, symbol, *, for_bond=False):
     if scheme in ('Default', 'Sibyl'):
         from .sibyl_palette import SIBYL_COLORS
         default=mix_color(mix_color(SIBYL_COLORS.get(symbol,default),.10),.05)
+    if scheme == 'VESTA':
+        from .vesta_palette import VESTA_COLORS
+        default = VESTA_COLORS.get(symbol, VESTA_COLORS['XX'])
     base=options.element_colors.get(symbol,default)
     return mix_color(base,.43) if scheme=='Pastel' else base

@@ -118,11 +118,21 @@ def read_output_lines(path):
     progress=load_progress('Reading '+path.name,size)
     with open_output_text(path) as stream:
         lines = []
-        for i,line in enumerate(stream):
-            if i % 4096 == 0:
-                check_load_cancelled()
-                progress(stream.buffer.tell())
-            lines.append(line.rstrip('\r\n'))
+        pending = ''
+        while True:
+            check_load_cancelled()
+            chunk = stream.read(1024 * 1024)
+            if not chunk:
+                break
+            # TextIOWrapper already normalizes CRLF and CR. Split in C, but
+            # only on newline: str.splitlines() also splits scientific titles
+            # containing form-feed / other Unicode line separators.
+            block = (pending + chunk).split('\n')
+            pending = block.pop()
+            lines.extend(block)
+            progress(min(size, stream.buffer.tell()))
+        if pending:
+            lines.append(pending)
     if cache is not None:
         cache[key] = lines
     progress(size)

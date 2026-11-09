@@ -143,7 +143,8 @@ def test_clip_planes_reach_bond_and_isosurface_mappers():
 def test_zero_matching_polyhedra_is_a_valid_rendered_structure():
     view = draw();view.options.style = 'Polyhedral';view.options.polyhedra_centers = 'Fe'
     view.set_scene(octahedron())
-    assert not view.polyhedra and len(view.displayed_atoms()) == 4
+    assert not view.polyhedra and len(view.displayed_atoms()) == 20
+    assert {i for i, _ in view.displayed_atoms()} == set(range(4))
 
 
 def test_plane_slab_surface_has_two_faces_and_preserves_cell_volume():
@@ -169,7 +170,7 @@ def test_boundary_repeats_complete_polyhedra_and_keeps_source_ids():
     f = octahedron();view = draw();view.options.style = 'Polyhedral'
     view.options.boundary_enabled = True;view.options.boundary_bounds = ((0, 2), (0, 1), (0, 1))
     view.set_scene(f)
-    assert len(view.polyhedra) == 2 and len(view.polyhedron_actors) == 2
+    assert len(view.polyhedra) == 12 and len(view.polyhedron_actors) == 12
     assert all(len(p['source'].ligand_indices) == 6 for p in view.polyhedra)
     assert view.polyhedra_extra_atoms
     assert all(0 <= i < 4 for i, _ in view.displayed_atoms())
@@ -275,7 +276,7 @@ def test_polyhedral_style_panel_and_distance_controls(gui):
     panel.centers.setText('Ti');panel.ligands.setText('O');panel.search.setCurrentText('Distance range')
     panel.maximum.setValue(2.1);panel.opacity.setValue(.42);panel.apply.click()
     assert w.style_combo.currentText() == 'Polyhedral'
-    assert len(w.renderer.polyhedra) == 1 and 'CN 6' in panel.info.text()
+    assert len(w.renderer.polyhedra) == 8 and 'CN 6' in panel.info.text()
     assert w.renderer.polyhedron_actors[0].GetProperty().GetOpacity() == pytest.approx(.42)
     panel.maximum.setValue(1.9);panel.apply.click();assert not w.renderer.polyhedra
 

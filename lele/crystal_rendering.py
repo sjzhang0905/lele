@@ -125,8 +125,8 @@ class CrystalRendering:
         finally:self._clipping_suspended = False
 
     def _crystal_visible_atoms(self):
-        if self.options.style == 'Polyhedral' and not self.options.polyhedra_show_atoms:return []
         result = self._raw_display_atoms()+self.polyhedra_extra_atoms
+        result=[(i,p) for i,p in result if not self._polyhedral_atom_hidden(self.frame,i)]
         if self.crystal_cuts and result:
             keep = inside_cuts([p for _, p in result], self.crystal_cuts)
             result = [item for item, show in zip(result, keep) if show]

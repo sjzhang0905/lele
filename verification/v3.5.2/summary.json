@@ -1,0 +1,33 @@
+{
+  "version": "3.5.2",
+  "baseline": "3.5.1",
+  "tests_passed": 1481,
+  "subtests_passed": 78,
+  "skipped_external_samples": 12,
+  "failures": 0,
+  "actual_chgcar_test_ran": true,
+  "review_numeric_differential_cases": 4000,
+  "review_buffer_operations": 30000,
+  "source_changes": [
+    {
+      "path": "lele/__init__.py",
+      "sha256": "ce67601e635b54f9f70c3f9acffce201fab230b4a67672abda2383b24783cf5b"
+    },
+    {
+      "path": "lele/formats.py",
+      "sha256": "ceb29a7970227a14d4eb9f2a6716208e2c7532da1b4c6227726675a6be11d283"
+    },
+    {
+      "path": "lele/legacy_converter.py",
+      "sha256": "b245390fde6db92985989ec92553f38b830f4ddd407be5cb51b8721441727a4a"
+    },
+    {
+      "path": "lele/vasp_volume_detection.py",
+      "sha256": "65cace488cff04de222e7ec0d1e038a9a637cfd5aa27806753a8f6ddd6a89841"
+    },
+    {
+      "path": "lele/volumetric_input.py",
+      "sha256": "572e15ca8eb195f78fd02b9a8b2dd9b1f3add701edfc2d54a279fc1736c8b4d2"
+    }
+  ]
+}

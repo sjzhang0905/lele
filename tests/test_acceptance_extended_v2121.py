@@ -217,10 +217,10 @@ def test_footer_aligns_from_real_layout_events_without_manual_sync(gui):
     gui.attach(slab());w=gui.window;w.show()
     for width in (1100,1400,1600,1100):
         w.resize(width,850);QTest.qWait(120)
-        assert abs(w.summary_label.mapToGlobal(QPoint()).x()-w.tabs.mapToGlobal(QPoint()).x())<=1
+        assert abs(w.summary_label.mapToGlobal(QPoint()).x()-w.lower_splitter.mapToGlobal(QPoint()).x())<=1
     # A longer selection measurement changes the same footer layout.
     gui.select([0,1]);QTest.qWait(120)
-    assert abs(w.summary_label.mapToGlobal(QPoint()).x()-w.tabs.mapToGlobal(QPoint()).x())<=1
+    assert abs(w.summary_label.mapToGlobal(QPoint()).x()-w.lower_splitter.mapToGlobal(QPoint()).x())<=1
 
 
 def test_gui_monitor_created_after_current_frame_reindex_keeps_identity(gui,tmp_path):

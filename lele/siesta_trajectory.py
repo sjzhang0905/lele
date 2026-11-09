@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """SIESTA relaxation history reader for .out and companion .ANI files.
 
-Only associate energies with structures when the per-step counts agree.
+Associate explicit ionic moves first; use complete-count matching otherwise.
 Do not confuse electronic SCF iterations with ionic relaxation steps.
 """
 from __future__ import annotations
@@ -113,12 +113,13 @@ def _frame_energy_map(frames, energy_records):
     # if a unique complete sequence can be established.
     if not energy_records:
         return 'No per-step energies found in SIESTA output.'
-    for label in ('etot', 'e_ks'):
+    for label in ('etot', 'e_ks', 'final_total', 'total'):
         records = [(i, e) for i, kind, e in energy_records if kind == label]
         if len(records) == len(frames):
             for frame, (idx, energy) in zip(frames, records):
                 frame.energy_ev = energy
                 frame.info['energy_source'] = 'SIESTA .out ' + label
+                frame.info['energy_source_line'] = idx+1
             return ''
     return (f'SIESTA energy/geometry counts differ ({len(energy_records)} energy records, '
             f'{len(frames)} geometries); energies not paired to steps.')
@@ -126,70 +127,8 @@ def _frame_energy_map(frames, energy_records):
 
 def read_siesta_output(path: Path, max_frames: int | None = None):
     """Return (frames, note), reading all printed geometry snapshots."""
-    lines = read_output_lines(path)
-    cell = None
-    species = {}
-    snapshots = []
-    energy_records = []
-    spin_setting = None
-    j = 0
-    progress=load_progress('SIESTA: structures and ionic energies',len(lines))
-    while j < len(lines):
-        check_load_cancelled();progress(j)
-        raw = lines[j]
-        spin_match = SPIN_FLAG.search(raw)
-        if spin_match:
-            spin_setting = spin_match.group(1).lower() in ('.true.', 'true', 'yes', 't')
-        sm = SPECIES.search(raw)
-        if sm:
-            z = abs(int(sm.group(2)))
-            name = _symbol(sm.group(3), {})
-            if not name and 0 < z < len(ELEMENTS):
-                name = ELEMENTS[z]
-            if name:
-                species[int(sm.group(1))] = name
-        em = ENERGY.search(raw)
-        if em:
-            label = em.group(1).lower().replace('_', '').replace('-', '')
-            label = 'etot' if label == 'etot' else 'e_ks'
-            energy_records.append((j, label, _number(em.group(2))))
-        if CELL_HEADER.search(raw):
-            rows = []
-            for ln in lines[j+1:j+5]:
-                s = ln.strip()
-                if s.lower().startswith(('outcell:', 'siesta:')):
-                    s = s.split(':', 1)[1].strip()
-                tokens = NUMBER.findall(s)
-                if len(tokens) >= 3:
-                    rows.append([_number(x) for x in tokens[:3]])
-                if len(rows) == 3:
-                    break
-            if len(rows) == 3:
-                cell = np.asarray(rows, dtype=float)
-        if COORD_HEADER.search(raw):
-            names, pos, end = _extract_coordinates(lines, j, species)
-            if len(names):
-                lower = raw.lower()
-                if 'fractional' in lower:
-                    if cell is None:
-                        j += 1; continue
-                    pos = pos @ cell
-                elif 'bohr' in lower:
-                    pos *= BOHR
-                snapshots.append((j, Frame(names, pos, cell.copy() if cell is not None else np.zeros((3,3)),
-                                            (cell is not None,) * 3,
-                                            info={'source': 'SIESTA .out', **({'spin_polarized': spin_setting} if spin_setting is not None else {})})))
-                if max_frames is not None and len(snapshots) > max_frames:
-                    raise ValueError(f'SIESTA output exceeds frame limit ({max_frames})')
-            j=max(j,end-1)
-        j += 1
-    progress(len(lines))
-    frames = [f for _, f in snapshots]
-    if not frames:
-        return [], 'No per-step coordinate blocks in SIESTA .out.'
-    note = _frame_energy_map(frames, energy_records)
-    if not note and frames:
-        return frames, ''
+    from .siesta_results import read_siesta_records
+    frames, note, _ = read_siesta_records(path, max_frames)
     return frames, note
 
 
@@ -290,19 +229,26 @@ def _add_mde_energies(path, frames):
     return True
 
 
-def load_siesta_history(path: Path, max_frames=None):
+def load_siesta_history(path: Path, max_frames=None, *, include_results=False):
     """Prefer .out snapshots; fall back to sibling .ANI when .out is sparse.
 
     A companion ANI has no unit cell; use per-step .out cells only with an
     unambiguous 1:1 match, otherwise refuse to invent a cell trajectory.
     """
+    from .siesta_results import read_siesta_records, results_from_frames
+    def finish(frames, note, results=None):
+        if not include_results: return frames, note
+        if results is None: results = results_from_frames(frames, note)
+        results.note = note
+        return frames, note, results
+
     if path.suffix.lower() == '.ani':
         ani_frames = read_siesta_ani(path, max_frames)
         matched = _add_mde_energies(path, ani_frames)
-        return ani_frames, ('ANI trajectory with matching MDE step energies.' if matched
-                            else 'ANI coordinates only: energy and cell are not stored in ANI.')
+        return finish(ani_frames, ('ANI trajectory with matching MDE step energies.' if matched
+                            else 'ANI coordinates only: energy and cell are not stored in ANI.'))
 
-    output_frames, output_note = read_siesta_output(path, max_frames)
+    output_frames, output_note, output_results = read_siesta_records(path, max_frames)
     ani = _same_name_sidecar(path, '.ANI')
     if ani is None:
         # Only an unambiguous sole .ANI is eligible when SystemLabel differs
@@ -314,21 +260,21 @@ def load_siesta_history(path: Path, max_frames=None):
         try:
             ani_frames = read_siesta_ani(ani, max_frames)
         except (ValueError, OSError) as ex:
-            return output_frames, f'Companion ANI not readable: {ex}; {output_note}'
+            return finish(output_frames, f'Companion ANI not readable: {ex}; {output_note}', output_results)
         if output_frames and ani_frames and ani_frames[-1].symbols != output_frames[-1].symbols:
             # A single unrelated ANI file in the directory must not replace
             # the currently opened calculation's geometry.
-            return output_frames, output_note
+            return finish(output_frames, output_note, output_results)
         if ani.stem.lower() != path.stem.lower():
             if not output_frames:
-                return output_frames, output_note
+                return finish(output_frames, output_note, output_results)
             # A distinct SystemLabel is common, but only pair an unmatched
             # basename when an actual output snapshot occurs in the ANI.
             source = output_frames[-1]
             if not any(f.symbols == source.symbols
                        and np.allclose(f.positions, source.positions, atol=0.05, rtol=0)
                        for f in ani_frames):
-                return output_frames, output_note
+                return finish(output_frames, output_note, output_results)
         if len(ani_frames) > len(output_frames):
             # An ANI trajectory has no lattice. A unique unchanged lattice
             # reported by .out can be used, but variable cells cannot.
@@ -361,8 +307,9 @@ def load_siesta_history(path: Path, max_frames=None):
                 notes += '; per-step energies available'
             else:
                 notes += '; per-step energies unavailable or not uniquely matchable'
-            return ani_frames, notes
+            return finish(ani_frames, notes)
     if output_frames and not any(f.energy_ev is not None for f in output_frames):
         if _add_mde_energies(path, output_frames):
             output_note = 'Per-step energies from matching SIESTA MDE.'
-    return output_frames, output_note
+            output_results = results_from_frames(output_frames, output_note)
+    return finish(output_frames, output_note, output_results)

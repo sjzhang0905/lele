@@ -1,0 +1,42 @@
+..............................ssss...................................... [  5%]
+........................................................................ [ 11%]
+.................................................................. [ 16%]
+.....................ss................................................. [ 22%]
+.........................................................sss............ [ 27%]
+........................................................................ [ 33%]
+........................................................................ [ 39%]
+........................................................................ [ 44%]
+........................................................................ [ 50%]
+..................................................s..................... [ 56%]
+........................................................................ [ 61%]
+........................................................................ [ 67%]
+........................................................................ [ 72%]
+ss...................................................................... [ 78%]
+.................................................................. [ 83%]
+.............................................................................. [ 89%]
+........................................................................ [ 95%]
+.........................................................                [100%]
+=============================== warnings summary ===============================
+tests/test_acceptance_regressions_v340.py: 7 warnings
+tests/test_crystal_v220.py: 2 warnings
+tests/test_field_mapping_v340.py: 24 warnings
+tests/test_isosurface_integration_v330.py: 10 warnings
+tests/test_isosurface_render_v330.py: 6 warnings
+tests/test_periodic_fragment_ui_v171.py: 8 warnings
+tests/test_renderer.py: 4 warnings
+tests/test_selection_ui_v090.py: 4 warnings
+tests/test_volumetric_view_v320.py: 3 warnings
+  /workspace/scratch/3f5187fd325f/work/LELE/lele/surface_rendering.py:92: DeprecationWarning: Call to deprecated class vtkTransformPolyDataFilter. (Replaced by vtkTransformFilter.) -- Deprecated since version 9.7.0.
+    transformed=vtkTransformPolyDataFilter();transformed.SetInputConnection(contour.GetOutputPort())
+
+tests/test_acceptance_regressions_v340.py::test_A3_periodic_surface_must_follow_boundary[bounds0-expected_x0]
+tests/test_acceptance_regressions_v340.py::test_A3_periodic_surface_must_follow_boundary[bounds1-expected_x1]
+tests/test_field_mapping_v340.py::test_boundary_repeats_only_periodic_source[True]
+tests/test_field_mapping_v340.py::test_periodic_seams_negative_roundoff_and_translated_grid_clipping
+tests/test_field_mapping_v340.py::test_periodic_seams_negative_roundoff_and_translated_grid_clipping
+tests/test_field_mapping_v340.py::test_periodic_seams_negative_roundoff_and_translated_grid_clipping
+  /workspace/scratch/3f5187fd325f/work/LELE/lele/surface_rendering.py:126: DeprecationWarning: Call to deprecated class vtkTransformPolyDataFilter. (Replaced by vtkTransformFilter.) -- Deprecated since version 9.7.0.
+    tile_filter=vtkTransformPolyDataFilter();tile_filter.SetInputData(poly)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+1263 passed, 12 skipped, 74 warnings, 78 subtests passed in 72.70s (0:01:12)

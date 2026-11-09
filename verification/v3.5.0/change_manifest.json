@@ -1,0 +1,42 @@
+{
+  "baseline": "LELE_v3.4.0_ESP_overlay_20261105.zip",
+  "baseline_sha256": "e7d708d75aa9abe954a9104196479e18cb8e46291af997c904cd3611e471c5fc",
+  "changed_files": [
+    "CHANGELOG.md",
+    "README.md",
+    "README_CN.md",
+    "lele/__init__.py",
+    "lele/app.py",
+    "lele/atom_appearance.py",
+    "lele/atom_panel.py",
+    "lele/calculation_results.py",
+    "lele/core.py",
+    "lele/crystal_actions.py",
+    "lele/crystal_rendering.py",
+    "lele/formats.py",
+    "lele/project_file.py",
+    "lele/renderer.py",
+    "lele/restored_actions.py",
+    "lele/result_availability.py",
+    "tests/test_acceptance_extended_v2121.py",
+    "tests/test_display_controls_v172.py",
+    "tests/test_selection_ui_v090.py",
+    "tests/test_structure_edits_v2120.py"
+  ],
+  "added_files": [
+    "docs/FEATURES_v3.5.0_CN.md",
+    "docs/VALIDATION_v3.5.0.md",
+    "examples/nmr_v350/README_CN.txt",
+    "examples/nmr_v350/synthetic_cp2k_shift.data",
+    "examples/nmr_v350/synthetic_gaussian_nmr.log",
+    "examples/nmr_v350/synthetic_gipaw_nmr.out",
+    "examples/nmr_v350/synthetic_nmr_display.lele",
+    "examples/nmr_v350/synthetic_nwchem_nmr.out",
+    "examples/nmr_v350/synthetic_orca_nmr.out",
+    "lele/nmr.py",
+    "lele/nmr_dialog.py",
+    "lele/nmr_input.py",
+    "tests/test_nmr_v350.py",
+    "tests/test_ui_v350.py"
+  ]
+}

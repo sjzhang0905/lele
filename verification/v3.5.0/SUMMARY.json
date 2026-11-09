@@ -1,0 +1,75 @@
+{
+  "version": "3.5.0",
+  "date": "2026-11-09",
+  "pytest": {
+    "passed": 1289,
+    "skipped": 12,
+    "subtests_passed": 78,
+    "failures": 0,
+    "errors": 0
+  },
+  "environment": {
+    "Python": "3.12.14",
+    "numpy": "2.3.5",
+    "ase": "3.29.0",
+    "PySide6": "6.12.0",
+    "vtk": "9.7.2",
+    "pytest": "9.2.0",
+    "matplotlib": "3.10.8"
+  },
+  "skips": [
+    {
+      "test": "tests.test_acceptance_extended_v2121.test_supplied_chemcraft_cif_without_spacegroup_metadata",
+      "reason": "Set LELE_CHEMCRAFT_CIF_EXAMPLE to the private 22.cif; it is not redistributed."
+    },
+    {
+      "test": "tests.test_acceptance_extended_v2121.test_supplied_poscar1_preserves_all_selective_flags_and_rows[unchanged]",
+      "reason": "Set LELE_ROTATION_EXAMPLE_DIR to the private POSCAR1/POSCAR2 directory."
+    },
+    {
+      "test": "tests.test_acceptance_extended_v2121.test_supplied_poscar1_preserves_all_selective_flags_and_rows[vacuum]",
+      "reason": "Set LELE_ROTATION_EXAMPLE_DIR to the private POSCAR1/POSCAR2 directory."
+    },
+    {
+      "test": "tests.test_acceptance_extended_v2121.test_supplied_poscar1_preserves_all_selective_flags_and_rows[reindex]",
+      "reason": "Set LELE_ROTATION_EXAMPLE_DIR to the private POSCAR1/POSCAR2 directory."
+    },
+    {
+      "test": "tests.test_coordinate_reorientation_v2110.test_actual_poscar_pair_is_a_rigid_reorientation",
+      "reason": "Set LELE_ROTATION_EXAMPLE_DIR to the supplied private POSCAR1/POSCAR2."
+    },
+    {
+      "test": "tests.test_coordinate_reorientation_v2110.test_local_axes_match_supplied_rotation_script_without_pymatgen",
+      "reason": "Set LELE_ROTATION_SCRIPT to the supplied v13 rotation script."
+    },
+    {
+      "test": "tests.test_delta_acceptance_v2131.test_palette_against_original_tcl",
+      "reason": "Set QA_SIBYL_TCL to the original Sibyl.tcl"
+    },
+    {
+      "test": "tests.test_delta_acceptance_v2131.test_user_poscar_vacuum_append_and_export[poscar-direct]",
+      "reason": "Set LELE_ROTATION_EXAMPLE_DIR to the original POSCAR1 folder"
+    },
+    {
+      "test": "tests.test_delta_acceptance_v2131.test_user_poscar_vacuum_append_and_export[poscar-cartesian]",
+      "reason": "Set LELE_ROTATION_EXAMPLE_DIR to the original POSCAR1 folder"
+    },
+    {
+      "test": "tests.test_molden_and_legend_v280.test_actual_124_atom_example_all_frequencies_and_frozen_rows",
+      "reason": "Set LELE_CP2K_MOLDEN_EXAMPLE to the supplied private example; it is not redistributed."
+    },
+    {
+      "test": "tests.test_qe_v2100.test_real_supplied_qe_files",
+      "reason": "Set LELE_QE_EXAMPLE_DIR; private QE examples are not redistributed"
+    },
+    {
+      "test": "tests.test_real_wavecar_reference_v321.test_real_wavecar_independent_direct_sum",
+      "reason": "No external standard WAVECAR fixture supplied"
+    }
+  ],
+  "build": "dist/lele_explorer-3.5.0-py3-none-any.whl",
+  "limitations": [
+    "Linux Qt offscreen and real EGL rendering; no Windows desktop or EXE acceptance.",
+    "NMR spectra show equal-area uncoupled nuclei, no J multiplets or powder simulation."
+  ]
+}

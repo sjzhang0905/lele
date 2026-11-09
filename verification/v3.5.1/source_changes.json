@@ -1,0 +1,54 @@
+[
+  {
+    "path": "lele/backend_loader.py",
+    "sha256": "5d11ea164c56badbf52033ee2eb3aac775d3a5094ab4b3b6a24ff254f7861a32"
+  },
+  {
+    "path": "lele/__init__.py",
+    "sha256": "47f9c0370a5cc6f642b96cb3b122b2436d8148816944e021d15bb6f7683c1a6f"
+  },
+  {
+    "path": "lele/cp2k_results.py",
+    "sha256": "3f49e6215692b6f9b1d13bd8468193bbb88063593181e0d17058a2ab82f0f0ec"
+  },
+  {
+    "path": "lele/trajectory_io.py",
+    "sha256": "76a5e1798bcd307cb9ed520b6a4f92be66ce9ed1dc3d1cb1d0defb2dee0eaef7"
+  },
+  {
+    "path": "lele/vasp_results.py",
+    "sha256": "c81562bc8832330a85cafc60e237ef41d62a54973ead4b8d9d7c8ac2058ccd2d"
+  },
+  {
+    "path": "lele/chemical_analysis.py",
+    "sha256": "6878ac113db7dc90d8c82da8b5ae54af3c6284444e9cd5bfb917aa9489e85d45"
+  },
+  {
+    "path": "lele/formats.py",
+    "sha256": "d8d388bea4f4c53a2ea95c4cab49ee25b20bd850a7a7f0fe7cfb4b07fb56a376"
+  },
+  {
+    "path": "lele/legacy_converter.py",
+    "sha256": "ec740db935b1367c6087b89f57b6104f8980e5efed622d9336235f34c0500435"
+  },
+  {
+    "path": "lele/nmr_input.py",
+    "sha256": "e2e7ed1ca32a6bc6681ee9f7e45052367207b4d513587250389424b6486b22a8"
+  },
+  {
+    "path": "lele/periodic_geometry.py",
+    "sha256": "99dd877a857901480695635dedc3bdda9eff6dbfd8594527eb97451a02a92c5d"
+  },
+  {
+    "path": "lele/polyhedra.py",
+    "sha256": "ab82af40399993451979c61ce6ab0ae151421a699b2259227b61d5a2006770f2"
+  },
+  {
+    "path": "lele/cube_input.py",
+    "sha256": "a8057091c5db78ca46155301dae9c88bf9e5d8a298832a66f1da5239be430792"
+  },
+  {
+    "path": "lele/output_text.py",
+    "sha256": "cc2509f6dac9d7db82f2068ba045ca81b5bdbd5de11869fb106272e644125321"
+  }
+]
