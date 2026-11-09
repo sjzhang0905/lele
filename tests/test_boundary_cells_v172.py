@@ -13,7 +13,10 @@ def test_two_by_two_repeats_every_atom_and_draws_each_original_cell_edge():
     source = Frame(['Si', 'O'], [[0, 0, 0], [1.1, 1.1, 1.1]], np.eye(3) * 3, (True,) * 3,
                    atom_appearance={1: AtomAppearance(opacity=.4)})
     view = boundary_view(source, ((0, 2), (0, 2), (0, 1)))
-    assert len(view.source_indices) == 8
+    # Four full cells plus the Si images on the inclusive outer faces.
+    assert len(view.source_indices) == 22
+    assert np.count_nonzero(view.source_indices == 0) == 18
+    assert np.count_nonzero(view.source_indices == 1) == 4
     assert view.tiles == tuple(product(range(2), range(2), range(1)))
     for k, tile in enumerate(view.tiles):
         np.testing.assert_allclose(view.frame.positions[2*k:2*k+2], source.positions + np.asarray(tile) @ source.cell)

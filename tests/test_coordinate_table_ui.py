@@ -17,12 +17,19 @@ class FakeItem:
     def __init__(self, value=''):
         self.value = value
         self.bits = 7
+        self.tooltip = ''
 
     def setText(self, value):
         self.value = value
 
     def text(self):
         return self.value
+
+    def setToolTip(self, value):
+        self.tooltip = value
+
+    def toolTip(self):
+        return self.tooltip
 
     def flags(self):
         return self.bits

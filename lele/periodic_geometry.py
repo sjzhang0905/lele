@@ -11,7 +11,6 @@ from dataclasses import dataclass
 from itertools import product
 from functools import lru_cache
 import numpy as np
-from scipy.spatial import cKDTree
 
 from .core import Frame, canonical_pair, radius
 
@@ -102,6 +101,7 @@ def short_contact_details(frame: Frame, threshold=0.6):
         return []
     cell = periodic_basis(frame)
     if cell is None:
+        from scipy.spatial import cKDTree
         tree = cKDTree(frame.positions)
         pairs = tree.query_pairs(float(threshold), output_type='ndarray')
         if not len(pairs):

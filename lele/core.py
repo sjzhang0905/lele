@@ -127,11 +127,18 @@ class Volume:
     data: np.ndarray
     origin: np.ndarray
     voxel_vectors: np.ndarray
+    label: str = ""
+    unit: str = ""
+    periodic: bool = False
+    reference_origin: Optional[np.ndarray] = None
+    reference_voxel_vectors: Optional[np.ndarray] = None
 
     def __post_init__(self):
         self.data = np.asarray(self.data, dtype=np.float32)
         self.origin = np.asarray(self.origin, dtype=float).reshape(3)
         self.voxel_vectors = np.asarray(self.voxel_vectors, dtype=float).reshape(3, 3)
+        self.reference_origin = self.origin.copy() if self.reference_origin is None else np.asarray(self.reference_origin, dtype=float).reshape(3)
+        self.reference_voxel_vectors = self.voxel_vectors.copy() if self.reference_voxel_vectors is None else np.asarray(self.reference_voxel_vectors, dtype=float).reshape(3, 3)
         if self.data.ndim != 3 or min(self.data.shape) < 2:
             raise ValueError("Volumetric data must be a 3D grid with at least 2 points per axis")
 
@@ -219,11 +226,17 @@ class Document:
     soc_results: list = field(default_factory=list)
     source_preview: Optional[str] = None
     project_original_path: Optional[str] = None
+    volumes: list[Volume] = field(default_factory=list)
+    wavefunction: object = None
+    wavecar: object = None
+    nmr_results: list = field(default_factory=list)
 
     def __post_init__(self):
+        if self.volume is not None and not self.volumes:
+            self.volumes = [self.volume]
         if not self.frames:
             from .result_availability import has_calculation_data
-            if not has_calculation_data(self.calculation_results):
+            if not self.nmr_results and not has_calculation_data(self.calculation_results):
                 raise ValueError("Document contains no atoms or calculation results")
 
 
@@ -541,8 +554,10 @@ def axis_vectors(frame: Frame, basis='XYZ', length=2.5, *, corner=False):
 
 def coordinate_table_rows(frame: Frame, precision: int = 6) -> list[tuple[str, str, str, str]]:
     """View formatting of the current in-memory coordinates, including edits."""
+    from .site_occupancy import site_is_disordered
     fmt = f'{{:.{precision}f}}'
     return [
-        (f'{i + 1} {symbol}', *(fmt.format(float(value)) for value in xyz))
+        (f'{i + 1} {symbol}'+('*' if site_is_disordered(frame,i) else ''),
+         *(fmt.format(float(value)) for value in xyz))
         for i, (symbol, xyz) in enumerate(zip(frame.symbols, frame.positions))
     ]

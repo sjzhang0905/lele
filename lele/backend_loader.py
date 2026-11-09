@@ -8,11 +8,10 @@ from PySide6.QtCore import QCoreApplication, QThread
 
 def load_backend_modules():
     """Import libraries only; widgets and VTK objects belong to the GUI thread."""
-    from . import (formats, chemical_analysis, periodic_geometry, fragment,
-                  selection_geometry, renderer, interaction)  # noqa: F401
+    from . import (formats, renderer, interaction)  # noqa: F401
     from vtkmodules.vtkInteractionWidgets import vtkOrientationMarkerWidget  # noqa: F401
-    from vtkmodules.vtkIOImage import vtkPNGWriter  # noqa: F401
-    from PIL import Image, GifImagePlugin  # noqa: F401
+    # Analysis, image export and ASE's format registry load when requested.
+    # None is needed to display the welcome page or construct the 3D canvas.
 
 
 class BackendLoader(QThread):

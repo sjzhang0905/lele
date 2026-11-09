@@ -1,0 +1,40 @@
+{
+  "version": "3.5.2",
+  "all_source_bytes_equal": true,
+  "actual_chgcar_checks": [
+    {
+      "filename": "CHGCAR",
+      "atoms": 6,
+      "grid_shape": [
+        48,
+        48,
+        192
+      ],
+      "grid_sha256": "52ef3ef764df5a11fbb020a7c3e033152d3ea3ad251c2b8621cd394d077030b0",
+      "unit": "e/\u00c5\u00b3"
+    },
+    {
+      "filename": "renamed_density.dat",
+      "atoms": 6,
+      "grid_shape": [
+        48,
+        48,
+        192
+      ],
+      "grid_sha256": "52ef3ef764df5a11fbb020a7c3e033152d3ea3ad251c2b8621cd394d077030b0",
+      "unit": "e/\u00c5\u00b3"
+    },
+    {
+      "filename": "CHGCAR(1)",
+      "atoms": 6,
+      "grid_shape": [
+        48,
+        48,
+        192
+      ],
+      "grid_sha256": "52ef3ef764df5a11fbb020a7c3e033152d3ea3ad251c2b8621cd394d077030b0",
+      "unit": "e/\u00c5\u00b3"
+    }
+  ],
+  "velocity_and_true_cube_regressions_pass": true
+}

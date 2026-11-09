@@ -1,0 +1,50 @@
+..............................ssss...................................... [  4%]
+........................................................................ [  9%]
+........................................................................ [ 14%]
+.................................................................. [ 18%]
+....................ss.................................................. [ 23%]
+........................................................................ [ 28%]
+...................sss.................................................. [ 33%]
+........................................................................ [ 37%]
+........................................................................ [ 42%]
+........................................................................ [ 47%]
+........................................................................ [ 52%]
+............s........................................................... [ 57%]
+........................................................................ [ 61%]
+........................................................................ [ 66%]
+........................................................................ [ 71%]
+.......ss............................................................... [ 76%]
+.................................................................. [ 80%]
+.............................................................................. [ 85%]
+........................................................................ [ 90%]
+........................................................................ [ 95%]
+...................................................................      [100%]
+=============================== warnings summary ===============================
+../../../../../opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+  /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+tests/test_acceptance_regressions_v340.py: 7 warnings
+tests/test_boundary_surface_v354.py: 22 warnings
+tests/test_crystal_v220.py: 2 warnings
+tests/test_field_mapping_v340.py: 24 warnings
+tests/test_isosurface_integration_v330.py: 10 warnings
+tests/test_isosurface_render_v330.py: 6 warnings
+tests/test_periodic_fragment_ui_v171.py: 8 warnings
+tests/test_renderer.py: 4 warnings
+tests/test_selection_ui_v090.py: 4 warnings
+tests/test_volumetric_view_v320.py: 3 warnings
+  /workspace/scratch/438ad5620a3b/work/LELE/lele/surface_rendering.py:100: DeprecationWarning: Call to deprecated class vtkTransformPolyDataFilter. (Replaced by vtkTransformFilter.) -- Deprecated since version 9.7.0.
+    transformed=vtkTransformPolyDataFilter();transformed.SetInputConnection(contour.GetOutputPort())
+
+tests/test_acceptance_regressions_v340.py: 2 warnings
+tests/test_boundary_surface_v354.py: 25 warnings
+tests/test_field_mapping_v340.py: 5 warnings
+  /workspace/scratch/438ad5620a3b/work/LELE/lele/surface_rendering.py:138: DeprecationWarning: Call to deprecated class vtkTransformPolyDataFilter. (Replaced by vtkTransformFilter.) -- Deprecated since version 9.7.0.
+    tile_filter=vtkTransformPolyDataFilter();tile_filter.SetInputData(poly)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+1489 passed, 12 skipped, 123 warnings, 78 subtests passed in 70.13s (0:01:10)

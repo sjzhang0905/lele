@@ -119,7 +119,12 @@ class StartupTests(unittest.TestCase):
                     assert window.render_options.background == '#eeeeee'
                     assert window.render_options.bond_cutoff == 1.3
                     assert window.canvas_stack.currentWidget() is window.welcome_page
-                    assert {'numpy', 'scipy', 'ase', 'vtkmodules'} <= {n.split('.')[0] for n in sys.modules}
+                    assert {'numpy', 'ase', 'vtkmodules'} <= {n.split('.')[0] for n in sys.modules}
+                    # A ready empty canvas does not need the ASE IO registry,
+                    # SciPy geometry/optimization or image-export plugins.
+                    assert 'ase.io' not in sys.modules
+                    assert 'scipy.spatial' not in sys.modules
+                    assert 'PIL.Image' not in sys.modules
                     timer.stop()
                     window.close()
             timer = QTimer()

@@ -1,0 +1,42 @@
+ Entering Gaussian System
+ Synthetic LELE reader/animation example. NOT a real quantum calculation. All moments and spectra are artificial.
+ NMR shieldings below are artificial test data.
+ #p nmr b3lyp/6-31g(d)
+ Charge = 0 Multiplicity = 1
+                         Standard orientation:
+ ---------------------------------------------------------------------
+ Center     Atomic      Atomic             Coordinates (Angstroms)
+ Number     Number       Type             X           Y           Z
+ ---------------------------------------------------------------------
+      1          8           0        0.000000    0.000000    0.000000
+      2          1           0        1.100000    0.000000    0.000000
+      3          1           0       -0.300000    1.100000    0.000000
+ ---------------------------------------------------------------------
+ SCF Done:  E(RB3LYP) =  -75.0000000000     A.U. after 10 cycles
+                         Standard orientation:
+ ---------------------------------------------------------------------
+ Center     Atomic      Atomic             Coordinates (Angstroms)
+ Number     Number       Type             X           Y           Z
+ ---------------------------------------------------------------------
+      1          8           0        0.000000    0.000000    0.000000
+      2          1           0        0.960000    0.000000    0.000000
+      3          1           0       -0.240000    0.920000    0.000000
+ ---------------------------------------------------------------------
+ SCF Done:  E(RB3LYP) =  -75.1000000000     A.U. after 10 cycles
+ Optimization completed.
+ Stationary point found.
+
+ SCF GIAO Magnetic shielding tensor (ppm):
+ 1 O Isotropic = 200.0000 Anisotropy = 30.0000
+ XX=190.0 YX=1.0 ZX=2.0
+ XY=3.0 YY=200.0 ZY=4.0
+ XZ=5.0 YZ=6.0 ZZ=210.0
+ 2 H Isotropic = 28.0000 Anisotropy = 3.0000
+ XX=27.0 YX=0.0 ZX=0.0
+ XY=0.0 YY=28.0 ZY=0.0
+ XZ=0.0 YZ=0.0 ZZ=29.0
+ 3 H Isotropic = 26.0000 Anisotropy = 6.0000
+ XX=24.0 YX=0.0 ZX=0.0
+ XY=0.0 YY=26.0 ZY=0.0
+ XZ=0.0 YZ=0.0 ZZ=28.0
+ Normal termination of Gaussian 16

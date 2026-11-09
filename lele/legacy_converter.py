@@ -17,8 +17,17 @@ from typing import Iterable, Optional
 import numpy as np
 from ase import Atoms
 from ase.data import atomic_numbers, chemical_symbols
-from ase.io import read as ase_read
-from ase.io import write as ase_write
+
+
+def ase_read(*args, **kwargs):
+    """Load ASE's format registry only for readers that actually use it."""
+    from ase.io import read
+    return read(*args, **kwargs)
+
+
+def ase_write(*args, **kwargs):
+    from ase.io import write
+    return write(*args, **kwargs)
 
 
 APP_NAME = "ChemStructConverter"
@@ -55,6 +64,9 @@ SUPPORTED_SUFFIXES = {
     ".mol",
     ".molden",
     ".mld",
+    ".fchk",
+    ".fch",
+    ".gbw",
     ".mol2",
     ".sdf",
     ".xsf",
@@ -145,17 +157,29 @@ def looks_like_vasp_structure(text: str) -> bool:
     return any(marker in lowered for marker in coord_markers)
 
 
-def detect_format(path: Path) -> Detection:
+def detect_format(path: Path, *, check_volume: bool = True) -> Detection:
     name = path.name
     upper_name = name.upper()
     suffix = path.suffix.lower()
+    if check_volume:
+        from .vasp_volume_detection import is_vasp_volume
+        if is_vasp_volume(path):
+            return Detection('vasp_volume', 'VASP volumetric data')
+    if suffix in ('.fchk', '.fch'):
+        return Detection('gaussian_fchk', 'Gaussian formatted checkpoint')
+    if suffix == '.gbw':
+        return Detection('orca_gbw', 'ORCA GBW')
+    if re.match(r'^WAVECAR(?:$|[._ -])', upper_name):
+        return Detection('vasp_wavecar', 'VASP WAVECAR')
     # .mol is shared by MDL structures and CP2K Molden vibration files.
     # Read the actual header before dispatching an ordinary suffix reader.
     if suffix in ('.mol','.molden','.mld'):
         from .output_text import decode_output
         with path.open('rb') as probe:header=decode_output(probe.read(4096))
         if re.match(r'^\s*\[Molden\s+Format\]',header,re.I):
-            return Detection('molden_vib','Molden vibrations (CP2K compatible)')
+            if re.search(r'(?im)^\s*\[FREQ\]', header):
+                return Detection('molden_vib','Molden vibrations (CP2K compatible)')
+            return Detection('molden','Molden')
 
     if re.match(r'^OUTCAR(?:$|[._ -])', upper_name) or suffix == '.outcar':
         return Detection("vasp_out", "VASP OUTCAR")
@@ -195,7 +219,9 @@ def detect_format(path: Path) -> Detection:
     text = read_probe(path)
     upper = text.upper()
     if re.match(r'^\s*\[Molden\s+Format\]',text,re.I):
-        return Detection('molden_vib','Molden vibrations (CP2K compatible)')
+        if re.search(r'(?im)^\s*\[FREQ\]', text):
+            return Detection('molden_vib','Molden vibrations (CP2K compatible)')
+        return Detection('molden','Molden')
 
     if re.search(r'(?m)^\s*\d+\s*\n\s*i\s*=\s*\d+\s*,',text):
         return Detection('cp2k_xyz','CP2K XYZ trajectory')
@@ -1041,6 +1067,13 @@ def read_structure(path: Path, detection: Optional[Detection] = None) -> tuple[A
             atoms = ase_read(str(path), index=-1, format="cif", fractional_occupancies=True)
         elif kind == "vasp_in":
             atoms = ase_read(str(path), index=-1, format="vasp")
+        elif kind == 'vasp_volume':
+            from ase.io.vasp import read_vasp_configuration
+            from .output_text import open_output_text
+            with open_output_text(path) as stream:
+                # The ordinary POSCAR reader also consumes optional velocities;
+                # a following charge grid must never be interpreted as those.
+                atoms = read_vasp_configuration(stream)
         elif kind == "vasp_out":
             atoms = ase_read(str(path), index=-1, format="vasp-out")
         elif kind == "vasp_xdatcar":
@@ -1263,7 +1296,7 @@ def candidate_files(folder: Path, recursive: bool = True) -> list[Path]:
     for path in iterator:
         if not path.is_file():
             continue
-        if path.name.upper() in {"POSCAR", "CONTCAR", "OUTCAR", "XDATCAR", "VASPRUN.XML"} or path.suffix.lower() in SUPPORTED_SUFFIXES:
+        if path.name.upper() in {"POSCAR", "CONTCAR", "OUTCAR", "XDATCAR", "VASPRUN.XML", "WAVECAR", "CHGCAR", "CHG", "ELFCAR", "LOCPOT", "PARCHG", "AECCAR0", "AECCAR1", "AECCAR2"} or path.suffix.lower() in SUPPORTED_SUFFIXES:
             result.append(path)
     return sorted(result)
 

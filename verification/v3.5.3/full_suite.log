@@ -1,0 +1,52 @@
+..............................ssss...................................... [  4%]
+........................................................................ [  9%]
+........................................................................ [ 14%]
+.................................................................. [ 18%]
+............ss.......................................................... [ 23%]
+........................................................................ [ 28%]
+...........sss.......................................................... [ 33%]
+........................................................................ [ 38%]
+........................................................................ [ 43%]
+........................................................................ [ 47%]
+........................................................................ [ 52%]
+....s................................................................... [ 57%]
+........................................................................ [ 62%]
+........................................................................ [ 67%]
+.......................................................................s [ 71%]
+s....................................................................... [ 76%]
+.................................................................. [ 81%]
+.............................................................................. [ 86%]
+........................................................................ [ 91%]
+........................................................................ [ 96%]
+...........................................................              [100%]
+=============================== warnings summary ===============================
+../../../../../opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+  /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+tests/test_acceptance_regressions_v340.py: 7 warnings
+tests/test_crystal_v220.py: 2 warnings
+tests/test_field_mapping_v340.py: 24 warnings
+tests/test_isosurface_integration_v330.py: 10 warnings
+tests/test_isosurface_render_v330.py: 6 warnings
+tests/test_periodic_fragment_ui_v171.py: 8 warnings
+tests/test_renderer.py: 4 warnings
+tests/test_selection_ui_v090.py: 4 warnings
+tests/test_volumetric_view_v320.py: 3 warnings
+  /workspace/scratch/438ad5620a3b/work/LELE/lele/surface_rendering.py:92: DeprecationWarning: Call to deprecated class vtkTransformPolyDataFilter. (Replaced by vtkTransformFilter.) -- Deprecated since version 9.7.0.
+    transformed=vtkTransformPolyDataFilter();transformed.SetInputConnection(contour.GetOutputPort())
+
+tests/test_acceptance_regressions_v340.py::test_A3_periodic_surface_must_follow_boundary[bounds0-expected_x0]
+tests/test_acceptance_regressions_v340.py::test_A3_periodic_surface_must_follow_boundary[bounds1-expected_x1]
+tests/test_field_mapping_v340.py::test_boundary_repeats_only_periodic_source[True]
+tests/test_field_mapping_v340.py::test_periodic_seams_negative_roundoff_and_translated_grid_clipping
+tests/test_field_mapping_v340.py::test_periodic_seams_negative_roundoff_and_translated_grid_clipping
+tests/test_field_mapping_v340.py::test_periodic_seams_negative_roundoff_and_translated_grid_clipping
+  /workspace/scratch/438ad5620a3b/work/LELE/lele/surface_rendering.py:126: DeprecationWarning: Call to deprecated class vtkTransformPolyDataFilter. (Replaced by vtkTransformFilter.) -- Deprecated since version 9.7.0.
+    tile_filter=vtkTransformPolyDataFilter();tile_filter.SetInputData(poly)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+1481 passed, 12 skipped, 75 warnings, 78 subtests passed in 66.82s (0:01:06)

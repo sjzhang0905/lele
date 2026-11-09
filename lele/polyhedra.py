@@ -8,7 +8,6 @@ from itertools import combinations
 import re
 import numpy as np
 from ase.data import atomic_numbers
-from scipy.spatial import ConvexHull, QhullError
 
 from .core import radius
 from .atom_appearance import atom_is_drawn
@@ -57,6 +56,7 @@ def convex_faces(points):
     _, singular, axes = np.linalg.svd(centered, full_matrices=False)
     rank = int(np.count_nonzero(singular > max(1.e-8, singular[0]*1.e-8)))
     if rank < 2:return [], [], False
+    from scipy.spatial import ConvexHull, QhullError
     try:
         if rank == 2:
             order = ConvexHull(centered @ axes[:2].T).vertices.tolist()

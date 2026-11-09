@@ -160,12 +160,14 @@ def test_non_gamma_boundary_bloch_phase_uses_equilibrium_cells():
     mode=PhononMode(1,100.,np.array([[1.,0,0]]),qpoint=(.5,0,0),q_fractional=(.5,0,0))
     preview=mode.preview_frame(ref,pi/2,.3)
     shown=boundary_view(preview,((0,2),(0,1),(0,1)))
-    np.testing.assert_allclose(shown.frame.positions,[[.3,0,0],[3.7,0,0]],atol=1.e-14)
+    expected=shown.shifts*4.+np.column_stack((.3*(-1.)**shown.shifts[:,0],np.zeros((len(shown.shifts),2))))
+    np.testing.assert_allclose(shown.frame.positions,expected,atol=1.e-14)
     np.testing.assert_array_equal(ref.positions,[[0,0,0]])
     # A phase crossing the boundary must not swap the equilibrium tile IDs.
     preview=mode.preview_frame(ref,-pi/2,.3)
     shown=boundary_view(preview,((0,2),(0,1),(0,1)))
-    np.testing.assert_allclose(shown.frame.positions,[[-.3,0,0],[4.3,0,0]],atol=1.e-14)
+    expected=shown.shifts*4.+np.column_stack((-.3*(-1.)**shown.shifts[:,0],np.zeros((len(shown.shifts),2))))
+    np.testing.assert_allclose(shown.frame.positions,expected,atol=1.e-14)
 
 
 def test_complex_non_gamma_phase_matches_bloch_time_convention():
@@ -173,7 +175,9 @@ def test_complex_non_gamma_phase_matches_bloch_time_convention():
     mode=PhononMode(1,100.,np.array([[1.,0,0]]),imaginary_displacements=np.array([[0,1.,0]]),
                     qpoint=(.25,0,0),q_fractional=(.25,0,0))
     shown=boundary_view(mode.preview_frame(ref,0.,.3),((0,2),(0,1),(0,1)))
-    np.testing.assert_allclose(shown.frame.positions,[[0,-.3,0],[3.7,0,0]],atol=1.e-14)
+    theta=-np.pi/2*shown.shifts[:,0]
+    expected=shown.shifts*4.+np.column_stack((.3*np.sin(theta),-.3*np.cos(theta),np.zeros(len(theta))))
+    np.testing.assert_allclose(shown.frame.positions,expected,atol=1.e-14)
 
 
 def test_unbound_and_bound_qe_results_roundtrip(tmp_path):

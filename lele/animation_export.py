@@ -169,7 +169,7 @@ class _OffscreenScene:
             from .gaussian_properties import selected_dipole,dipole_label
             self.draw.dipole_vector=selected_dipole(self.document,self.dipole_reference or frame,self.draw.options.dipole_source)
             self.draw.dipole_label=dipole_label(self.document,self.draw.options.dipole_source)
-        self.draw.set_scene(frame, volume)
+        self.draw.set_scene(frame, volume, volumes=(self.document.volumes if self.document is not None and volume is not None else None))
         if self.first and not self.camera_supplied:
             self.scene.ResetCamera()
         self.first = False

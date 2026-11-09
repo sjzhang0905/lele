@@ -13,6 +13,7 @@ import numpy as np
 from .core import Document, Frame, Volume
 from .poscar_labels import read_poscar_groups
 from .siesta_trajectory import load_siesta_history
+from .result_availability import has_calculation_data
 from . import legacy_converter as legacy
 
 # iread(index=':') supports these formats reliably enough for a first pass.
@@ -22,7 +23,7 @@ TRAJECTORY_KINDS = {
     'qe_out', 'ase_generic',
 }
 MAX_FRAMES = None  # No application frame-count limit.
-MAX_VOLUME_POINTS = 2_000_000
+MAX_VOLUME_POINTS = 64_000_000
 BOHR_ANG = 0.529177210903
 
 
@@ -89,9 +90,18 @@ def _cube_grid(path: Path) -> Volume:
 
 
 def _load_document(filename: str | Path, max_frames: int | None = MAX_FRAMES) -> Document:
-    from ase.io import iread
-
     path = Path(filename).expanduser().resolve()
+    from .vasp_volume_detection import is_vasp_volume, named_vasp_volume_kind
+    if is_vasp_volume(path):
+        from .volumetric_input import read_vasp_volume_document
+        document = read_vasp_volume_document(path, max_points=MAX_VOLUME_POINTS)
+        if named_vasp_volume_kind(path) is None:
+            document.note += (' VASP grid identified from file contents; interpreted as CHGCAR charge data. '
+                              'For potential or ELF grids retain LOCPOT or ELFCAR in the filename to select their native units.')
+        return document
+    if path.suffix.lower() in ('.cube', '.cub'):
+        from .volumetric_input import read_cube_document
+        return read_cube_document(path, max_points=MAX_VOLUME_POINTS)
     if path.name.endswith('.finalensemble.xyz'):
         from .orca_goat import read_goat_ensembles
         ensembles=read_goat_ensembles(path)
@@ -113,10 +123,28 @@ def _load_document(filename: str | Path, max_frames: int | None = MAX_FRAMES) ->
         if path.name.endswith('_MEP_ALL_trj.xyz') and not Path(str(prefix)+'.NEB.log').exists() and not Path(str(prefix)+'.interp').exists() and not Path(str(prefix)+'_MEP_trj.xyz').exists():
             return Document(path,'XYZ NEB records (image count unavailable)',records,note='Place the main output/NEB.log beside this file to identify images and iterations.')
         return Document(path,'ORCA NEB results',[records[0]])
-    detection = legacy.detect_format(path)
+    detection = legacy.detect_format(path, check_volume=False)
     kind = detection.kind
     note = ''
     volume = None
+
+    if kind == 'gaussian_fchk':
+        from .fchk_input import read_fchk
+        return read_fchk(path)
+    if kind in ('molden', 'molden_vib'):
+        from .molden_input import read_molden
+        return read_molden(path)
+
+    if kind == 'vasp_volume':
+        from .volumetric_input import read_vasp_volume_document
+        return read_vasp_volume_document(path, max_points=MAX_VOLUME_POINTS)
+
+    if kind == 'vasp_wavecar':
+        from .binary_wavefunctions import read_wavecar
+        return read_wavecar(path)
+    if kind == 'orca_gbw':
+        from .binary_wavefunctions import read_gbw
+        return read_gbw(path)
 
     if kind in ('qe_in','qe_out'):
         from .qe_results import read_qe_input,read_qe_output
@@ -127,11 +155,6 @@ def _load_document(filename: str | Path, max_frames: int | None = MAX_FRAMES) ->
         if kind=='qe_modes' and path.suffix.lower()=='.eig':
             raise ValueError('Open normalized QE .modes displacements; .eig mass-weighted eigenvectors are a different representation.')
         return read_qe_phonons(path,stdout=kind=='qe_phonon')
-
-    if kind=='molden_vib':
-        from .molden_vibrations import read_molden_vibrations
-        frame,vibrations,results,note=read_molden_vibrations(path)
-        return Document(path,detection.label,[frame.clone()],vibrations=vibrations,calculation_results=results,note=note)
 
     if kind in ('cp2k_in','cp2k_out','cp2k_xyz'):
         from .cp2k_results import read_cp2k_output,read_cp2k_xyz
@@ -185,15 +208,15 @@ def _load_document(filename: str | Path, max_frames: int | None = MAX_FRAMES) ->
                 calculation_results=results),kind)
 
     if kind == 'siesta_out':
-        frames, note = load_siesta_history(path, max_frames)
-        if frames:
-            return Document(path, detection.label, frames, None, note)
+        frames, note, results = load_siesta_history(path, max_frames, include_results=True)
+        if frames or has_calculation_data(results):
+            return Document(path, detection.label, frames, note=note, calculation_results=results)
         # Retain the converter fallback when the output has no printed steps.
 
     if path.suffix.lower() == '.ani':
-        frames, note = load_siesta_history(path, max_frames)
+        frames, note, results = load_siesta_history(path, max_frames, include_results=True)
         if frames:
-            return Document(path, 'SIESTA ANI trajectory', frames, None, note)
+            return Document(path, 'SIESTA ANI trajectory', frames, note=note, calculation_results=results)
 
     if kind=='nwchem_out':
         from .nwchem_trajectory import read_nwchem_frames
@@ -232,6 +255,7 @@ def _load_document(filename: str | Path, max_frames: int | None = MAX_FRAMES) ->
         if kind == 'qe_out':
             opts['results_required'] = False
         frames = []
+        from ase.io import iread
         from .output_text import load_progress
         report=load_progress('ASE: reading '+detection.label)
         try:
@@ -276,10 +300,27 @@ def load_document(filename: str | Path, max_frames: int | None = MAX_FRAMES, *, 
 
 
 def _load_complete_document(filename, max_frames):
-    document = _load_document(filename, max_frames)
-    try:kind = legacy.detect_format(document.path).kind
+    from .nmr_input import standalone_nmr_kind,read_nmr_results
+    path=Path(filename).expanduser().resolve()
+    special=standalone_nmr_kind(path) if path.suffix.lower() in ('.out','.log','.data','.txt') else None
+    if special:
+        nmr=read_nmr_results(path,'nmr_output')
+        if not nmr:raise ValueError('NMR output detected, but no complete finite shielding results were printed.')
+        return Document(path,special,[],nmr_results=nmr,note='NMR results only; no complete reference structure is inferred.')
+    try:document = _load_document(filename, max_frames)
+    except (ValueError,legacy.ConversionError):
+        try:detected=legacy.detect_format(path).kind
+        except Exception:raise
+        nmr=read_nmr_results(path,detected)
+        if not nmr:raise
+        document=Document(path,detected,[],nmr_results=nmr)
+    try:
+        from .vasp_volume_detection import VASP_FIELD_NAMES
+        kind = ('vasp_volume' if document.format_name in {'VASP '+name for name in VASP_FIELD_NAMES}
+                else legacy.detect_format(document.path, check_volume=False).kind)
     except Exception:kind = 'siesta_out' if document.path.suffix.lower()=='.ani' else document.format_name
-    if document.format_name.startswith('ORCA'):kind='orca_out'
+    if document.format_name.startswith('ORCA') and kind not in ('orca_gbw', 'molden'):
+        kind='orca_out'
     for frame in document.frames:
         frame.info['source_kind'] = kind
         frame.info['source_format'] = document.format_name
@@ -305,22 +346,31 @@ def _load_complete_document(filename, max_frames):
         for frame in document.frames:
             frame.info.setdefault('source_kind',kind)
             frame.info.setdefault('source_format',document.format_name)
+    if not document.nmr_results:
+        document.nmr_results=read_nmr_results(document.path,kind,document)
     return document
 
 
-def export_frame(frame: Frame, filename: str | Path, target: str, box_size: float = 30.0):
+def export_frame(frame: Frame, filename: str | Path, target: str, box_size: float = 30.0, *, occupancy_policy='error'):
     """Write a structure in one of the original converter's 5 output modes."""
     from ase import Atoms
 
     if target not in legacy.TARGETS.values():
         raise ValueError(f'Unsupported export target: {target}')
+    if occupancy_policy not in ('error','maximum'):raise ValueError('Unsupported occupancy export policy.')
+    from .site_occupancy import is_disordered,maximum_occupancy_frame
+    occupancy_notices=[]
+    if is_disordered(frame) and target!='cif':
+        if occupancy_policy!='maximum':
+            raise ValueError('Fractional site occupancies require CIF export or explicit maximum-occupancy element export confirmation.')
+        original_count=len(frame.symbols)
+        frame=maximum_occupancy_frame(frame)
+        occupancy_notices.append('Export copy uses the highest-occupancy element at each site with full occupancy; '
+                                 f'{original_count-len(frame.symbols)} completely vacant site(s) omitted. Source occupancies unchanged.')
     atoms = Atoms(symbols=frame.symbols, positions=frame.positions.copy(),
                   cell=frame.cell.copy(), pbc=frame.pbc)
     from .vasp_constraints import attach_fixed_axes
     if target in ('poscar-direct','poscar-cartesian'):attach_fixed_axes(atoms,frame.info)
-    from .site_occupancy import is_disordered
-    if is_disordered(frame) and target!='cif':
-        raise ValueError('Fractional site occupancies require CIF export. Construct an explicit ordered structure before exporting a calculation input.')
     if 'site_occupancies' in frame.info:
         atoms.info['occupancy']={str(i):dict(s) for i,s in enumerate(frame.info['site_occupancies'])}
         atoms.set_array('spacegroup_kinds',np.arange(len(atoms),dtype=int))
@@ -341,4 +391,4 @@ def export_frame(frame: Frame, filename: str | Path, target: str, box_size: floa
     else:
         legacy.write_target(Path(filename), prepared, target,
                             Path(filename).stem, legacy.DEFAULT_GAUSSIAN_ROUTE)
-    return notices
+    return occupancy_notices+list(notices)

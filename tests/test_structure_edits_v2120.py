@@ -210,5 +210,5 @@ def test_gui_fractional_composition_and_footer_left_edge_tracks_coordinate_tabs(
     for width in (1280,1600,1100):
         w.resize(width,850);w.show()
         for _ in range(3):gui.app.processEvents();w._align_summary_footer()
-        left=w.tabs.mapToGlobal(QPoint(0,0)).x();actual=w.summary_label.mapToGlobal(QPoint(0,0)).x()
+        left=w.lower_splitter.mapToGlobal(QPoint(0,0)).x();actual=w.summary_label.mapToGlobal(QPoint(0,0)).x()
         assert abs(left-actual)<=1

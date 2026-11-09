@@ -11,6 +11,17 @@ from .output_text import read_output_lines, check_load_cancelled, load_progress,
 from .cp2k_input import real
 
 ENERGY=re.compile(r'ENERGY\|\s+Total FORCE_EVAL.*?energy\s*\[([^]]+)\]\s*('+NUMBER+r')',re.I)
+RUN_HEADER=re.compile(r'CP2K\|\s*version string',re.I)
+COORDINATE_ROW=re.compile(r'^\s*(\d+)\s+\d+\s+([A-Za-z]+)\s+\d+\s+('+NUMBER+r')\s+('+NUMBER+r')\s+('+NUMBER+r')')
+ATOM_COUNT=re.compile(r'(?:-\s*Atoms:|Number of atoms:)\s*(\d+)',re.I)
+CELL_VECTOR=re.compile(r'CELL\|\s*Vector\s+([abc])\s*\[(angstrom|bohr)\]:\s*(.*)',re.I)
+CELL_PERIODICITY=re.compile(r'CELL\|\s*Periodicity\s+(NONE|XYZ|XY|XZ|YZ|X|Y|Z)\s*$',re.I)
+OPT_STEP=re.compile(r'OPTIMIZATION STEP:\s*(\d+)')
+MD_STEP=re.compile(r'MD\|\s*Step number\s+(\d+)')
+SCF_CONVERGED=re.compile(r'SCF run converged in\s+(\d+)\s+steps')
+OPT_RECORD=re.compile(r'\s*OPT\|\s*Step number\s+(\d+)')
+TD_ROW=re.compile(r'\s*TDDFPT\|\s*(\d+)\s+('+NUMBER+r')\s+('+NUMBER+r')\s+('+NUMBER+r')\s+('+NUMBER+r')\s+('+NUMBER+r')\s*$')
+TD_KPOINT=re.compile(r'\s*TDDFPT_KPOINT\|\s*(\d+)\s+(.*)')
 METRIC=re.compile(r'^\s*OPT\|\s*(Convergence limit for\s+)?(Maximum gradient|Max\. gradient|RMS gradient|Maximum step size|Max\. step size|RMS step size)\s+('+NUMBER+r')\s*$',re.I)
 RECORD_PREFIXES=('GLOBAL|','DFT|','FUNCTIONAL|','CELL|','MO|','ENERGY|','OPT|','MD|',
     'TDDFPT|','TDDFPT_KPOINT|','MODULE QUICKSTEP:','OPTIMIZATION STEP:',
@@ -58,9 +69,9 @@ def energy_factor(unit):
 def coordinate_table(lines,start,cell,pbc,info,natoms):
     from .trajectory_io import numeric_array
     bohr='BOHR' in lines[start].upper();rows=[];symbols=[];j=start+1
-    pattern=re.compile(r'^\s*(\d+)\s+\d+\s+([A-Za-z]+)\s+\d+\s+('+NUMBER+r')\s+('+NUMBER+r')\s+('+NUMBER+r')')
     while j<len(lines) and (j<start+6 or rows):
-        match=pattern.match(lines[j])
+        if (j-start)%1024==0:check_load_cancelled()
+        match=COORDINATE_ROW.match(lines[j])
         if match:
             if int(match[1])!=len(rows)+1 or match[2] not in atomic_numbers:break
             symbols.append(match[2]);rows.append([match[k] for k in (3,4,5)])
@@ -87,10 +98,12 @@ def _segment(lines,offset,results):
         results.orbitals.append(OrbitalSet(ji,mo_line,dict(mo),step_index=step_index,
             numbering='1-based CP2K orbital numbers. Channels keep k points and spins separate; only the last printed table per SCF evaluation is retained'))
         mo={};mo_line=0
-    i=0
+    i=0;next_checkpoint=0
     while i<len(lines):
-        check_load_cancelled()
-        progress(i)
+        # Keep progress/cancellation bounded without a ContextVar and clock
+        # lookup for every SCF diagnostic line in a long molecular dynamics run.
+        if i>=next_checkpoint:
+            check_load_cancelled();progress(i);next_checkpoint=i+512
         line=lines[i];source=offset+i+1;upper=line.upper()
         # SCF iteration rows, integration-grid diagnostics and other numeric
         # tables dominate long stdout files. They contain no records read here.
@@ -112,30 +125,30 @@ def _segment(lines,offset,results):
         if 'FUNCTIONAL|' in line:
             m=re.match(r'\s*FUNCTIONAL\|\s+([A-Za-z][\w-]+):',line)
             if m and m[1] not in job.method.split(' / '):job.method=' / '.join(filter(None,(job.method,m[1])))
-        atom_count=re.search(r'(?:-\s*Atoms:|Number of atoms:)\s*(\d+)',line,re.I)
+        atom_count=ATOM_COUNT.search(line) if 'ATOMS:' in upper else None
         if atom_count and 'Atomic kind:' not in line:natoms=int(atom_count[1])
-        v=re.search(r'CELL\|\s*Vector\s+([abc])\s*\[(angstrom|bohr)\]:\s*(.*)',line,re.I)
+        v=CELL_VECTOR.search(line) if 'CELL|' in upper else None
         if v:
             numbers=re.findall(NUMBER,v[3]);vector=np.asarray([real(x) for x in numbers[:3]])
             norm=re.search(r'\|[abc]\|\s*=\s*('+NUMBER+r')',v[3],re.I)
             if norm is not None and np.linalg.norm(vector)>0:vector*=real(norm[1])/np.linalg.norm(vector)
             vectors[v[1].lower()]=vector*(Bohr if v[2].lower()=='bohr' else 1.)
             if all(key in vectors for key in 'abc'):cell=np.asarray([vectors[key] for key in 'abc'])
-        periodic=re.search(r'CELL\|\s*Periodicity\s+(NONE|XYZ|XY|XZ|YZ|X|Y|Z)\s*$',line,re.I)
+        periodic=CELL_PERIODICITY.search(line) if 'CELL|' in upper else None
         if periodic:pbc=tuple(a in periodic[1].upper() for a in 'XYZ')
         if 'ATOMIC COORDINATES IN ' in upper:
             current,end=coordinate_table(lines,i,cell,pbc,info,natoms)
             current_used=False
             if current is None:results.note+=' Incomplete coordinate table retained as unavailable.'
             i=end;continue
-        opt=re.search(r'OPTIMIZATION STEP:\s*(\d+)',line)
+        opt=OPT_STEP.search(line) if 'OPTIMIZATION STEP:' in line else None
         if opt:
             cycle=int(opt[1]);current=None;last=None;scf_converged=None
-        md=re.search(r'MD\|\s*Step number\s+(\d+)',line)
+        md=MD_STEP.search(line) if 'MD|' in line else None
         if md and int(md[1])!=cycle:cycle=int(md[1]);current=None;last=None
         if 'SCF WAVEFUNCTION OPTIMIZATION' in line:
             flush_orbitals();scf_converged=None
-        converged=re.search(r'SCF run converged in\s+(\d+)\s+steps',line)
+        converged=SCF_CONVERGED.search(line) if 'SCF run converged in' in line else None
         if converged:job.scf_cycles=int(converged[1]);scf_converged=True
         if 'SCF run NOT converged' in line:
             scf_converged=False;results.note+=f' SCF not converged (printed at line {source}).'
@@ -150,7 +163,7 @@ def _segment(lines,offset,results):
                 rows.append(Orbital(int(row[1]),real(row[4]),real(row[3])));j+=1
             if rows:mo[channel]=rows;mo_line=source
             i=max(i+1,j);continue
-        e=ENERGY.search(line)
+        e=ENERGY.search(line) if 'ENERGY|' in upper else None
         if e:
             value=real(e[2])*energy_factor(e[1]);data={'cp2k_energy_hartree':value/Hartree,'energy_source':'CP2K FORCE_EVAL',
                 'cp2k_scf_converged':scf_converged}
@@ -164,9 +177,9 @@ def _segment(lines,offset,results):
             for s in pending_spectra:s.reference.energy_ev=value
             pending_spectra.clear()
             if stage.kind in ('optimization','md'):current=None
-        record=re.match(r'\s*OPT\|\s*Step number\s+(\d+)',line)
+        record=OPT_RECORD.match(line) if 'OPT|' in line else None
         if record is not None and last is not None:last.cycle=int(record[1])
-        metric=METRIC.match(line)
+        metric=METRIC.match(line) if 'OPT|' in upper else None
         if metric is not None:
             if last is None:
                 last=Cp2kStep(ji,source,None if current is None else current.clone(),stage_index=si,cycle=cycle)
@@ -182,7 +195,7 @@ def _segment(lines,offset,results):
         if 'Transition dipoles calculated using' in line:
             match=re.search(r'using\s+(\S+)',line,re.I);form=match[1].lower() if match else 'unspecified';magnitudes=False
         if 'transition dipole magnitudes are shown' in line.lower():magnitudes=True;form='component magnitudes'
-        mult=re.search(r'states of multiplicity\s+(\d+)',line)
+        mult=re.search(r'states of multiplicity\s+(\d+)',line) if 'states of multiplicity' in line else None
         if mult:multiplicity=mult[1]
         if 'State' in line and 'Excitation' in line and 'Transition dipole' in line:
             spectrum=ElectronicSpectrum(None if current is None else current.clone(),source_line=source,
@@ -190,7 +203,7 @@ def _segment(lines,offset,results):
             results.spectra.append(spectrum);job.tasks.add('TDDFPT');in_analysis=False
             if spectrum.reference is not None and spectrum.reference.energy_ev is None:
                 pending_spectra.append(spectrum)
-        td=re.match(r'\s*TDDFPT\|\s*(\d+)\s+('+NUMBER+r')\s+('+NUMBER+r')\s+('+NUMBER+r')\s+('+NUMBER+r')\s+('+NUMBER+r')\s*$',line)
+        td=TD_ROW.match(line) if 'TDDFPT|' in line else None
         if td and spectrum is not None:
             number=int(td[1]);energy=real(td[2]);vector=np.asarray([real(td[k]) for k in (3,4,5)]);strength=real(td[6])
             if energy>0 and strength>=0:
@@ -201,7 +214,7 @@ def _segment(lines,offset,results):
                 elif form=='length':t.electric_dipole_au=vector;t.oscillator_strength_length=strength
                 else:t.metadata['printed_components_au']=vector.tolist()
                 spectrum.transitions.append(t)
-        kp=re.match(r'\s*TDDFPT_KPOINT\|\s*(\d+)\s+(.*)',line)
+        kp=TD_KPOINT.match(line) if 'TDDFPT_KPOINT|' in line else None
         if kp and spectrum is not None:
             t=next((t for t in reversed(spectrum.transitions) if t.number==int(kp[1])),None)
             values=kp[2].split()
@@ -232,9 +245,12 @@ def _segment(lines,offset,results):
 
 def read_cp2k_output(path):
     lines=read_output_lines(path);results=Cp2kResults('CP2K',force_unit='Hartree/bohr (printed gradients)',displacement_unit='bohr')
-    boundaries=[i for i,line in scan_lines(lines,'CP2K: identifying runs') if re.search(r'CP2K\|\s*version string',line,re.I)]
+    boundaries=[i for i,line in scan_lines(lines,'CP2K: identifying runs')
+                if 'CP2K|' in line.upper() and RUN_HEADER.search(line)]
     starts=[0]+boundaries[1:]
-    for start,end in zip(starts,starts[1:]+[len(lines)]):_segment(lines[start:end],start,results)
+    for start,end in zip(starts,starts[1:]+[len(lines)]):
+        # Avoid a second file-sized pointer array for the common single run.
+        _segment(lines if start==0 and end==len(lines) else lines[start:end],start,results)
     results.note=('CP2K files are read independently; no companion file supplies missing structures, cells or results. '
         'Only printed coordinates are linked to energy records. XYZ trajectory energies are Hartree; internal energies are eV. '
         'Output cells and coordinates retain their printed precision. '+results.note).strip()

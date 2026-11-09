@@ -1,4 +1,5 @@
 """Streaming XYZ blocks shared by native long-trajectory readers."""
+from itertools import islice
 import numpy as np
 from ase.data import atomic_numbers
 from .output_text import open_output_text, check_load_cancelled, load_progress
@@ -25,6 +26,54 @@ def numeric_array(rows):
                            for row in rows], dtype=float)
 
 
+# Structured loadtxt parses normal XYZ atom rows in C without allocating a
+# Python string for every coordinate. Object strings preserve the complete
+# symbol token, so malformed labels cannot be truncated to valid elements.
+_XYZ_DTYPE = np.dtype([('symbol', object), ('position', float, (3,))])
+
+
+def coordinate_lines(stream, count):
+    """Read a bounded frame in C-backed iterator batches, keeping cancellation."""
+    rows = []
+    for start in range(0, count, 1024):
+        check_load_cancelled()
+        chunk = list(islice(stream, min(1024, count-start)))
+        rows.extend(chunk)
+        if len(chunk) < min(1024, count-start):
+            break
+    return rows
+
+
+def _xyz_coordinates(rows, count, source, plain):
+    if len(rows) != count:
+        raise IncompleteXYZ(f'Incomplete XYZ coordinates at line {source}')
+    # Tiny frames are cheaper through the straightforward reader. The slow
+    # path also retains precise legacy errors and Fortran-D support.
+    if count >= 24:
+        try:
+            values = np.loadtxt(rows, dtype=_XYZ_DTYPE, comments=None, ndmin=1, encoding=None,
+                                usecols=None if plain else (0, 1, 2, 3))
+            symbols = values['symbol'].tolist()
+            if len(values) == count and set(symbols).issubset(atomic_numbers):
+                return symbols, values['position'].copy()
+        except ValueError:
+            pass
+    symbols, coordinates = [], []
+    for index, raw in enumerate(rows):
+        if index % 1024 == 0:
+            check_load_cancelled()
+        fields = raw.split()
+        if len(fields) < 4:
+            raise IncompleteXYZ(f'Incomplete XYZ coordinates at line {source}')
+        if plain and (len(fields) != 4 or fields[0] not in atomic_numbers):
+            raise NotPlainXYZ('Extended XYZ atom fields require ASE')
+        if fields[0] not in atomic_numbers:
+            raise IncompleteXYZ(f'Unknown XYZ element at line {source+2+index}')
+        symbols.append(fields[0])
+        coordinates.append(fields[1:4])
+    return symbols, numeric_array(coordinates)
+
+
 def xyz_blocks(path, *, plain=False):
     """Yield complete blocks in one pass, converting coordinate arrays in C.
 
@@ -32,8 +81,8 @@ def xyz_blocks(path, *, plain=False):
     additional columns always go through ASE rather than being discarded.
     """
     from pathlib import Path
-    size=Path(path).stat().st_size
-    progress=load_progress('XYZ: reading coordinate frames',size)
+    size = Path(path).stat().st_size
+    progress = load_progress('XYZ: reading coordinate frames', size)
     with open_output_text(path) as stream:
         line_number = 0
         while True:
@@ -59,23 +108,10 @@ def xyz_blocks(path, *, plain=False):
             comment = raw.rstrip('\r\n')
             if plain and '=' in comment:
                 raise NotPlainXYZ('Extended XYZ metadata requires ASE')
-            rows = []
-            symbols = []
-            for _ in range(count):
-                if _%1024==0:check_load_cancelled()
-                raw = stream.readline()
-                line_number += 1
-                fields = raw.split()
-                if not raw or len(fields) < 4:
-                    raise IncompleteXYZ(f'Incomplete XYZ coordinates at line {source}')
-                if plain and (len(fields) != 4 or fields[0] not in atomic_numbers):
-                    raise NotPlainXYZ('Extended XYZ atom fields require ASE')
-                if fields[0] not in atomic_numbers:
-                    raise IncompleteXYZ(f'Unknown XYZ element at line {line_number}')
-                symbols.append(fields[0])
-                rows.append(fields[1:4])
-            positions = numeric_array(rows)
-            progress(min(max(0,size-1),stream.buffer.tell()))
+            rows = coordinate_lines(stream, count)
+            line_number += len(rows)
+            symbols, positions = _xyz_coordinates(rows, count, source, plain)
+            progress(min(max(0, size-1), stream.buffer.tell()))
             yield source, comment, symbols, positions
 
 

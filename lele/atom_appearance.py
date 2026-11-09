@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 LABEL_MODES = ('None', 'Element', 'Index (1..N)',
                'Element + index (global)', 'VESTA (POSCAR groups)')
+ATOM_REPRESENTATIONS = ('Global', 'Ball and stick', 'Space filling', 'Sticks', 'Wireframe')
 
 
 @dataclass(frozen=True)
@@ -13,8 +14,11 @@ class AtomAppearance:
     opacity: float = 1.0
     label_mode: str = 'Global'
     label_text: str = ''
+    representation: str = 'Global'
 
     def __post_init__(self):
+        if self.representation not in ATOM_REPRESENTATIONS:
+            raise ValueError('Unsupported atom representation')
         if not 0.0 <= self.opacity <= 1.0:
             raise ValueError('Atom opacity must be between 0 and 1')
         if self.label_mode not in ('Global', 'Custom', *LABEL_MODES):

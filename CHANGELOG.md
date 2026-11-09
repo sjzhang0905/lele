@@ -1,5 +1,89 @@
 # Changelog
 
+## 3.5.5 — 2026-11-09
+
+- Constrain all lower settings editors, including numeric spin boxes and hidden WAVECAR controls: 90 logical pixels for ordinary values and dropdowns, 140 for high-precision isovalues. Preserve native internal line editors and their buttons.
+- Keep Boundary numeric columns grouped on the left and Apply next to the positive isovalue input; prevent forms from stretching regular fields while retaining the 265-pixel slider cap.
+- Retain all 3.5.4 Boundary surface fixes and prior startup/large-file performance improvements.
+
+## 3.5.4 — 2026-11-09
+
+- Repeat cell-sized finite CUBE isosurfaces with Boundary atom copies. Keep display instances separate from physical periodicity, without adding wraparound samples or changing the source grid.
+- Repeat finite-surface color mappings in the source instance coordinates, so copied surfaces retain their colors. Preserve the existing periodic CHGCAR seam/clipping path.
+- Cover actual Boundary Apply/Reset, both signs and custom layers, oblique/negative cell ranges, source-data preservation and mismatched-grid warnings.
+
+## 3.5.3 — 2026-11-09
+
+- Start the sidebar at its existing 295-pixel minimum and give window expansion space to the canvas; retain manual sidebar resizing.
+- Keep sidebar and lower-tab combo boxes at 90 logical pixels, with full-width option popups and current-value hover text. Cap horizontal sliders at 265 pixels while allowing narrow form rows to shrink them.
+- Wrap Style help text to keep the minimum-width sidebar free of horizontal overflow. Preserve v3.5.1 startup/large-file optimizations and v3.5.2 renamed-CHGCAR detection and reading speed.
+
+## 3.5.2 — 2026-11-09
+
+- Recognize VASP charge grids by POSCAR header, coordinates and grid records even after renaming. Keep ordinary structures and their velocity blocks distinct; support common copied filenames.
+- Parse VASP scalar fields in bounded NumPy chunks, retaining augmentation boundaries, spin channels, grid ordering, units, malformed-data rejection and cancellation.
+- Verify renamed loading with the supplied CHGCAR and add background-import/field-control regression coverage. Include a reproducible benchmark and validation report.
+
+## 3.5.1 — 2026-11-09
+
+- Delay ASE's full IO registry, SciPy spatial routines and image-export libraries until needed; keep first-paint-before-background-loading behavior. Cache successful Windows dependency verification and invalidate it when the installation changes or a launch fails.
+- Parse CUBE scalar data in bounded NumPy blocks, including very long physical lines, with complete channel/axis/unit handling and strict invalid/truncated-data checks.
+- Batch XYZ and XDATCAR coordinates through NumPy, retaining Fortran exponents, repeated/variable cells, source records, extended-XYZ fallback, cancellation and frame edit independence.
+- Reduce unrelated regular-expression work in VASP and CP2K output readers. Decode shared output text in chunks and quickly exclude absent NMR tables after checking the complete source.
+- Add performance reproductions and regression checks; preserve existing scientific precision, all trajectory frames, and the configured volumetric point limit.
+
+## 3.5.0 — 2026-11-09
+
+- Add per-atom Global / Ball and stick / Space filling / Sticks / Wireframe styles in Atoms. Each ordinary bond half follows its endpoint. Preserve colour, opacity, labels, matching-frame updates, boundary images, undo and project snapshots.
+- Order element groups by retained file/component occurrence, collapse on a newly activated document, and reveal the exact source atom when its Coordinates name is double-clicked.
+- Move Axes, Labels, Field and Boundary to the lower left, and the three data tabs to the lower right. Open Crystal tools and Dipole from View in reusable windows; Enter in numeric editors no longer activates export buttons.
+- Read NMR total shielding records from Gaussian, ORCA, NWChem, VASP CSA tables, CP2K SHIFT files and QE/GIPAW output. Keep multiple datasets and source numbering; distinguish VASP ISO_SHIFT and ISO_SHIELD and separate G=0/core variants. Property-only files need no invented geometry.
+- Add element-specific NMR tables, full printed tensors, explicit reference shieldings, stick/Gaussian/Lorentzian spectra, descending chemical-shift axes, CSV and PNG/SVG export. Save references and results in projects; source-atom navigation requires a verified matching frame. Guard against undersampled narrow peaks and run large spectrum calculations with progress feedback.
+- Retain all v3.4.0 acceptance fixes, field overlays and ESP colour mapping. Add synthetic NMR examples and regression coverage.
+
+
+## 3.4.0 — 2026-11-05
+
+- Fix FCHK / non-frequency Molden snapshots missing calculation stages, and tolerate stage-less legacy project metadata. Do not infer optimization convergence from a snapshot.
+- Fit the first generated molecular/WAVECAR field and refresh camera clipping after scene changes.
+- Repeat periodic isosurfaces with Boundary, including shifted ranges, oblique cells and translated grid origins; clip to the displayed cell range. Never periodically replicate a nonperiodic field.
+- Add atomic attachment of compatible CUBE / VASP grids to the current document, multiple source fields per surface layer, and Cartesian trilinear scalar color mapping at surface vertices.
+- Add red-white-blue / reversed / Viridis palettes, automatic symmetric or fixed limits, explicit source units, optional color scales and coverage warnings. Preserve mappings through transforms, document switching, projects, PNG and GIF export. The viewer samples imported fields; it does not compute ESP.
+- Include independent acceptance regressions, analytical mapping tests and portable example projects.
+
+## 3.1.0 — 2026-11-04
+
+- Add a separate Occupancy % column to Atoms: ordinary components show 100%, and fractional occupancies are displayed as percentages. Remove bracketed multi-element compositions from the atom-name column.
+- List every site component under its own element, including a minority element not present among the representative species. Mixed Mn/Sn components get separate Mn and Sn rows with their own palette colours, the same source-site index and identical coordinate tooltips.
+- Refresh groups when components are added or removed, refresh percentages when only probabilities change, and preserve current component focus. Selection and existing per-site appearance controls deduplicate shared site IDs; source coordinates/counts, weighted composition and CIF/project/maximum-occupancy exports remain consistent.
+
+## 3.0.4 — 2026-11-04
+
+- Show each mixed/partial site's components and vacancy in its Atoms row. Mark coordinate-table site names with `*` and show the complete occupancy in row tooltips, retaining the compact four-column layout, original coordinates and one row per source site. Include minority elements in the element-colour selector.
+- Ask “使用最大占据元素” or “取消” before non-CIF mixed-site exports. With confirmation, export an ordered copy using the most occupied element at each site, full occupancy, stable tie handling and original site order. Ignore partial vacancy fractions and omit completely vacant sites; rebuild POSCAR species blocks and retain surviving selective-dynamics flags. Preserve the editable source model, its occupancies, selection and undo history.
+- Keep CIF/project occupancy roundtrips unchanged. Cancellation does not open the save picker or write a destination. Programmatic exports retain the conservative default unless `occupancy_policy='maximum'` is explicit.
+
+## 3.0.3 — 2026-11-04
+
+- Add an Element / occupancy tab to the atom right-click dialog, alongside the existing index and swap controls. Edit multiple element/fraction rows, add or remove rows, and display the total and remaining vacancy. Reject invalid elements, duplicate rows, non-finite/negative fractions and totals above one.
+- Change only the clicked site in the active geometry frame, preserving positions, indices, other frames, appearance and existing bond topology. Update site composition, rendering and POSCAR species blocks. Clear calculated frame energy/force/spin values and detach an old volumetric grid; Ctrl+Z restores the original frame and grid.
+- Preserve all components and vacancy fractions in CIF/project roundtrips. Retain the existing rejection of mixed/partial-occupancy POSCAR, XYZ and GJF export; a representative display/bonding element does not implicitly select an ordered export model.
+
+## 3.0.2 — 2026-11-04
+
+- Add Labels / Indices / Both / Hide shortcuts in Atoms for the selected atoms. Preserve global label settings, matching-frame appearance, project persistence and undo.
+- Show periodic atoms on both outer cell faces, four edge images or eight corner images. Keep source IDs, counts and coordinates unchanged; repeat bonds, manual hydrogen links, labels and Bloch displacements with the displayed images.
+- Initialize each newly opened document with its own enabled one-cell Boundary. Restore an existing document's saved range when switching back, and preserve project settings.
+- Parse SIESTA FIRE/CG/MD move records into calculation results and energy curves. Pair fractional coordinates with the lattice printed for that move, distinguish initial/final unrelaxed coordinates from evaluated structures, and retain unmatched energies as results without borrowing a geometry. Preserve printed E_KS and final total/free-energy provenance separately and use eV in results views.
+- Add the VESTA atom-colour palette, derived from the official 3.5.8 RGB table, shared by atoms, element-coloured bonds, colour controls and legends.
+
+## 3.0.1 — 2026-11-04
+
+- Use one frame-tree formatter for initial creation and selection refresh. OUTCAR optimization records keep their printed Step numbers, energies and convergence status; plain trajectories keep Frame labels, and custom NEB/conformer labels are preserved.
+- Open new multi-frame documents at the last available structure and use that structure when selecting the file node. Explicit frame selections and saved project frame indices remain available; long trajectories still expand only the required page.
+- Enable boundary display by default in both rendering options and the checkbox. The initial range remains one original cell, and manually disabled settings persist across frame navigation.
+- Keep world-origin crystal axes, explicit fragment previews, aligned cell outlines and saved camera clipping compatible with the default one-cell boundary.
+
 ## 3.0.0 — 2026-11-03
 
 - Default PNG saving to 4× canvas resolution with Smooth edges enabled.
@@ -634,3 +718,15 @@
 The source tree continues the fitted-plane, selection, deletion, undo and
 appearance features of 0.9.0. Surface/heterostructure builders and automated
 AIMD analysis remain planned extensions.
+
+## 3.2.0
+
+Added Gaussian FCHK, Molden wavefunction, CUBE multi-dataset and VASP volumetric import and visualization, plus WAVECAR metadata and ORCA GBW conversion support. See docs/FORMAT_SUPPORT_V3.2_CN.md for limits.
+
+## 3.2.1
+
+Validated full-complex scalar WAVECAR reconstruction against real output; added orbital-field selection and explicit GBW companion-output fallback.
+
+## 3.3.0
+
+Added independent isosurface styles and multiple levels on the active dataset, grid-aligned planar slices and CUBE field export.

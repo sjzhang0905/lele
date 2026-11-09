@@ -53,13 +53,17 @@ def toggle_hydrogen_bond(frame, selection, automatic=False):
     return 'added'
 
 
-def repeat_hydrogen_bonds(frame, result, tiles, *, repeats=None, wrap=True):
+def repeat_hydrogen_bonds(frame, result, tiles, *, repeats=None, wrap=True, image_map=None):
     """Map explicit image links onto Boundary copies or a real supercell."""
     if not (frame.hbond_added or frame.hbond_removed):
         return
     _, floors = normalized_positions(frame)
     tile_index = {tuple(tile): k for k, tile in enumerate(tiles)}
     n = len(frame.symbols)
+    source_images = {}
+    if image_map is not None:
+        for (source, tile), index in image_map.items():
+            source_images.setdefault(source, []).append((tile, index))
     for pair in frame.hbond_added.keys() | frame.hbond_removed:
         a, b = pair
         shift = frame.hbond_added.get(pair)
@@ -68,7 +72,8 @@ def repeat_hydrogen_bonds(frame, result, tiles, *, repeats=None, wrap=True):
         offset = np.asarray(shift, dtype=int)
         if wrap:
             offset = offset - floors[a] + floors[b]
-        for k, tile in enumerate(tiles):
+        images = source_images.get(a, ()) if image_map is not None else ((tile, k*n+a) for k, tile in enumerate(tiles))
+        for tile, source_index in images:
             destination = np.asarray(tile) + offset
             outer = np.zeros(3, dtype=int)
             if repeats is not None:
@@ -76,10 +81,11 @@ def repeat_hydrogen_bonds(frame, result, tiles, *, repeats=None, wrap=True):
                     if periodic:
                         outer[axis] = destination[axis] // repeats[axis]
                         destination[axis] %= repeats[axis]
-            other = tile_index.get(tuple(destination))
+            other = (image_map.get((b, tuple(destination))) if image_map is not None else
+                     tile_index.get(tuple(destination)))
             if other is None:
                 continue
-            i, j = k*n + a, other*n + b
+            i, j = source_index, other if image_map is not None else other*n + b
             target = canonical_pair(i, j)
             if pair in frame.hbond_added:
                 if i > j: outer = -outer

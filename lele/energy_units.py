@@ -7,6 +7,10 @@ MOLECULAR = ('gaussian', 'orca', 'nwchem', 'gamess', 'qchem', 'xtb', 'molpro')
 PERIODIC = ('vasp', 'qe', 'espresso', 'siesta', 'cp2k', 'castep', 'abinit')
 
 
+def program_energy_unit(program):
+    return 'eV' if any(name in program.lower() for name in PERIODIC) else 'kcal/mol'
+
+
 def energy_unit(frame, format_name=''):
     source=' '.join(str(v) for v in (frame.info.get('source_kind',''),frame.info.get('source_format',''),format_name)).lower()
     if any(name in source for name in MOLECULAR):return 'kcal/mol'

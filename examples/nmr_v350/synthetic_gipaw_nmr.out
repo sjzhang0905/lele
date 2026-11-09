@@ -1,0 +1,14 @@
+ Program GIPAW v.7.0
+ Synthetic test data, not a physical calculation.
+ Atom 1 Si pos: (0 0 0) Total sigma: 999
+ Total NMR chemical shifts in ppm:
+ Atom 1 Si pos: (0 0 0) Total sigma: 430.00
+ 420 1 2
+ 3 430 4
+ 5 6 440
+ Si 1 anisotropy: 30.00 eta: .50
+ Atom 2 O pos: (1 1 1) Total sigma: 250.00
+ 240 0 0
+ 0 250 0
+ 0 0 260
+ O 2 anisotropy: 30.00 eta: .50

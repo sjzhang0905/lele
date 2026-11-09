@@ -1,0 +1,500 @@
+[
+  {
+    "style": "Windows",
+    "startup": [
+      295,
+      1081
+    ],
+    "resize": [
+      [
+        1200,
+        [
+          295,
+          901
+        ]
+      ],
+      [
+        1920,
+        [
+          295,
+          1621
+        ]
+      ],
+      [
+        1380,
+        [
+          295,
+          1081
+        ]
+      ]
+    ],
+    "tabs": [
+      {
+        "tab": "Files",
+        "panel_width": 295,
+        "controls": []
+      },
+      {
+        "tab": "Atoms",
+        "panel_width": 295,
+        "controls": [
+          [
+            "PanelComboBox",
+            "Use global style",
+            90
+          ],
+          [
+            "PanelComboBox",
+            "Use global label setting",
+            90
+          ],
+          [
+            "QSlider",
+            0,
+            105
+          ]
+        ]
+      },
+      {
+        "tab": "Style",
+        "panel_width": 295,
+        "controls": [
+          [
+            "PanelComboBox",
+            "Classic ball and stick",
+            90
+          ],
+          [
+            "PanelComboBox",
+            "Ball and stick",
+            90
+          ],
+          [
+            "PanelComboBox",
+            "Atomic",
+            90
+          ],
+          [
+            "PanelComboBox",
+            "Default",
+            90
+          ],
+          [
+            "PanelComboBox",
+            "Element",
+            90
+          ],
+          [
+            "PanelComboBox",
+            "Glossy",
+            90
+          ],
+          [
+            "PanelComboBox",
+            "Chemcraft pair ranges",
+            90
+          ],
+          [
+            "PanelComboBox",
+            "",
+            90
+          ],
+          [
+            "QSlider",
+            50,
+            163
+          ],
+          [
+            "QSlider",
+            7,
+            163
+          ],
+          [
+            "QSlider",
+            100,
+            107
+          ]
+        ],
+        "body_width": 295,
+        "hscroll": 0
+      },
+      {
+        "tab": "Edit",
+        "panel_width": 295,
+        "controls": [
+          [
+            "PanelComboBox",
+            "X",
+            90
+          ]
+        ],
+        "body_width": 279,
+        "hscroll": 0
+      },
+      {
+        "tab": "Axes",
+        "panel_width": 539,
+        "controls": [
+          [
+            "PanelComboBox",
+            "Bottom-left (VESTA style)",
+            90
+          ],
+          [
+            "PanelComboBox",
+            "Automatic (periodic abc / molecular XYZ)",
+            90
+          ]
+        ],
+        "body_width": 539,
+        "hscroll": 0
+      },
+      {
+        "tab": "Labels",
+        "panel_width": 539,
+        "controls": [
+          [
+            "PanelComboBox",
+            "None",
+            90
+          ],
+          [
+            "PanelComboBox",
+            "Arial",
+            90
+          ]
+        ],
+        "body_width": 539,
+        "hscroll": 0
+      },
+      {
+        "tab": "Field",
+        "panel_width": 539,
+        "controls": [
+          [
+            "PanelComboBox",
+            "",
+            90
+          ],
+          [
+            "PanelComboBox",
+            "Both",
+            90
+          ],
+          [
+            "PanelComboBox",
+            "Surface",
+            90
+          ],
+          [
+            "PanelComboBox",
+            "",
+            90
+          ],
+          [
+            "PanelComboBox",
+            "",
+            90
+          ],
+          [
+            "PanelComboBox",
+            "",
+            90
+          ],
+          [
+            "PanelComboBox",
+            "Single-band density |\u03c8|\u00b2",
+            90
+          ],
+          [
+            "QSlider",
+            65,
+            265
+          ]
+        ],
+        "body_width": 539,
+        "hscroll": 0
+      },
+      {
+        "tab": "Boundary",
+        "panel_width": 539,
+        "controls": [],
+        "body_width": 535,
+        "hscroll": 0
+      }
+    ],
+    "popups": [
+      [
+        "Classic ball and stick",
+        90,
+        272,
+        224
+      ],
+      [
+        "Automatic (periodic abc / molecular XYZ)",
+        90,
+        274,
+        226
+      ],
+      [
+        "Use global style",
+        90,
+        134,
+        86
+      ]
+    ],
+    "manual_resize_preserved": [
+      400,
+      1396
+    ]
+  },
+  {
+    "style": "Fusion",
+    "startup": [
+      295,
+      1081
+    ],
+    "resize": [
+      [
+        1200,
+        [
+          295,
+          901
+        ]
+      ],
+      [
+        1920,
+        [
+          295,
+          1621
+        ]
+      ],
+      [
+        1380,
+        [
+          295,
+          1081
+        ]
+      ]
+    ],
+    "tabs": [
+      {
+        "tab": "Files",
+        "panel_width": 295,
+        "controls": []
+      },
+      {
+        "tab": "Atoms",
+        "panel_width": 295,
+        "controls": [
+          [
+            "PanelComboBox",
+            "Use global style",
+            90
+          ],
+          [
+            "PanelComboBox",
+            "Use global label setting",
+            90
+          ],
+          [
+            "QSlider",
+            0,
+            101
+          ]
+        ]
+      },
+      {
+        "tab": "Style",
+        "panel_width": 295,
+        "controls": [
+          [
+            "PanelComboBox",
+            "Classic ball and stick",
+            90
+          ],
+          [
+            "PanelComboBox",
+            "Ball and stick",
+            90
+          ],
+          [
+            "PanelComboBox",
+            "Atomic",
+            90
+          ],
+          [
+            "PanelComboBox",
+            "Default",
+            90
+          ],
+          [
+            "PanelComboBox",
+            "Element",
+            90
+          ],
+          [
+            "PanelComboBox",
+            "Glossy",
+            90
+          ],
+          [
+            "PanelComboBox",
+            "Chemcraft pair ranges",
+            90
+          ],
+          [
+            "PanelComboBox",
+            "",
+            90
+          ],
+          [
+            "QSlider",
+            50,
+            161
+          ],
+          [
+            "QSlider",
+            7,
+            161
+          ],
+          [
+            "QSlider",
+            100,
+            103
+          ]
+        ],
+        "body_width": 295,
+        "hscroll": 0
+      },
+      {
+        "tab": "Edit",
+        "panel_width": 295,
+        "controls": [
+          [
+            "PanelComboBox",
+            "X",
+            90
+          ]
+        ],
+        "body_width": 281,
+        "hscroll": 0
+      },
+      {
+        "tab": "Axes",
+        "panel_width": 539,
+        "controls": [
+          [
+            "PanelComboBox",
+            "Bottom-left (VESTA style)",
+            90
+          ],
+          [
+            "PanelComboBox",
+            "Automatic (periodic abc / molecular XYZ)",
+            90
+          ]
+        ],
+        "body_width": 539,
+        "hscroll": 0
+      },
+      {
+        "tab": "Labels",
+        "panel_width": 539,
+        "controls": [
+          [
+            "PanelComboBox",
+            "None",
+            90
+          ],
+          [
+            "PanelComboBox",
+            "Arial",
+            90
+          ]
+        ],
+        "body_width": 539,
+        "hscroll": 0
+      },
+      {
+        "tab": "Field",
+        "panel_width": 539,
+        "controls": [
+          [
+            "PanelComboBox",
+            "",
+            90
+          ],
+          [
+            "PanelComboBox",
+            "Both",
+            90
+          ],
+          [
+            "PanelComboBox",
+            "Surface",
+            90
+          ],
+          [
+            "PanelComboBox",
+            "",
+            90
+          ],
+          [
+            "PanelComboBox",
+            "",
+            90
+          ],
+          [
+            "PanelComboBox",
+            "",
+            90
+          ],
+          [
+            "PanelComboBox",
+            "Single-band density |\u03c8|\u00b2",
+            90
+          ],
+          [
+            "QSlider",
+            65,
+            265
+          ]
+        ],
+        "body_width": 539,
+        "hscroll": 0
+      },
+      {
+        "tab": "Boundary",
+        "panel_width": 539,
+        "controls": [],
+        "body_width": 537,
+        "hscroll": 0
+      }
+    ],
+    "popups": [
+      [
+        "Classic ball and stick",
+        90,
+        272,
+        224
+      ],
+      [
+        "Automatic (periodic abc / molecular XYZ)",
+        90,
+        274,
+        226
+      ],
+      [
+        "Use global style",
+        90,
+        134,
+        86
+      ]
+    ],
+    "manual_resize_preserved": [
+      400,
+      1396
+    ]
+  }
+]

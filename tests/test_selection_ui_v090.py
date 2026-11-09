@@ -141,10 +141,10 @@ class SelectionWorkflowTests(unittest.TestCase):
         f=Frame(['Si'],[[0,0,0]],np.eye(3)*2.2,(True,)*3,atom_appearance={0:AtomAppearance(opacity=.4)})
         self.attach(f);w=self.window;w.render_options.labels='Index (1..N)'
         bounds=((0,2),(0,2),(0,1));w._apply_boundary(True,bounds)
-        self.assertEqual(len(w.renderer.boundary_display.source_indices),4)
-        self.assertEqual(len(w.renderer.boundary_display.bonds),4)
+        self.assertEqual(len(w.renderer.boundary_display.source_indices),18)
+        self.assertEqual(len(w.renderer.boundary_display.bonds),33)
         self.assertEqual({a.GetInput() for a in w.renderer._label_actors},{'1'})
-        self.select([0]);self.assertEqual(len(w.renderer.atom_highlights),4)
+        self.select([0]);self.assertEqual(len(w.renderer.atom_highlights),18)
         for i,p in w.renderer.displayed_atoms():
             w.scene.SetWorldPoint(*p,1.);w.scene.WorldToDisplay();x,y,_=w.scene.GetDisplayPoint()
             self.assertEqual(w.renderer.pick_index(x,y),0)
@@ -522,7 +522,7 @@ class SelectionWorkflowTests(unittest.TestCase):
         self.attach(Frame(['O', 'H', 'H', 'C'], [[0, 0, 0], [1, 0, 0], [-1, 0, 0], [4, 0, 0]]))
         w, panel = self.window, self.window.atom_panel
         self.assertEqual([panel.tree.topLevelItem(i).text(0) for i in range(3)],
-                         ['C (1)', 'H (2)', 'O (1)'])
+                         ['O (1)', 'H (2)', 'C (1)'])
         self.assertIn('#3', panel._items[2].text(0))
         panel.tree.setCurrentItem(panel._items[2])
         self.assertEqual(w.selection, [2])
@@ -543,11 +543,11 @@ class SelectionWorkflowTests(unittest.TestCase):
         coords = w.frame.positions.copy()
         self.select([1])
         panel.label_combo.setCurrentIndex(panel.label_combo.findData('Index (1..N)'))
-        self.assertEqual([a.GetInput() for a in w.renderer._label_actors], ['2'])
+        self.assertEqual([a.GetInput() for a in w.renderer._label_actors], ['2', '2'])
         panel.label_combo.setCurrentIndex(panel.label_combo.findData('Custom'))
         panel.label_text.setText('site B')
         panel.label_text.editingFinished.emit()
-        self.assertEqual([a.GetInput() for a in w.renderer._label_actors], ['site B'])
+        self.assertEqual([a.GetInput() for a in w.renderer._label_actors], ['site B', 'site B'])
         with patch('lele.atom_panel.QColorDialog.getColor', return_value=QColor('#aabbcc')):
             panel.color_button.click()
         panel.transparency_spin.setValue(70)
@@ -585,7 +585,7 @@ class SelectionWorkflowTests(unittest.TestCase):
         self.assertFalse(appearance(w.frame, 1).visible)
         self.assertEqual(appearance(w.frame, 3).label_text, 'last')
 
-    def test_lower_panel_is_evenly_split_with_compact_editable_coordinates_and_blank_right(self):
+    def test_lower_panel_is_evenly_split_with_settings_left_coordinates_right(self):
         from PySide6.QtCore import Qt
         from PySide6.QtWidgets import QWidget
         w = self.window
@@ -593,11 +593,11 @@ class SelectionWorkflowTests(unittest.TestCase):
         w.show()
         self.app.processEvents()
         self.assertEqual(w.lower_splitter.orientation(), Qt.Orientation.Horizontal)
-        self.assertIs(w.lower_splitter.widget(0), w.tabs)
-        self.assertIs(w.lower_splitter.widget(1), w.future_panel)
+        self.assertIs(w.lower_splitter.widget(0), w.bottom_control_tabs)
+        self.assertIs(w.lower_splitter.widget(1), w.tabs)
         sizes = w.lower_splitter.sizes()
         self.assertLess(abs(sizes[0] - sizes[1]), sum(sizes) * .08)
-        self.assertEqual(w.future_panel.findChildren(QWidget), [])
+        self.assertEqual([w.bottom_control_tabs.tabText(i) for i in range(w.bottom_control_tabs.count())], ['Axes','Labels','Field','Boundary'])
         self.assertTrue(w.atom_table.verticalHeader().isHidden())
         self.assertLessEqual(w.atom_table.verticalHeader().defaultSectionSize(),
                              max(24, w.atom_table.fontMetrics().height() + 4))
@@ -611,8 +611,8 @@ class SelectionWorkflowTests(unittest.TestCase):
         w = self.window
         volume = Volume(np.linspace(-.1, .1, 64).reshape(4, 4, 4), [0, 0, 0], np.eye(3))
         self.attach(w.frame, volume=volume)
-        page = next(i for i in range(w.sidebar_tabs.count()) if w.sidebar_tabs.tabText(i) == 'Field')
-        w.sidebar_tabs.setCurrentIndex(page)
+        page = next(i for i in range(w.bottom_control_tabs.count()) if w.bottom_control_tabs.tabText(i) == 'Field')
+        w.bottom_control_tabs.setCurrentIndex(page)
         w.show()
         w.iso_spin.setFocus()
         self.app.processEvents()
@@ -636,8 +636,8 @@ class SelectionWorkflowTests(unittest.TestCase):
         from PySide6.QtCore import Qt
         from PySide6.QtTest import QTest
         w = self.window
-        page = next(i for i in range(w.sidebar_tabs.count()) if w.sidebar_tabs.tabText(i) == 'Field')
-        w.sidebar_tabs.setCurrentIndex(page)
+        page = next(i for i in range(w.bottom_control_tabs.count()) if w.bottom_control_tabs.tabText(i) == 'Field')
+        w.bottom_control_tabs.setCurrentIndex(page)
         w.show()
         w.iso_spin.setFocus()
         self.app.processEvents()

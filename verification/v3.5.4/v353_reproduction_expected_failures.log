@@ -1,0 +1,131 @@
+FFFF.F..                                                                 [100%]
+=================================== FAILURES ===================================
+____ test_ordinary_cube_boundary_apply_updates_both_signs_and_custom_layers ____
+
+gui = <fragment_ui_harness.SelectionWorkflowTests testMethod=test_invert_complements_selection_and_updates_coordinate_table>
+tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-37/test_ordinary_cube_boundary_ap0')
+
+    def test_ordinary_cube_boundary_apply_updates_both_signs_and_custom_layers(gui, tmp_path):
+        document = ordinary_cube(tmp_path)
+        w = gui.window
+        w._attach_loaded_document(document)
+        w.iso_spin.setValue(.25)
+        w.field_signs.setCurrentText('Both')
+        assert len(w.renderer.field_actors) == 2
+        # Exercise the actual panel signal, not only the renderer options.
+        w.boundary_panel.set_values(True, ((0, 2), (0, 2), (0, 1)))
+        w.boundary_panel.apply.click()
+        assert len(w.renderer.boundary_display.tiles) == 4
+>       assert len(w.renderer.field_actors) == 8
+E       assert 2 == 8
+E        +  where 2 = len([<vtkmodules.vtkRenderingOpenGL2.vtkOpenGLActor(0x3cce8480) at 0x7f08c176fa00>, <vtkmodules.vtkRenderingOpenGL2.vtkOpenGLActor(0x3d1f05e0) at 0x7f08c176fee0>])
+E        +    where [<vtkmodules.vtkRenderingOpenGL2.vtkOpenGLActor(0x3cce8480) at 0x7f08c176fa00>, <vtkmodules.vtkRenderingOpenGL2.vtkOpenGLActor(0x3d1f05e0) at 0x7f08c176fee0>] = <lele.renderer.MoleculeRenderer object at 0x7f093e1050a0>.field_actors
+E        +      where <lele.renderer.MoleculeRenderer object at 0x7f093e1050a0> = <lele.app.LELEWindow(0x3bcf5830) at 0x7f093ef05800>.renderer
+
+work/LELE/tests/test_boundary_surface_v354.py:66: AssertionError
+_ test_finite_meshes_translate_with_negative_bounds_without_wrap_padding[False] _
+
+tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-37/test_finite_meshes_translate_w0')
+skew = False
+
+    @pytest.mark.parametrize('skew', [False, True])
+    def test_finite_meshes_translate_with_negative_bounds_without_wrap_padding(tmp_path, skew):
+        document = ordinary_cube(tmp_path, skew=skew)
+        volume = document.volume
+        before = volume.data.copy()
+        original = render(document, volume_signs='Positive', boundary_enabled=False)
+        original_points = mesh_points(original.field_actors[0])
+        bounds = ((-1, 1), (0, 2), (-1, 0))
+        repeated = render(document, volume_signs='Positive', boundary_bounds=bounds)
+        shifts = [np.asarray(t) @ document.frames[0].cell for t in product(*[range(*b) for b in bounds])]
+>       assert len(repeated.field_actors) == len(shifts) == 4
+E       assert 1 == 4
+E        +  where 1 = len([<vtkmodules.vtkRenderingOpenGL2.vtkOpenGLActor(0x3cdc4400) at 0x7f08c1668be0>])
+E        +    where [<vtkmodules.vtkRenderingOpenGL2.vtkOpenGLActor(0x3cdc4400) at 0x7f08c1668be0>] = <lele.renderer.MoleculeRenderer object at 0x7f08c1abd580>.field_actors
+E        +  and   4 = len([array([-3.,  0., -5.]), array([-3.,  4., -5.]), array([ 0.,  0., -5.]), array([ 0.,  4., -5.])])
+
+work/LELE/tests/test_boundary_surface_v354.py:88: AssertionError
+_ test_finite_meshes_translate_with_negative_bounds_without_wrap_padding[True] _
+
+tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-37/test_finite_meshes_translate_w1')
+skew = True
+
+    @pytest.mark.parametrize('skew', [False, True])
+    def test_finite_meshes_translate_with_negative_bounds_without_wrap_padding(tmp_path, skew):
+        document = ordinary_cube(tmp_path, skew=skew)
+        volume = document.volume
+        before = volume.data.copy()
+        original = render(document, volume_signs='Positive', boundary_enabled=False)
+        original_points = mesh_points(original.field_actors[0])
+        bounds = ((-1, 1), (0, 2), (-1, 0))
+        repeated = render(document, volume_signs='Positive', boundary_bounds=bounds)
+        shifts = [np.asarray(t) @ document.frames[0].cell for t in product(*[range(*b) for b in bounds])]
+>       assert len(repeated.field_actors) == len(shifts) == 4
+E       assert 1 == 4
+E        +  where 1 = len([<vtkmodules.vtkRenderingOpenGL2.vtkOpenGLActor(0x3ce8b380) at 0x7f08c166c340>])
+E        +    where [<vtkmodules.vtkRenderingOpenGL2.vtkOpenGLActor(0x3ce8b380) at 0x7f08c166c340>] = <lele.renderer.MoleculeRenderer object at 0x7f08c197bb60>.field_actors
+E        +  and   4 = len([array([-3.4, -0.3, -5. ]), array([-2.7,  3.7, -5. ]), array([-0.4, -0.3, -5. ]), array([ 0.3,  3.7, -5. ])])
+
+work/LELE/tests/test_boundary_surface_v354.py:88: AssertionError
+_______ test_finite_surface_color_pattern_repeats_in_source_coordinates ________
+
+tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-37/test_finite_surface_color_patt0')
+
+    def test_finite_surface_color_pattern_repeats_in_source_coordinates(tmp_path):
+        document = ordinary_cube(tmp_path, skew=True)
+        volume = document.volume
+        indices = np.moveaxis(np.indices(volume.data.shape), 0, -1)
+        points = indices @ volume.voxel_vectors + volume.origin
+        color = Volume(points @ [.2, -.1, .3], volume.origin, volume.voxel_vectors,
+                       'Finite potential', 'source units', False)
+        document.volumes.append(color)
+        layer = dict(value=.25, color='#ffffff', opacity=1., style='Surface', dataset=0,
+                     map_dataset=1, map_palette='Red-white-blue', map_range=[-3., 3.], map_legend=True)
+        draw = render(document, boundary_bounds=((-1, 2), (0, 1), (0, 1)), volume_surfaces=[layer])
+>       assert len(draw.field_actors) == 3
+E       assert 1 == 3
+E        +  where 1 = len([<vtkmodules.vtkRenderingOpenGL2.vtkOpenGLActor(0x3cef99e0) at 0x7f08c166d540>])
+E        +    where [<vtkmodules.vtkRenderingOpenGL2.vtkOpenGLActor(0x3cef99e0) at 0x7f08c166d540>] = <lele.renderer.MoleculeRenderer object at 0x7f08c1601c70>.field_actors
+
+work/LELE/tests/test_boundary_surface_v354.py:113: AssertionError
+_________ test_mismatched_finite_grid_is_not_repeated_and_explains_why _________
+
+tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-37/test_mismatched_finite_grid_is0')
+
+    def test_mismatched_finite_grid_is_not_repeated_and_explains_why(tmp_path):
+        document = ordinary_cube(tmp_path)
+        document.volume.voxel_vectors *= .8
+        draw = render(document, volume_signs='Positive', boundary_bounds=((0, 2),) * 3)
+        assert len(draw.boundary_display.tiles) == 8
+        assert len(draw.field_actors) == 1
+>       assert any('differs' in note and 'repetition is disabled' in note for note in draw.field_warnings)
+E       assert False
+E        +  where False = any(<generator object test_mismatched_finite_grid_is_not_repeated_and_explains_why.<locals>.<genexpr> at 0x7f08c1762c20>)
+
+work/LELE/tests/test_boundary_surface_v354.py:139: AssertionError
+=============================== warnings summary ===============================
+../../../opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+  /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+tests/test_boundary_surface_v354.py: 18 warnings
+  /workspace/scratch/438ad5620a3b/baseline_v353/LELE/lele/surface_rendering.py:92: DeprecationWarning: Call to deprecated class vtkTransformPolyDataFilter. (Replaced by vtkTransformFilter.) -- Deprecated since version 9.7.0.
+    transformed=vtkTransformPolyDataFilter();transformed.SetInputConnection(contour.GetOutputPort())
+
+tests/test_boundary_surface_v354.py::test_actual_chgcar_periodic_meshes_keep_boundary_repetition
+tests/test_boundary_surface_v354.py::test_actual_chgcar_periodic_meshes_keep_boundary_repetition
+tests/test_boundary_surface_v354.py::test_actual_chgcar_periodic_meshes_keep_boundary_repetition
+  /workspace/scratch/438ad5620a3b/baseline_v353/LELE/lele/surface_rendering.py:126: DeprecationWarning: Call to deprecated class vtkTransformPolyDataFilter. (Replaced by vtkTransformFilter.) -- Deprecated since version 9.7.0.
+    tile_filter=vtkTransformPolyDataFilter();tile_filter.SetInputData(poly)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED work/LELE/tests/test_boundary_surface_v354.py::test_ordinary_cube_boundary_apply_updates_both_signs_and_custom_layers
+FAILED work/LELE/tests/test_boundary_surface_v354.py::test_finite_meshes_translate_with_negative_bounds_without_wrap_padding[False]
+FAILED work/LELE/tests/test_boundary_surface_v354.py::test_finite_meshes_translate_with_negative_bounds_without_wrap_padding[True]
+FAILED work/LELE/tests/test_boundary_surface_v354.py::test_finite_surface_color_pattern_repeats_in_source_coordinates
+FAILED work/LELE/tests/test_boundary_surface_v354.py::test_mismatched_finite_grid_is_not_repeated_and_explains_why
+5 failed, 3 passed, 22 warnings in 1.18s

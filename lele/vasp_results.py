@@ -165,6 +165,9 @@ def _metadata(lines):
     counts=None;labels={key:[] for key in ('TITEL','POTCAR','VRHFIN')};masses=[];tags={}
     tag=re.compile(r'\b(NIONS|IBRION|ISIF|ENCUT|EDIFF|EDIFFG|ISPIN|NELECT)\s*=\s*('+NUMBER+r')')
     for _,line in scan_lines(lines,'VASP: reading metadata'):
+        # All retained OUTCAR metadata includes '=' or ':'; numeric SCF
+        # diagnostics can be skipped before header dispatch.
+        if '=' not in line and ':' not in line:continue
         stripped=line.lstrip()
         if counts is None and 'ions per type' in line:
             counts=[int(x) for x in re.findall(r'\d+',line.split('=',1)[1])]
@@ -234,28 +237,29 @@ def _read_outcar_segment(lines, offset, results):
         check_load_cancelled()
         progress(i)
         line = lines[i]
+        lower = line.lower()
         source = offset+i+1
-        iteration = re.search(r'Iteration\s+\d+\(\s*(\d+)\)', line)
+        iteration = re.search(r'Iteration\s+\d+\(\s*(\d+)\)', line) if 'Iteration' in line else None
         if iteration:
             in_scf = True
             current = None
             job.scf_cycles = int(iteration[1])
-        if 'FREE ENERGIE OF THE ION-ELECTRON SYSTEM' in line.upper():
+        if 'free energie of the ion-electron system' in lower:
             in_scf = False
-        if 'direct lattice vectors' in line.lower():
+        if 'direct lattice vectors' in lower:
             rows, end = _rows(lines, i+1, 3, 3)
             if len(rows) == 3:
                 cell = rows
                 results.periodic_geometry_seen = True
                 i = end
                 continue
-        if 'position of ions in cartesian coordinates' in line.lower() and natoms:
+        if 'position of ions in cartesian coordinates' in lower and natoms:
             rows, end = _rows(lines, i+1, 3, natoms)
             if len(rows) == natoms:
                 initial = (_frame(symbols, rows, cell, info), source)
                 i = end
                 continue
-        if re.match(r'^\s*POSITION\s+TOTAL-FORCE', line, re.I):
+        if 'position' in lower and re.match(r'^\s*POSITION\s+TOTAL-FORCE', line, re.I):
             in_scf = False
             rows, end = _rows(lines, i+1, 6, natoms or None)
             cycle += 1
@@ -272,8 +276,9 @@ def _read_outcar_segment(lines, offset, results):
             results.steps.append(current)
             i = end
             continue
-        energy = TOTEN.match(line)
-        no_entropy, sigma = NO_ENTROPY.search(line), SIGMA.search(line)
+        energy = TOTEN.match(line) if 'free' in lower else None
+        no_entropy = NO_ENTROPY.search(line) if 'entropy' in lower else None
+        sigma = SIGMA.search(line) if 'sigma' in lower else None
         if (energy or no_entropy or sigma) and not in_scf:
             # Initial electronic iterations can also print TOTEN. Only the
             # ionic summary (or a standalone summary excerpt) belongs here.
@@ -301,7 +306,7 @@ def _read_outcar_segment(lines, offset, results):
             current = None
         if 'Eigenvectors after division by SQRT(mass)' in line:
             in_modes, divided = True, True
-        match = FREQUENCY.match(line) if in_modes else None
+        match = FREQUENCY.match(line) if in_modes and 'cm-1' in lower else None
         if match:
             value = number(match[3]) * (-1 if match[2] else 1)
             key = int(match[1])
@@ -380,7 +385,7 @@ def read_vasp_results(path):
     boundaries = [i for i, line in scan_lines(lines,'VASP: identifying runs') if VERSION.match(line)]
     starts = [0] + boundaries[1:]
     for start, end in zip(starts, starts[1:]+[len(lines)]):
-        _read_outcar_segment(lines[start:end], start, results)
+        _read_outcar_segment(lines if start==0 and end==len(lines) else lines[start:end], start, results)
     results.note = ' '.join(dict.fromkeys(results.note.split('  '))).strip()
     return results
 
@@ -436,7 +441,7 @@ def _xdat_header(lines, start):
 
 def read_xdatcar(path, max_frames=None):
     from .output_text import open_output_text
-    from .trajectory_io import numeric_array
+    from .trajectory_io import numeric_array, coordinate_lines
     results=VaspResults()
     results.jobs.append(CalculationJob(0,1,tasks={'Structure trajectory'}))
     results.stages.append(CalculationStage(0,0,'XDATCAR trajectory','trajectory',1))
@@ -477,6 +482,10 @@ def read_xdatcar(path, max_frames=None):
         while first is not None and not first[1].strip():first=take()
         if first is None:raise ValueError('Empty XDATCAR')
         cell,scale,species,counts=header(first)
+        natoms=sum(counts)
+        symbols=[s for s,n in zip(species,counts) for _ in range(n)]
+        groups=list(zip(species,counts))
+        periodic=abs(np.linalg.det(cell))>1.e-12
         while True:
             check_load_cancelled()
             progress(min(max(0,size-1),stream.buffer.tell()))
@@ -486,28 +495,36 @@ def read_xdatcar(path, max_frames=None):
             if not text.strip():continue
             match=CONFIG.match(text)
             if match is None:
-                try:cell,scale,species,counts=header(item);continue
+                try:
+                    cell,scale,species,counts=header(item)
+                    natoms=sum(counts)
+                    symbols=[s for s,n in zip(species,counts) for _ in range(n)]
+                    groups=list(zip(species,counts))
+                    periodic=abs(np.linalg.det(cell))>1.e-12
+                    continue
                 except (ValueError,IndexError):
                     results.note=f'Incomplete trailing XDATCAR header at line {source}; complete frames retained.';break
-            rows=[]
-            for _ in range(sum(counts)):
-                item=take()
-                if item is None:break
-                fields=item[1].split()
-                if len(fields)<3:break
-                rows.append(fields)
+            # No pending header line remains after a configuration marker.
+            # Read the numeric table in bounded batches and parse normal
+            # whitespace-separated coordinates in NumPy's C reader.
+            rows=coordinate_lines(stream,natoms)
+            line_number+=len(rows)
             try:
-                numeric=numeric_array(rows)
-                complete=(len(rows)==sum(counts) and numeric.ndim==2 and numeric.shape[1]>=3
-                          and np.isfinite(numeric).all())
+                if len(rows)!=natoms:raise ValueError('Incomplete coordinate table')
+                if natoms >= 24:
+                    try:numeric=np.loadtxt(rows,comments=None,ndmin=2)
+                    except ValueError:numeric=numeric_array([row.split() for row in rows])
+                else:numeric=numeric_array([row.split() for row in rows])
+                complete=(len(rows)==natoms and numeric.ndim==2 and numeric.shape[0]==natoms
+                          and numeric.shape[1]>=3 and np.isfinite(numeric).all())
             except (ValueError,TypeError):complete=False
             if not complete:
                 results.note=f'Incomplete XDATCAR configuration at line {source}; complete frames retained.';break
             if max_frames is not None and len(results.steps)>=max_frames:
                 raise ValueError(f'Trajectory exceeds {max_frames} frames')
             positions=numeric[:,:3]@cell if match[1].lower()=='direct' else numeric[:,:3]*scale
-            symbols=[s for s,n in zip(species,counts) for _ in range(n)]
-            frame=_frame(symbols,positions,cell,{'poscar_groups':list(zip(species,counts))})
+            frame=(Frame(list(symbols),positions,cell.copy(),(periodic,)*3,
+                         info={'poscar_groups':list(groups)}) if len(symbols)==len(positions) else None)
             results.steps.append(VaspStep(0,source,frame,stage_index=0,cycle=int(match[2])))
     progress(size)
     results.note=('XDATCAR contains structure records only; no energies or times are assumed. '+results.note).strip()

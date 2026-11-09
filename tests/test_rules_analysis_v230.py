@@ -80,7 +80,10 @@ def test_rules_update_boundary_cache_without_moving_atoms():
     view = MoleculeRenderer(vtkRenderer());view.options.boundary_enabled = True
     view.set_scene(f);assert not view.boundary_display.bonds
     install_rules(f, [rule(a1='Fe', a2='O', maximum=3.)]);view.set_scene(f)
-    assert view.boundary_display.bonds == [(0, 1)]
+    assert len(view.boundary_display.bonds) == 4
+    for a,b in view.boundary_display.bonds:
+        assert sorted(view.boundary_display.source_indices[[a,b]]) == [0,1]
+        assert np.linalg.norm(view.boundary_display.frame.positions[a]-view.boundary_display.frame.positions[b]) == pytest.approx(2.8)
     np.testing.assert_array_equal(f.positions, [[0, 0, 0], [2.8, 0, 0]])
 
 

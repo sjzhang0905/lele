@@ -1,0 +1,26 @@
+{
+  "cube_128_single_line.cube": {
+    "baseline": {
+      "median_seconds": 0.5148407180022332,
+      "median_peak_rss_mib": 325.296875
+    },
+    "work": {
+      "median_seconds": 0.17810514799930388,
+      "median_peak_rss_mib": 75.671875
+    },
+    "speedup": 2.8906560185685675,
+    "hashes_equal": true
+  },
+  "cube_224.cube": {
+    "baseline": {
+      "median_seconds": 7.317876116998377,
+      "median_peak_rss_mib": 105.3203125
+    },
+    "work": {
+      "median_seconds": 0.9478125000023283,
+      "median_peak_rss_mib": 110.203125
+    },
+    "speedup": 7.720805662491686,
+    "hashes_equal": true
+  }
+}

@@ -1,0 +1,18 @@
+.......................................................                  [100%]
+=============================== warnings summary ===============================
+tests/test_field_mapping_v340.py: 24 warnings
+tests/test_acceptance_regressions_v340.py: 7 warnings
+  /workspace/scratch/3f5187fd325f/work/LELE/lele/surface_rendering.py:92: DeprecationWarning: Call to deprecated class vtkTransformPolyDataFilter. (Replaced by vtkTransformFilter.) -- Deprecated since version 9.7.0.
+    transformed=vtkTransformPolyDataFilter();transformed.SetInputConnection(contour.GetOutputPort())
+
+tests/test_field_mapping_v340.py::test_boundary_repeats_only_periodic_source[True]
+tests/test_field_mapping_v340.py::test_periodic_seams_negative_roundoff_and_translated_grid_clipping
+tests/test_field_mapping_v340.py::test_periodic_seams_negative_roundoff_and_translated_grid_clipping
+tests/test_field_mapping_v340.py::test_periodic_seams_negative_roundoff_and_translated_grid_clipping
+tests/test_acceptance_regressions_v340.py::test_A3_periodic_surface_must_follow_boundary[bounds0-expected_x0]
+tests/test_acceptance_regressions_v340.py::test_A3_periodic_surface_must_follow_boundary[bounds1-expected_x1]
+  /workspace/scratch/3f5187fd325f/work/LELE/lele/surface_rendering.py:126: DeprecationWarning: Call to deprecated class vtkTransformPolyDataFilter. (Replaced by vtkTransformFilter.) -- Deprecated since version 9.7.0.
+    tile_filter=vtkTransformPolyDataFilter();tile_filter.SetInputData(poly)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+55 passed, 37 warnings in 4.80s

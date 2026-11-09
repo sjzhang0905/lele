@@ -7,7 +7,9 @@ from .crystal_settings import POLYHEDRA_KEYS
 class CrystalActions:
     def _install_crystal_controls(self):
         from .crystal_panel import CrystalPanel
-        self.crystal_panel = CrystalPanel();self.sidebar_tabs.addTab(self.crystal_panel, 'Crystal')
+        self.crystal_panel = CrystalPanel()
+        self.crystal_window=self._create_settings_window(self.crystal_panel,'Crystal tools',760,650)
+        self.crystal_action=self._action(self.view_menu,'Crystal tools…',lambda:self._show_crystal_tools(0))
         planes = self.crystal_panel.planes
         planes.applyRequested.connect(self._apply_lattice_planes)
         planes.normalRequested.connect(self._view_lattice_normal)
@@ -24,7 +26,8 @@ class CrystalActions:
         self.crystal_panel.set_values(self.render_options)
 
     def _show_crystal_tools(self, index):
-        self.sidebar_tabs.setCurrentWidget(self.crystal_panel);self.crystal_panel.tabs.setCurrentIndex(index)
+        self.crystal_panel.tabs.setCurrentIndex(index)
+        self._show_settings_window(self.crystal_window)
 
     def _apply_lattice_planes(self, values):
         if self.frame is None:return

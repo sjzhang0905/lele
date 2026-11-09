@@ -19,7 +19,8 @@ FORMAT = 'LELE_PROJECT'
 SCHEMA = 1
 MODULES = ('core', 'render_options', 'atom_appearance', 'calculation_results',
     'vasp_results', 'orca_neb', 'orca_goat', 'orca_soc', 'gaussian_properties',
-    'trajectory_analysis', 'selection_geometry', 'periodic_geometry','cp2k_results','qe_results','qe_phonons')
+    'trajectory_analysis', 'selection_geometry', 'periodic_geometry','cp2k_results','qe_results','qe_phonons',
+    'siesta_results', 'gaussian_basis', 'binary_wavefunctions','nmr')
 
 
 def data_types():

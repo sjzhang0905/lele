@@ -2,6 +2,67 @@
 
 **Local Environment and Lattice Explorer**
 
+Version **3.5.5** also compacts lower-tab numeric inputs, including Boundary
+ranges and high-precision isovalues, keeping them left-aligned as the panel grows.
+See the [layout correction notes](docs/LAYOUT_v3.5.5_CN.md).
+
+Version **3.5.4** fixes cell-sized CUBE isosurfaces missing from Boundary copies,
+including mapped surface colors. Source fields remain unchanged. See the
+[Boundary fix notes](docs/BOUNDARY_v3.5.4_CN.md).
+
+Version **3.5.3** starts the sidebar at its existing minimum width and compacts
+settings dropdowns and horizontal sliders. Expanded dropdowns still show the full
+option text. See the [layout notes](docs/LAYOUT_v3.5.3_CN.md).
+
+Version **3.5.2** recognizes renamed CHGCAR files by their structure and grid
+content, and accelerates VASP scalar-field loading. See the
+[fix and performance report](docs/CHGCAR_v3.5.2_CN.md).
+
+Version **3.5.1** accelerates application startup, large CUBE grids and long AIMD
+trajectories while retaining every frame and the existing numeric precision.
+See the [performance and validation report](docs/PERFORMANCE_v3.5.1_CN.md).
+
+Version **3.5.0** adds independent display styles for selected atoms, source-order
+collapsed element groups with coordinate-row navigation, and NMR shielding tables
+and referenced spectra. Axes / Labels / Field / Boundary move to the bottom left;
+Coordinates / Input-output / Results move right. Crystal and Dipole are in View.
+See the [Chinese guide](docs/FEATURES_v3.5.0_CN.md) and
+[validation](docs/VALIDATION_v3.5.0.md). The v3.4 ESP/isosurface features remain included.
+
+Version **3.4.0** adds cross-dataset isosurface overlays and scalar color mapping
+(e.g. imported ESP on an electron-density surface), with color scales, project
+persistence and PNG/GIF export. It also fixes all three independent v3.3.0
+acceptance findings. See the [Chinese usage guide](docs/FEATURES_v3.4.0_CN.md)
+and [validation](docs/VALIDATION_v3.4.0.md).
+
+Version **3.1.0** gives **Atoms** a separate **Occupancy %** column and lists
+each mixed-site element in its own group. Mn 0.5 / Sn 0.5 appears as a Mn row
+at 50% and a Sn row at 50%, sharing the same site coordinates; ordinary sites
+show 100%. The former bracketed composition text is removed from atom names.
+See the [usage and validation](docs/VALIDATION_v3.1.0.md).
+
+Version **3.0.4** makes edited mixed sites explicit in Atoms and the coordinate
+table, includes minority elements in the colour selector, and asks whether to
+use the highest-occupancy element when exporting to POSCAR, XYZ or GJF.
+The conversion affects only the export copy; CIF retains the full occupancies.
+See the [usage and validation](docs/VALIDATION_v3.0.4.md).
+
+Version **3.0.3** adds a right-click **Element / occupancy** editor for one
+atomic site, including multiple elements and an implicit vacancy fraction.
+Mixed/partial sites retain their occupancies in CIF and saved projects;
+POSCAR, XYZ and GJF exports require an explicitly ordered structure.
+See the [usage and validation](docs/VALIDATION_v3.0.3.md).
+
+Version **3.0.2** adds selected-atom label/index buttons in **Atoms**, VESTA
+element colours and inclusive images of atoms on cell faces, edges and corners.
+New structures start with their own enabled one-cell Boundary. SIESTA ionic
+energies are matched by move and available in the energy curve/results view.
+See the [usage and validation](docs/VALIDATION_v3.0.2.md).
+
+Version **3.0.1** keeps OUTCAR Step labels stable, opens multi-frame files at
+their last available structure, and enables Boundary display by default.
+See the [fix validation](docs/VALIDATION_v3.0.1.md).
+
 Version **3.0.0** defaults PNG saving to **4× resolution with Smooth edges**.
 See the [release validation](docs/VALIDATION_v3.0.0.md).
 
@@ -279,7 +340,9 @@ automatically after the window appears and preloading finishes.
 
 The welcome window and its settings load without NumPy, SciPy, ASE or VTK.
 Immediately after the welcome header is painted, a background thread preloads
-the scientific libraries and readers automatically. The GUI thread then prepares
+the core scientific libraries and readers automatically. The full ASE format
+registry, SciPy spatial analysis and image-export dependencies load on demand.
+The GUI thread then prepares
 the hidden 3D canvas and the status bar shows Ready. The welcome animation and
 menus remain active during imports. Files chosen while loading are queued and
 open when ready; display settings carry over. Rebuild the Windows executable
