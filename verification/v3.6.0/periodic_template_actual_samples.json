@@ -1,0 +1,18 @@
+[
+  {
+    "sample": "RuO2-1.restart",
+    "atoms": 216,
+    "maximum_coordinate_error_angstrom": 4.973799150320701e-14,
+    "all_non_structure_lines_identical": true,
+    "source_unchanged": true,
+    "source_sha256": "ff2a542ec9a97803bcdadf8dad1bf0cb2826952bb9337153a2524dfccbc495ed"
+  },
+  {
+    "sample": "NCM111_PBEU_geoopt-1.restart",
+    "atoms": 36,
+    "maximum_coordinate_error_angstrom": 7.105427357601002e-15,
+    "all_non_structure_lines_identical": true,
+    "source_unchanged": true,
+    "source_sha256": "bf8445811e5a45295dc2093f71324b7003d69a22541c65ba7c7e86c27de39074"
+  }
+]

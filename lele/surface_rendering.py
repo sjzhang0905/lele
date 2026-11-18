@@ -8,7 +8,7 @@ from vtkmodules.vtkFiltersGeneral import vtkTransformPolyDataFilter
 from vtkmodules.vtkRenderingCore import vtkActor, vtkPolyDataMapper, vtkColorTransferFunction
 from vtkmodules.vtkRenderingAnnotation import vtkScalarBarActor
 from vtkmodules.util.numpy_support import numpy_to_vtk, vtk_to_numpy
-from .field_mapping import sample_field, mapping_limits, validate_layer_mapping
+from .field_mapping import sample_field, mapping_limits, validate_layer_mapping, DEFAULT_PALETTE
 from .output_text import check_load_cancelled
 from .operations import ui_checkpoint
 
@@ -19,6 +19,11 @@ def color_lookup(palette, limits):
     if palette=='Viridis':
         from matplotlib import colormaps
         for t in np.linspace(0,1,65):lut.AddRGBPoint(lo+t*(hi-lo),*colormaps['viridis'](t)[:3])
+    elif palette.startswith('VMD '):
+        # VMD Scene.C: RWB/BWR endpoints are pure primaries, scale midpoint .5.
+        red=(1.,0.,0.);blue=(0.,0.,1.)
+        low,high=(red,blue) if palette=='VMD RWB' else (blue,red)
+        lut.AddRGBPoint(lo,*low);lut.AddRGBPoint((lo+hi)/2,1.,1.,1.);lut.AddRGBPoint(hi,*high)
     else:
         red=(.80,.08,.12);blue=(.08,.22,.80)
         low,high=(red,blue) if palette=='Red-white-blue' else (blue,red)
@@ -27,7 +32,49 @@ def color_lookup(palette, limits):
     return lut
 
 
+def update_mapping_colors(draw, previous, layers):
+    """Recolor existing meshes for slider edits; return False for geometry edits.
+
+    Avoid contour extraction and field interpolation on every slider event.
+    Existing actor scalars and original color-grid data remain authoritative.
+    """
+    if not previous or len(previous)!=len(layers):return False
+    color_keys={'map_palette','map_range'}
+    for before,after in zip(previous,layers):
+        if {k:v for k,v in before.items() if k not in color_keys}!={k:v for k,v in after.items() if k not in color_keys}:
+            return False
+    updates=[];lookups={};groups={}
+    for actor in draw.field_actors:
+        number=getattr(actor,'_lele_layer_number',None)
+        if number is None:return False
+        spec=layers[number-1]
+        if spec.get('map_dataset',-1)<0:continue
+        samples=getattr(actor,'_lele_mapping_values',None)
+        color_field=getattr(actor,'_lele_mapping_field',None)
+        if samples is None or color_field is None:return False
+        groups.setdefault(number,[]).append((actor.GetMapper(),samples,color_field))
+    for number,records in groups.items():
+        spec=layers[number-1]
+        # A nonperiodic color grid can assign different values to each periodic
+        # surface copy; legacy auto ranges must include all copies, just as the
+        # initial renderer does. Explicit slider ranges need no concatenation.
+        samples=(np.concatenate([record[1] for record in records])
+                 if spec.get('map_range') is None else records[0][1])
+        limits=mapping_limits(spec,samples,records[0][2].data)
+        lut=color_lookup(spec.get('map_palette',DEFAULT_PALETTE),limits)
+        lookups[number]=(lut,limits)
+        updates.extend((mapper,lut,limits) for mapper,_,_ in records)
+    for mapper,lut,limits in updates:
+        mapper.SetLookupTable(lut);mapper.SetScalarRange(*limits)
+    for bar in draw.field_scalar_bars:
+        number=getattr(bar,'_lele_layer_number',None)
+        if number in lookups:bar.SetLookupTable(lookups[number][0])
+    return True
+
+
 def draw_fields(draw, active, fields, active_index):
+    # None suppresses every layer while leaving the fields available to slices.
+    if draw.options.volume_signs == 'None':return
     from .renderer import volume_surface_specs
     specs=volume_surface_specs(draw.options)
     numbers=([i+1 for i,s in enumerate(draw.options.volume_surfaces) if s.get('visible',True)]
@@ -46,6 +93,7 @@ def draw_fields(draw, active, fields, active_index):
 
 def draw_volume(draw, volume, specs, fields=()):
     from .renderer import rgb
+    if not specs or draw.options.volume_signs == 'None':return
     data=np.pad(volume.data,((0,1),)*3,mode='wrap') if volume.periodic else volume.data
     grid=vtkImageData();grid.SetDimensions(*data.shape)
     values=numpy_to_vtk(np.ascontiguousarray(data.ravel(order='F')),deep=True)
@@ -59,12 +107,17 @@ def draw_volume(draw, volume, specs, fields=()):
     tiles=[np.zeros(3)];boundary_clips=[]
     boundary=getattr(draw,'boundary_display',None)
     if boundary is not None:
-        period=np.asarray(volume.data.shape)[:,None]*volume.voxel_vectors
-        if np.allclose(period,draw.frame.cell,rtol=1e-6,atol=2e-4):
+        from .cell_origin import cell_origin
+        box_origin=(cell_origin(draw.frame) if draw.options.boundary_preserve_origin else np.zeros(3))
+        intervals = np.asarray(volume.data.shape)
+        if volume.provenance.get('grid_extent') == 'first_to_last_sample':
+            intervals = intervals - 1
+        extent = intervals[:, None] * volume.voxel_vectors
+        if np.allclose(extent,draw.frame.cell,rtol=1e-6,atol=2e-4):
             if volume.periodic:
                 from itertools import product
                 inverse=np.linalg.inv(draw.frame.cell)
-                fractional_origin=(volume.origin-draw.display_translation)@inverse
+                fractional_origin=(volume.origin-draw.display_translation-box_origin)@inverse
                 # A translated periodic grid can straddle the displayed cell.
                 # Cover it with neighboring instances, then clip to the requested
                 # Boundary parallelepiped in Cartesian coordinates.
@@ -76,12 +129,11 @@ def draw_volume(draw, volume, specs, fields=()):
                 for axis,(lo,hi) in enumerate(bounds):
                     for edge,sign in ((lo,1.),(hi,-1.)):
                         plane=vtkPlane();plane.SetNormal(*(sign*inverse[:,axis]))
-                        plane.SetOrigin(*(draw.display_translation+edge*draw.frame.cell[axis]))
+                        plane.SetOrigin(*(draw.display_translation+box_origin+edge*draw.frame.cell[axis]))
                         boundary_clips.append(plane)
             else:
-                # CUBE normally defines a cell-sized box without declaring
-                # physical periodicity. Copy its existing mesh with the atoms;
-                # do not invent wraparound values or clip away its original box.
+                # Repeat the existing finite box with the displayed cells.
+                # Values at opposite faces may differ.
                 tiles=[np.asarray(t)@draw.frame.cell for t in boundary.tiles]
         elif volume.periodic:
             draw.field_warnings.append('Periodic grid period differs from the structure cell; field repetition is disabled.')
@@ -93,14 +145,20 @@ def draw_volume(draw, volume, specs, fields=()):
     low,high=float(data.min()),float(data.max())
     for spec in specs:
         check_load_cancelled();validate_layer_mapping(spec)
-        if not low<=spec['value']<=high or spec['opacity']==0:continue
+        if not low<=spec['value']<=high:
+            draw.field_warnings.append(f'Layer {spec.get("_layer_number",1)}: isovalue {spec["value"]:.6g} '
+                                       f'is outside source range [{low:.6g}, {high:.6g}]; no surface.')
+            continue
+        if spec['opacity']==0:continue
         contour=vtkContourFilter();contour.SetInputData(grid);contour.SetValue(0,spec['value'])
         contour.AddObserver('ProgressEvent',lambda a,_:ui_checkpoint('Computing isosurface',a.GetProgress(),1))
         contour.Update()
         transformed=vtkTransformPolyDataFilter();transformed.SetInputConnection(contour.GetOutputPort())
         transformed.SetTransform(transform);transformed.Update()
         poly=transformed.GetOutput()
-        if not poly.GetNumberOfPoints():continue
+        if not poly.GetNumberOfPoints():
+            draw.field_warnings.append(f'Layer {spec.get("_layer_number",1)}: no surface at isovalue {spec["value"]:.6g}.')
+            continue
         if poly.GetNumberOfPoints()*len(tiles)>20_000_000:
             draw.field_warnings.append('Surface exceeds 20 million displayed vertices; reduce Boundary or layers.');continue
         map_index=spec.get('map_dataset',-1);mapped=map_index>=0
@@ -124,12 +182,13 @@ def draw_volume(draw, volume, specs, fields=()):
                                    sample_field(color_field,points+shift if volume.periodic else points,
                                                 progress=ui_checkpoint))
                 joined=np.concatenate(samples);finite=np.isfinite(joined)
-                limits=mapping_limits(spec,joined)
-                lut=color_lookup(spec.get('map_palette','Red-white-blue'),limits)
+                limits=mapping_limits(spec,joined,color_field.data)
+                lut=color_lookup(spec.get('map_palette',DEFAULT_PALETTE),limits)
                 if not finite.all():
                     draw.field_warnings.append(f'Layer {spec.get("_layer_number",1)}: {np.count_nonzero(~finite):,}/{len(finite):,} vertices outside color grid or non-finite; shown gray.')
             except ValueError as exc:
                 draw.field_warnings.append(str(exc)+' Mapped layer omitted.');continue
+        layer_actor_count=len(draw.field_actors)
         for tile,shift in enumerate(tiles):
             ui_checkpoint('Drawing surface copies',tile,len(tiles))
             tile_poly=poly;tile_filter=transformed
@@ -151,7 +210,22 @@ def draw_volume(draw, volume, specs, fields=()):
             else:
                 mapper=vtkPolyDataMapper();mapper.SetInputConnection(tile_filter.GetOutputPort())
                 mapper.ScalarVisibilityOff()
+            regions=getattr(draw.options,'volume_hidden_regions',[])
+            if regions:
+                # Subtract after placing each Boundary instance. Thus a box
+                # hides only the copies that were actually under that box.
+                from .surface_erase import hide_polydata
+                mapper.Update()
+                clipped,resources=hide_polydata(mapper.GetInput(),regions,
+                    rotation=draw.display_rotation,translation=draw.display_translation)
+                draw._keepalive.extend(resources)
+                if not clipped.GetNumberOfCells():continue
+                mapper.SetInputData(clipped)
             actor=vtkActor();actor.SetMapper(mapper)
+            actor._lele_layer_number=spec.get('_layer_number',1)
+            if mapped:
+                actor._lele_mapping_values=samples[tile]
+                actor._lele_mapping_field=color_field
             # VTK accepts at most six mapper clipping planes. Crystal cuts
             # also consume that budget, so combine via geometry clipping when
             # both systems are active (handled below).
@@ -169,7 +243,7 @@ def draw_volume(draw, volume, specs, fields=()):
             # Uniform layer colors also set VTK's specular color. A mapped
             # surface needs neutral material, or highlights tint the ESP scale.
             prop.SetColor((1.,1.,1.) if mapped else rgb(spec['color']))
-            prop.SetOpacity(spec['opacity']);prop.SetSpecular(.25)
+            prop.SetOpacity(spec['opacity']);draw._finish(prop)
             if spec['style']=='Wireframe':prop.SetRepresentationToWireframe()
             elif spec['style']=='Points':prop.SetRepresentationToPoints()
             width=max(.1,float(draw.options.volume_line_width))
@@ -179,13 +253,15 @@ def draw_volume(draw, volume, specs, fields=()):
             draw._add_actor(actor);draw.field_actors.append(actor)
             # Preserve the contour resource tuple used by PNG mesh export.
             draw._keepalive.append((contour,mapper,transformed,transform))
-        if mapped and spec.get('map_legend',True):
+        if mapped and spec.get('map_legend',True) and len(draw.field_actors)>layer_actor_count:
             if len(draw.field_scalar_bars)>=4:
                 draw.field_warnings.append('Only the first four color scales are shown; disable extra legends in layer settings.')
                 continue
             source=fields[map_index]
             bar=vtkScalarBarActor();bar.SetLookupTable(lut);bar.SetOrientationToHorizontal()
-            bar.SetTitle(f'Layer {spec.get("_layer_number",1)}: {source.label or "Color field"} [{source.unit or "source units"}]')
+            bar._lele_layer_number=spec.get('_layer_number',1)
+            # Keep the physical unit, but omit layer numbers and filenames.
+            bar.SetTitle(source.unit or '')
             bar.SetNumberOfLabels(5);bar.SetLabelFormat('%.3g')
             bar.SetPosition(.12,.02+len(draw.field_scalar_bars)*.09);bar.SetWidth(.76);bar.SetHeight(.08)
             bar.SetUnconstrainedFontSize(True)

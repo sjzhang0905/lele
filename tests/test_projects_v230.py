@@ -164,7 +164,7 @@ def test_project_restores_multiple_files_rules_views_and_no_source_dependency(gu
     assert restored.render_options.boundary_enabled and restored.render_options.lattice_planes[0]['hkl'] == (1, 1, 1)
     assert restored.frame.atom_appearance[0].color == '#AA2233'
     assert camera_data(restored.scene.GetActiveCamera()) == first_camera
-    assert restored.doc.source_preview and 'Sr' in restored.source_view.toPlainText()
+    assert restored.doc.source_preview is None and 'Sr' in restored.doc.frames[0].symbols
     assert restored._geometry_parameters[id(restored.doc)][0].atoms == (0, 1)
     assert restored.render_options is not restored._document_views[id(restored.documents[2])].options
 

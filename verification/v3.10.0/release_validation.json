@@ -1,0 +1,33 @@
+{
+  "version": "3.10.0",
+  "baseline": "3.9.1",
+  "created_utc": "2026-11-11T13:56:09.370404+00:00",
+  "tests": {
+    "passed": 2021,
+    "skipped": 16,
+    "subtests_passed": 78,
+    "warnings": 140,
+    "seconds": 163.64
+  },
+  "wheel": {
+    "version": "3.10.0",
+    "python_modules_checked": 168,
+    "all_wheel_python_matches_source": true,
+    "wheel_integrity": "PASS",
+    "wheel_name": "lele_explorer-3.10.0-py3-none-any.whl",
+    "wheel_bytes": 1383226,
+    "wheel_sha256": "b09dad8dd5992adc5a90e5d65965ac43a69517689a57078520685d77292d5983"
+  },
+  "supplemental_validation": {
+    "date_utc": "2026-11-11T14:11:04.559415+00:00",
+    "previous_skip_records": 16,
+    "passed": 19,
+    "skipped": 0,
+    "failed": 0,
+    "seconds": 8.72,
+    "production_modules_unchanged": 168,
+    "full_suite_rerun": false,
+    "matching_outcar_comparison": false,
+    "source_inputs_unchanged": true
+  }
+}

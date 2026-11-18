@@ -11,18 +11,21 @@ from lele.style_presets import ATOM_PALETTES, element_palette_color
 from test_periodic_fragment_ui_v171 import gui
 
 
-def test_selected_label_buttons_only_change_selected_atoms_and_support_undo(gui):
+def test_selected_label_dropdown_only_changes_selected_atoms_and_supports_undo(gui):
     frame = Frame(['O','H','H'], [[1,1,1],[1.9,1,1],[1,1.9,1]])
     gui.attach(frame, second_frame=frame.clone())
     w = gui.window
     w.render_options.labels = 'None'
     gui.select([0,2])
     panel = w.atom_panel
-    for button, expected in [(panel.show_labels_button,['O','H']),
-                             (panel.show_indices_button,['1','3']),
-                             (panel.show_both_button,['O1','H3']),
-                             (panel.hide_labels_button,[])]:
-        button.click()
+    assert not hasattr(panel, 'show_labels_button')
+    for mode, expected in [('Element',['O','H']),
+                           ('Index (1..N)',['1','3']),
+                           ('ORCA index (0..N-1)',['0','2']),
+                           ('Element + ORCA index',['O0','H2']),
+                           ('Element + index (global)',['O1','H3']),
+                           ('None',[])]:
+        panel.label_combo.setCurrentIndex(panel.label_combo.findData(mode))
         assert [a.GetInput() for a in w.renderer._label_actors] == expected
         assert appearance(w.frame,1).label_mode == 'Global'
         assert w.render_options.labels == 'None'
@@ -37,7 +40,7 @@ def test_boundary_face_picking_counts_and_selected_labels_use_original_ids(gui):
     frame = Frame(['Si'], [[0,1,1]], np.eye(3)*5, (True,)*3)
     gui.attach(frame)
     w = gui.window
-    gui.select([0]); w.atom_panel.show_indices_button.click()
+    gui.select([0]); w.atom_panel.label_combo.setCurrentIndex(w.atom_panel.label_combo.findData('Index (1..N)'))
     assert len(w.renderer.displayed_atoms()) == 2
     assert [a.GetInput() for a in w.renderer._label_actors] == ['1','1']
     assert len(w.renderer.atom_highlights) == 2

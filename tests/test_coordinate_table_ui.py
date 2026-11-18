@@ -107,6 +107,7 @@ class DummyWindow:
         self.selection = []
         self.scene_updates = 0
         self.info_updates = 0
+        self.color_updates = 0
         self._ignore_table = False
         self._active_vibration = None
         self.element_combo = FakeCombo()
@@ -119,6 +120,9 @@ class DummyWindow:
 
     def _refresh_info(self):
         self.info_updates += 1
+
+    def _sync_color_controls(self):
+        self.color_updates += 1
 
 
 def extracted_methods():
@@ -198,7 +202,8 @@ class CoordinateUIRegressionTests(unittest.TestCase):
         method = next(n for n in cls.body if isinstance(n, ast.FunctionDef) and n.name == '_build_ui')
         code = ast.get_source_segment(APP_PATH.read_text(encoding='utf-8'), method)
         self.assertEqual(code.count('root.addWidget('), 2)
-        self.assertIn('root.addWidget(sidebar_tabs)', code)
+        self.assertIn('root.addWidget(self.sidebar_column)', code)
+        self.assertIn('sidebar_layout.addWidget(self.menuBar())', code)
         self.assertIn('root.addWidget(centre)', code)
         self.assertIn("sidebar_tabs.addTab(files_page, 'Files')", code)
         for name in ('Style', 'Axes', 'Labels', 'Field', 'Edit'):

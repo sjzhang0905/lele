@@ -25,7 +25,7 @@ def mixed(gui,weights=None,existing_sn=False):
 
 def test_normal_rows_have_a_separate_full_occupancy_column(gui):
     gui.attach(normal());p=gui.window.atom_panel
-    assert p.tree.columnCount()==4 and p.tree.headerItem().text(3)=='Occupancy %'
+    assert p.tree.columnCount()==4 and p.tree.headerItem().text(3)=='Occ. %'
     assert len(p._component_items)==3
     assert all(item.text(3)=='100%' for item in p._component_items.values())
     assert all(item.text(3)=='' for item in p._groups.values())
@@ -122,15 +122,20 @@ def test_shared_site_visibility_and_transparency_keep_component_rows_in_sync(gui
 
 
 def test_components_use_their_own_palette_colour_and_source_overrides(gui):
+    from PySide6.QtCore import Qt
     w,p=mixed(gui)
+    def swatch(symbol):
+        item=p._component_items[0,symbol]
+        assert item.text(1)==''
+        return item.data(1,Qt.ItemDataRole.DecorationRole).name()
     w._set_option('atom_palette','VESTA')
-    assert p._component_items[0,'Mn'].text(1)==w.renderer._display_color('Mn').lower()
-    assert p._component_items[0,'Sn'].text(1)==w.renderer._display_color('Sn').lower()
-    assert p._component_items[0,'Sn'].text(1)!=p._component_items[0,'Mn'].text(1)
+    assert swatch('Mn')==w.renderer._display_color('Mn').lower()
+    assert swatch('Sn')==w.renderer._display_color('Sn').lower()
+    assert swatch('Sn')!=swatch('Mn')
     w._change_atom_appearance([0],{'color':'#123456'})
-    assert p._component_items[0,'Mn'].text(1)==p._component_items[0,'Sn'].text(1)=='#123456'
+    assert swatch('Mn')==swatch('Sn')=='#123456'
     w._reset_atom_appearance([0])
-    assert p._component_items[0,'Sn'].text(1)==w.renderer._display_color('Sn').lower()
+    assert swatch('Sn')==w.renderer._display_color('Sn').lower()
 
 
 def test_sn_colour_dialog_starts_from_sn_palette_colour(gui):

@@ -151,13 +151,16 @@ def test_invalid_vacuum_cannot_modify_cell(gap):
     np.testing.assert_array_equal(f.cell,old)
 
 
-def test_selected_outline_is_a_dashed_camera_facing_ring_and_keeps_original_colors():
+def test_selected_outline_is_a_solid_camera_facing_ring_and_keeps_original_colors():
     from vtkmodules.vtkRenderingCore import vtkRenderer,vtkFollower
     from lele.renderer import MoleculeRenderer
     draw=MoleculeRenderer(vtkRenderer());f=slab();draw.selected=[0];color=draw.atom_color(f,0);draw.set_scene(f)
     actor,=draw.atom_highlights
     assert isinstance(actor,vtkFollower) and not actor.GetPickable() and actor.GetProperty().GetLineWidth()>=3
-    mesh=actor.GetMapper().GetInput();assert mesh.GetNumberOfPolys()==0 and mesh.GetNumberOfLines()==32
+    mesh=actor.GetMapper().GetInput();assert mesh.GetNumberOfPolys()==0 and mesh.GetNumberOfLines()==1
+    ring=mesh.GetCell(0)
+    assert ring.GetNumberOfPoints()==mesh.GetNumberOfPoints()+1
+    assert ring.GetPointId(0)==ring.GetPointId(ring.GetNumberOfPoints()-1)
     assert draw.atom_color(f,0)==color
     assert all(abs(mesh.GetPoint(i)[2])<1.e-12 for i in range(mesh.GetNumberOfPoints()))
 

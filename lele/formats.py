@@ -59,6 +59,8 @@ def _frame_from_ase(atoms):
     from .vasp_constraints import read_fixed_axes
     flags=read_fixed_axes(atoms)
     if flags is not None:info['vasp_fixed_axes']=flags
+    from .atom_constraints import from_ase_constraints
+    info.update(from_ase_constraints(atoms))
     if calc is not None and 'forces' in getattr(calc, 'results', {}):
         forces=np.asarray(calc.results['forces'],float)
         if forces.size and np.isfinite(forces).all():
@@ -86,11 +88,17 @@ def _cube_grid(path: Path) -> Volume:
     """Use the same normalized CUBE geometry and units as the atom reader."""
     from .cube_input import read_cube_file
     result=read_cube_file(path,max_points=MAX_VOLUME_POINTS)
-    return Volume(result['data'],result['origin'],result['spacing'])
+    return Volume(result['data'],result['origin'],result['spacing'],
+                  periodic=result.get('periodic',False))
 
 
 def _load_document(filename: str | Path, max_frames: int | None = MAX_FRAMES) -> Document:
     path = Path(filename).expanduser().resolve()
+    if path.suffix.lower() == '.gbw':
+        raise ValueError('GBW is no longer supported. Open an ORCA output, Molden file or CUBE instead.')
+    if path.suffix.lower() == '.xsf':
+        from .xsf_input import read_xsf_document
+        return read_xsf_document(path, max_points=MAX_VOLUME_POINTS, max_frames=max_frames)
     from .vasp_volume_detection import is_vasp_volume, named_vasp_volume_kind
     if is_vasp_volume(path):
         from .volumetric_input import read_vasp_volume_document
@@ -142,9 +150,6 @@ def _load_document(filename: str | Path, max_frames: int | None = MAX_FRAMES) ->
     if kind == 'vasp_wavecar':
         from .binary_wavefunctions import read_wavecar
         return read_wavecar(path)
-    if kind == 'orca_gbw':
-        from .binary_wavefunctions import read_gbw
-        return read_gbw(path)
 
     if kind in ('qe_in','qe_out'):
         from .qe_results import read_qe_input,read_qe_output
@@ -292,6 +297,8 @@ def _load_document(filename: str | Path, max_frames: int | None = MAX_FRAMES) ->
 
 
 def load_document(filename: str | Path, max_frames: int | None = MAX_FRAMES, *, cancelled=None, progress=None) -> Document:
+    if Path(filename).suffix.lower() == '.gbw':
+        raise ValueError('GBW is no longer supported. Open an ORCA output, Molden file or CUBE instead.')
     from .output_text import output_read_session, check_load_cancelled
     with output_read_session(cancelled,progress):
         document = _load_complete_document(filename, max_frames)
@@ -319,7 +326,7 @@ def _load_complete_document(filename, max_frames):
         kind = ('vasp_volume' if document.format_name in {'VASP '+name for name in VASP_FIELD_NAMES}
                 else legacy.detect_format(document.path, check_volume=False).kind)
     except Exception:kind = 'siesta_out' if document.path.suffix.lower()=='.ani' else document.format_name
-    if document.format_name.startswith('ORCA') and kind not in ('orca_gbw', 'molden'):
+    if document.format_name.startswith('ORCA') and kind not in ('orca_in', 'molden'):
         kind='orca_out'
     for frame in document.frames:
         frame.info['source_kind'] = kind
@@ -348,11 +355,18 @@ def _load_complete_document(filename, max_frames):
             frame.info.setdefault('source_format',document.format_name)
     if not document.nmr_results:
         document.nmr_results=read_nmr_results(document.path,kind,document)
+    from .atom_constraints import attach_document_constraints
+    attach_document_constraints(document, kind)
     return document
 
 
-def export_frame(frame: Frame, filename: str | Path, target: str, box_size: float = 30.0, *, occupancy_policy='error'):
-    """Write a structure in one of the original converter's 5 output modes."""
+def export_frame(frame: Frame, filename: str | Path, target: str, box_size: float = 30.0, *, occupancy_policy='error', merge_same_elements=False):
+    """Write one structure; optional POSCAR grouping never changes the source.
+
+    ``merge_same_elements`` affects POSCAR only. It groups elements in their
+    first-appearance order after maximum-occupancy projection when requested.
+    False preserves the current atom order and declared duplicate POSCAR blocks.
+    """
     from ase import Atoms
 
     if target not in legacy.TARGETS.values():
@@ -367,6 +381,9 @@ def export_frame(frame: Frame, filename: str | Path, target: str, box_size: floa
         frame=maximum_occupancy_frame(frame)
         occupancy_notices.append('Export copy uses the highest-occupancy element at each site with full occupancy; '
                                  f'{original_count-len(frame.symbols)} completely vacant site(s) omitted. Source occupancies unchanged.')
+    if merge_same_elements and target in ('poscar-direct','poscar-cartesian'):
+        from .poscar_export import grouped_poscar_frame
+        frame = grouped_poscar_frame(frame)
     atoms = Atoms(symbols=frame.symbols, positions=frame.positions.copy(),
                   cell=frame.cell.copy(), pbc=frame.pbc)
     from .vasp_constraints import attach_fixed_axes

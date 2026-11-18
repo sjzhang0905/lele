@@ -1,0 +1,29 @@
+{
+  "version": "3.5.6",
+  "date": "2026-11-10",
+  "tests": {
+    "passed": 1505,
+    "skipped": 13,
+    "subtests_passed": 78,
+    "seconds": 72.92
+  },
+  "validation": [
+    "Four supplied CP2K files loaded and summaries checked in both Results / info and CalculationOverview",
+    "MD energy/step/statistics association and independent concatenated jobs reviewed",
+    "Windows and Fusion Qt styles: compact buttons at 450, 700 and 1000 requested panel widths",
+    "295-pixel Atoms panel: #100 and 100% visible, manual header resizing retained",
+    "Wheel built with new color controls module"
+  ],
+  "environment": {
+    "python": "3.12.14",
+    "PySide6": "6.12.0",
+    "numpy": "2.3.5",
+    "ase": "3.29.0",
+    "vtk": "9.7.2",
+    "pytest": "9.2.0"
+  },
+  "limitations": [
+    "Native Windows EXE was not executed",
+    "Optional PySCF independent-reference test module and unavailable private fixtures skipped"
+  ]
+}

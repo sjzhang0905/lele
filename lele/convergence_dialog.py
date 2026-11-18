@@ -4,8 +4,15 @@ import numpy as np
 from .operations import gui_operation,ui_checkpoint,ui_operation,run_data_task
 from .output_text import progress_items
 from ase.units import Hartree
-from PySide6.QtWidgets import (QDialog,QVBoxLayout,QHBoxLayout,QLabel,QComboBox,
-    QCheckBox,QPushButton,QFileDialog)
+from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QCheckBox, QPushButton
+from .dialog_policy import QDialog, QFileDialog
+
+
+MD_SERIES = {
+    'cp2k_md_temperature_K': 'Temperature (K)',
+    'cp2k_md_kinetic_hartree': 'Kinetic energy (Eh)',
+    'cp2k_md_conserved_hartree': 'Conserved quantity (Eh)',
+}
 
 
 class ConvergenceDialog(QDialog):
@@ -15,10 +22,12 @@ class ConvergenceDialog(QDialog):
         self.is_xtb=self.results is not None and self.results.program=='xTB'
         self.is_vasp=self.results is not None and self.results.program=='VASP'
         self.is_cp2k=self.results is not None and self.results.program=='CP2K'
+        self.has_orca_scan=bool(getattr(self.results,'scans',[]))
         self.line_frames={}
         self.setWindowTitle('Energy / geometry convergence — '+document.path.name);self.resize(950,820)
         from matplotlib.figure import Figure
-        from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg,NavigationToolbar2QT
+        from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
+        from .figure_export import FigureExportToolbar as NavigationToolbar2QT
         layout=QVBoxLayout(self);controls=QHBoxLayout();layout.addLayout(controls)
         self.job=QComboBox()
         jobs=[] if self.results is None else self.results.jobs
@@ -26,13 +35,12 @@ class ConvergenceDialog(QDialog):
         if not jobs:self.job.addItem('Loaded geometry frames',None)
         self.stage_combo=QComboBox()
         self._prepare_stages()
-        self.metric_combo=QComboBox();self.metric_combo.addItems(['Maximum / RMS force','Maximum / RMS displacement'])
+        self.metric_combo=QComboBox();self._prepare_metrics()
         self.unit=QComboBox();self.unit.addItems(['eV','Hartree','kcal/mol'])
         if self.is_xtb:self.unit.setCurrentText('kcal/mol')
-        self.metric_combo.setVisible(not self.is_xtb)
         self.scan_only=QCheckBox('Converged scan points only')
-        self.scan_only.setVisible(not self.is_xtb)
-        self.scan_only.setChecked(bool(jobs and 'Scan' in jobs[0].tasks
+        self.scan_only.setVisible(not self.is_xtb and not self.has_orca_scan)
+        self.scan_only.setChecked(bool(not self.has_orca_scan and jobs and 'Scan' in jobs[0].tasks
             and any(step.job_index==jobs[0].index and step.converged for step in self.results.steps)))
         for widget in (self.job,self.stage_combo,self.metric_combo,self.unit,self.scan_only):controls.addWidget(widget)
         self.note=QLabel('Click a plotted point to display its geometry frame.');self.note.setWordWrap(True);layout.addWidget(self.note)
@@ -43,7 +51,8 @@ class ConvergenceDialog(QDialog):
         self.export_button=QPushButton('Export curve data CSV…');self.export_button.clicked.connect(self.export_data);layout.addWidget(self.export_button)
         self.canvas.mpl_connect('pick_event',self.pick_point)
         self.job.currentIndexChanged.connect(self._job_changed)
-        for widget in (self.stage_combo,self.metric_combo,self.unit):widget.currentIndexChanged.connect(self.redraw)
+        self.stage_combo.currentIndexChanged.connect(self._stage_changed)
+        for widget in (self.metric_combo,self.unit):widget.currentIndexChanged.connect(self.redraw)
         self.scan_only.toggled.connect(self.redraw);self.redraw()
 
     def _prepare_stages(self):
@@ -56,7 +65,35 @@ class ConvergenceDialog(QDialog):
             self.stage_combo.setVisible(bool(stages))
 
     def _job_changed(self):
-        self._prepare_stages();self.redraw()
+        self._prepare_stages();self._stage_changed()
+
+    def _stage_changed(self, *_):
+        self._prepare_metrics()
+        self.redraw()
+
+    def _prepare_metrics(self):
+        from PySide6.QtCore import QSignalBlocker
+        with QSignalBlocker(self.metric_combo):
+            self.metric_combo.clear()
+            stage = self.stage_combo.currentData()
+            self.is_md = self.is_cp2k and any(s.index == stage and s.kind == 'md' for s in self.results.stages)
+            if self.is_xtb:
+                here = [s for s in self.results.steps if s.stage_index == stage]
+                if self.document.trajectory_link:
+                    if any(s.geometry is not None and 'xtb_trajectory_gnorm' in s.geometry.info for s in here):
+                        self.metric_combo.addItem('Trajectory gradient norm (Eh/bohr)', 'gnorm')
+                    if any(s.optimizer_gradient_norm is not None for s in here):
+                        self.metric_combo.addItem('Optimizer gradient norm (Eh/α)', 'optimizer_norm')
+                self.metric_combo.setVisible(self.metric_combo.count() > 1)
+                return
+            if self.is_md:
+                here = [s for s in self.results.steps if s.stage_index == stage]
+                for key, label in MD_SERIES.items():
+                    if any(key in s.info for s in here):
+                        self.metric_combo.addItem(label, key)
+            self.metric_combo.addItem('Maximum / RMS force', 'force')
+            if not self.is_md:
+                self.metric_combo.addItem('Maximum / RMS displacement', 'displacement')
 
     def points(self):
         index=self.job.currentData()
@@ -64,14 +101,20 @@ class ConvergenceDialog(QDialog):
             self.scan_only.setEnabled(False)
             stage=self.stage_combo.currentData()
             from .vasp_results import ENERGY_KEY
+            steps = [(i,s) for i,s in enumerate(self.results.steps)
+                     if s.job_index==index and (stage is None or s.stage_index==stage)]
+            summarized = {s.cycle for _,s in steps if s.info.get('cp2k_opt_summary')} if self.document.trajectory_link else set()
             return [dict(frame=s.frame_index,energy_ev=s.info.get(ENERGY_KEY) if self.is_vasp else s.energy_ev,
                          metrics=s.convergence,x=s.cycle if s.cycle is not None else i+1,
-                         source_line=s.source_line)
-                    for i,s in enumerate(self.results.steps) if s.job_index==index and (stage is None or s.stage_index==stage)]
+                         extra=s.info, source_line=None if s.info.get('trajectory_only') else s.source_line,
+                         trajectory_line=s.geometry.info.get('trajectory_source_line') if s.geometry else None)
+                    for i,s in steps if s.cycle not in summarized or s.info.get('cp2k_opt_summary') or s.frame_index is not None]
         if self.is_xtb:
             self.scan_only.setEnabled(False)
             stage=self.stage_combo.currentData()
-            return [dict(frame=s.frame_index,energy_ev=s.energy_ev,metrics={},x=s.cycle or i+1,source_line=s.source_line)
+            return [dict(frame=s.frame_index,energy_ev=s.energy_ev,metrics={},x=s.cycle or i+1,source_line=s.source_line,
+                         gnorm=s.geometry.info.get('xtb_trajectory_gnorm') if s.geometry else None,
+                         optimizer_norm=s.optimizer_gradient_norm)
                     for i,s in enumerate(self.results.steps) if s.job_index==index and (stage is None or s.stage_index==stage)]
         steps=[] if self.results is None else [s for s in self.results.steps if s.job_index==index and s.frame_index is not None]
         stage=self.stage_combo.currentData()
@@ -83,6 +126,7 @@ class ConvergenceDialog(QDialog):
         result={}
         for step in steps:
             row=result.setdefault(step.frame_index,dict(frame=step.frame_index,energy_ev=step.energy_ev,metrics={}))
+            if self.has_orca_scan and step.cycle is not None:row['x']=step.cycle
             row['metrics'].update(step.convergence)
             if step.energy_ev is not None:row['energy_ev']=step.energy_ev
         if not steps and (self.results is None or not self.results.steps):
@@ -108,9 +152,11 @@ class ConvergenceDialog(QDialog):
     @gui_operation('Preparing convergence curves')
     def redraw(self,*_):
         self.figure.clear();self.line_frames={}
-        self.energy_axes=self.figure.add_subplot(111 if self.is_xtb else 211)
-        self.metric_axes=None if self.is_xtb else self.figure.add_subplot(212)
         rows=self.points();self._rows=rows
+        xtb_norm = self.is_xtb and self.metric_combo.currentData() in ('gnorm', 'optimizer_norm')
+        one_plot = self.is_xtb and not xtb_norm
+        self.energy_axes=self.figure.add_subplot(111 if one_plot else 211)
+        self.metric_axes=None if one_plot else self.figure.add_subplot(212)
         factor={'eV':1.,'Hartree':1./Hartree,'kcal/mol':23.0605478306}[self.unit.currentText()]
         energies=[r['energy_ev'] for r in rows if r['energy_ev'] is not None]
         baseline=min(energies) if energies else 0.
@@ -122,37 +168,57 @@ class ConvergenceDialog(QDialog):
             trajectory='Optimization trajectory' in self.results.jobs[self.job.currentData()].tasks
             self.energy_axes.set_xlabel('Trajectory record' if trajectory else 'Optimization cycle')
             self.energy_axes.grid(True,alpha=.2)
+            if xtb_norm:
+                self._plot(self.metric_axes, rows, [r[self.metric_combo.currentData()] for r in rows], 'Gradient norm', gaps=True)
+                self.metric_axes.set_ylabel(self.metric_combo.currentText())
+                self.metric_axes.set_xlabel('Optimization cycle')
+                self.metric_axes.grid(True, alpha=.2)
             matched=sum(r['frame'] is not None for r in rows)
             self.note.setText(f'{len(rows)} energy records · {matched} with geometry. Relative energies use the minimum shown. '
                 'Click a point with matched coordinates to display that structure.\n'+self.document.note)
             self.canvas.draw();return
-        names=('max_force','rms_force') if self.metric_combo.currentIndex()==0 else ('max_displacement','rms_displacement')
+        metric = self.metric_combo.currentData()
+        if metric in MD_SERIES:
+            self._plot(self.metric_axes, rows, [r['extra'].get(metric) for r in rows], MD_SERIES[metric], gaps=True)
+            self.metric_axes.set_ylabel(MD_SERIES[metric])
+            for axes in (self.energy_axes, self.metric_axes):
+                axes.set_xlabel('MD step')
+                axes.grid(True, alpha=.2)
+            self.note.setText(f'{len(rows)} MD records · {sum(r["frame"] is not None for r in rows)} with coordinates. '
+                              'Click a point to display its matched trajectory frame.')
+            self.canvas.draw()
+            return
+        names=('max_force','rms_force') if metric=='force' else ('max_displacement','rms_displacement')
         any_metric=False
         for key,color in zip(names,('#be3f45','#257db5')):
             values=[r['metrics'].get(key,(None,None))[0] for r in rows]
-            line=self._plot(self.metric_axes,rows,values,key.replace('_',' ').title(),color=color)
+            line=self._plot(self.metric_axes,rows,values,key.replace('_',' ').title(),color=color,gaps=self.is_cp2k)
             if line is not None:
                 any_metric=True
                 thresholds=[r['metrics'].get(key,(None,None))[1] for r in rows]
                 valid=[(r.get('x',r['frame']+1 if r['frame'] is not None else 0),v) for r,v in zip(rows,thresholds) if v is not None]
                 if valid:self.metric_axes.plot([x for x,_ in valid],[v for _,v in valid],'--',color=color,alpha=.65,label=key+' threshold')
-        unit='source units' if self.results is None else (self.results.force_unit if self.metric_combo.currentIndex()==0 else self.results.displacement_unit)
+        unit='source units' if self.results is None else (self.results.force_unit if metric=='force' else self.results.displacement_unit)
+        if self.is_md:unit='Eh/bohr, per-atom force magnitude'
         if rows and not any(r['metrics'] for r in rows):unit='not printed'
         if any_metric and self.results is not None and not self.results.steps:unit='eV/Å (Cartesian forces)'
-        self.metric_axes.set_ylabel(('Force / gradient' if self.metric_combo.currentIndex()==0 else 'Displacement')+' ('+unit+')')
+        self.metric_axes.set_ylabel(('Force / gradient' if metric=='force' else 'Displacement')+' ('+unit+')')
         if any_metric:self.metric_axes.legend(fontsize=8)
         else:self.metric_axes.text(.5,.5,'Maximum/RMS values were not printed for these frames',ha='center',transform=self.metric_axes.transAxes)
         for axes in (self.energy_axes,self.metric_axes):
-            axes.set_xlabel('Ionic record' if self.is_vasp else 'CP2K record / printed step' if self.is_cp2k else 'Geometry frame');axes.grid(True,alpha=.2)
+            axes.set_xlabel('MD step' if self.is_md else 'Ionic record' if self.is_vasp else 'CP2K record / printed step' if self.is_cp2k else 'Optimization cycle' if self.has_orca_scan else 'Geometry frame');axes.grid(True,alpha=.2)
         self.note.setText('Click a data point to display its geometry frame. Each calculation segment is plotted separately.\n'
             'Values are from the source output; structural edits do not recalculate convergence or orbital properties.')
         if self.is_vasp:
             self.note.setText(f'{len(rows)} ionic records · {sum(r["frame"] is not None for r in rows)} with geometry. '
                 'E0 (σ→0) only; relative energies use the minimum shown. Missing E0 values are gaps. '
                 'Points without geometry do not change the 3D view.\n'+self.document.note)
+        elif self.has_orca_scan:
+            self.note.setText('Optimization history for the selected scan step. Use Scan curve… for the energy profile across scan points.\n'
+                'Click a point to display its geometry. Energies and convergence are from the source output.')
         elif self.is_cp2k:
             self.note.setText(f'{len(rows)} printed records · {sum(r["frame"] is not None for r in rows)} with coordinates. '
-                'Missing structures are not reconstructed from other files. Relative energy uses the minimum shown.\n'+self.document.note)
+                'Click a point with coordinates to display its structure. Relative energy uses the minimum shown.\n'+self.document.note)
         self.canvas.draw()
 
     def pick_point(self,event):
@@ -173,12 +239,14 @@ class ConvergenceDialog(QDialog):
             keys=('max_force','rms_force','max_displacement','rms_displacement')
             with open(path,'w',encoding='utf-8-sig',newline='') as stream:
                 writer=csv.writer(stream);writer.writerow(['step_or_record','geometry_frame','energy_Eh','energy_eV',
-                    *keys,*[k+'_threshold' for k in keys],'force_unit','displacement_unit','source_line'])
+                    *keys,*[k+'_threshold' for k in keys],'force_unit','displacement_unit','source_line','trajectory_line',
+                    *(['time_fs', *MD_SERIES] if self.is_md else [])])
                 for row in progress_items(self._rows,'Writing convergence CSV'):
                     value=row['energy_ev']
                     writer.writerow([row['x'],None if row['frame'] is None else row['frame']+1,
                         None if value is None else value/Hartree,value,*[row['metrics'].get(k,(None,None))[0] for k in keys],
-                        *[row['metrics'].get(k,(None,None))[1] for k in keys],self.results.force_unit,self.results.displacement_unit,row['source_line']])
+                        *[row['metrics'].get(k,(None,None))[1] for k in keys],('Eh/bohr (atomic force magnitudes)' if self.is_md else self.results.force_unit),self.results.displacement_unit,row['source_line'],row['trajectory_line'],
+                        *([row['extra'].get(k) for k in ('time_fs', *MD_SERIES)] if self.is_md else [])])
             return
         if self.is_vasp:
             keys=('max_force','rms_force')
@@ -192,12 +260,12 @@ class ConvergenceDialog(QDialog):
             return
         if self.is_xtb:
             with open(path,'w',encoding='utf-8-sig',newline='') as stream:
-                writer=csv.writer(stream);writer.writerow(['cycle_or_record','geometry_frame','energy_Eh','energy_eV','energy_kcal_mol','source_line'])
+                writer=csv.writer(stream);writer.writerow(['cycle_or_record','geometry_frame','energy_Eh','energy_eV','energy_kcal_mol','source_line','trajectory_gnorm_Eh_bohr','optimizer_gnorm_Eh_per_alpha'])
                 for r in progress_items(self._rows,'Writing convergence CSV'):
                     energy=r['energy_ev']
                     writer.writerow([r['x'],None if r['frame'] is None else r['frame']+1,
                         None if energy is None else energy/Hartree,energy,
-                        None if energy is None else energy*23.0605478306,r['source_line']])
+                        None if energy is None else energy*23.0605478306,r['source_line'],r['gnorm'],r['optimizer_norm']])
             return
         keys=('max_force','rms_force','max_displacement','rms_displacement')
         with open(path,'w',encoding='utf-8-sig',newline='') as stream:

@@ -1,0 +1,38 @@
+F..                                                                      [100%]
+=================================== FAILURES ===================================
+______________________ test_palette_against_original_tcl _______________________
+tests/test_delta_acceptance_v2131.py:131: in test_palette_against_original_tcl
+    assert {s:draw.atom_color(f,i) for i,s in enumerate(symbols)}==expected
+E   AssertionError: assert {'H': '#DADAD...#DAFF46', ...} == {'H': '#D3D3D...#D3FF25', ...}
+E     
+E     Differing items:
+E     {'Ba': '#906A46'} != {'Ba': '#7C5025'}
+E     {'Tc': '#70B8C0'} != {'Tc': '#57ACB5'}
+E     {'Pm': '#BCFFD6'} != {'Pm': '#B0FFCF'}
+E     {'Ca': '#B5B546'} != {'Ca': '#A8A825'}
+E     {'Tm': '#46DF80'} != {'Tm': '#25D96A'}...
+E     
+E     ...Full output truncated, use '-vv' to show
+=============================== warnings summary ===============================
+../../../../opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+  /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+tests/test_boundary_surface_v354.py::test_actual_chgcar_periodic_meshes_keep_boundary_repetition
+tests/test_boundary_surface_v354.py::test_actual_chgcar_periodic_meshes_keep_boundary_repetition
+  /workspace/scratch/c771f19f02ac/LELE/lele/surface_rendering.py:103: DeprecationWarning: Call to deprecated class vtkTransformPolyDataFilter. (Replaced by vtkTransformFilter.) -- Deprecated since version 9.7.0.
+    transformed=vtkTransformPolyDataFilter();transformed.SetInputConnection(contour.GetOutputPort())
+
+tests/test_boundary_surface_v354.py::test_actual_chgcar_periodic_meshes_keep_boundary_repetition
+tests/test_boundary_surface_v354.py::test_actual_chgcar_periodic_meshes_keep_boundary_repetition
+tests/test_boundary_surface_v354.py::test_actual_chgcar_periodic_meshes_keep_boundary_repetition
+  /workspace/scratch/c771f19f02ac/LELE/lele/surface_rendering.py:142: DeprecationWarning: Call to deprecated class vtkTransformPolyDataFilter. (Replaced by vtkTransformFilter.) -- Deprecated since version 9.7.0.
+    tile_filter=vtkTransformPolyDataFilter();tile_filter.SetInputData(poly)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_delta_acceptance_v2131.py::test_palette_against_original_tcl
+1 failed, 2 passed, 6 warnings in 2.74s

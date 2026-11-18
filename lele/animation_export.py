@@ -139,6 +139,8 @@ class _OffscreenScene:
         self.window.SetOffScreenRendering(True)
         self.settings=settings
         self.document=None
+        self.annotation_renderer=None
+        self.annotation_scale = max(1., settings.width * settings.supersample / source_size[0]) if source_size and source_size[0] else settings.supersample
         self.dipole_reference=None
         self.window.SetSize(settings.width*settings.supersample, settings.height*settings.supersample)
         self.window.SetMultiSamples(0)
@@ -170,6 +172,11 @@ class _OffscreenScene:
             self.draw.dipole_vector=selected_dipole(self.document,self.dipole_reference or frame,self.draw.options.dipole_source)
             self.draw.dipole_label=dipole_label(self.document,self.draw.options.dipole_source)
         self.draw.set_scene(frame, volume, volumes=(self.document.volumes if self.document is not None and volume is not None else None))
+        if self.document is not None:
+            from .annotations import AnnotationRenderer
+            if self.annotation_renderer is None:
+                self.annotation_renderer = AnnotationRenderer(self.scene)
+            self.annotation_renderer.set_annotations(self.document.annotations)
         if self.first and not self.camera_supplied:
             self.scene.ResetCamera()
         self.first = False
@@ -181,6 +188,15 @@ class _OffscreenScene:
             self.marker.SetEnabled(1)
             self.draw.attach_corner_labels(self.marker.GetRenderer())
             self.marker.InteractiveOff()
+        from .png_export import scaled_world_text
+        actors = self.annotation_renderer.actors if self.annotation_renderer is not None else []
+        with scaled_world_text(actors, self.annotation_scale):
+            return self._capture_image()
+
+    def _capture_image(self):
+        from PIL import Image
+        from vtkmodules.vtkRenderingCore import vtkWindowToImageFilter
+        from vtkmodules.util.numpy_support import vtk_to_numpy
         self.window.Render()
         capture = vtkWindowToImageFilter()
         capture.SetInput(self.window)
@@ -197,6 +213,8 @@ class _OffscreenScene:
         return image
 
     def close(self):
+        if self.annotation_renderer is not None:
+            self.annotation_renderer.clear()
         self.draw.detach_corner_labels()
         if self.marker.GetEnabled():
             self.marker.SetEnabled(0)

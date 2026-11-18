@@ -1,0 +1,177 @@
+[
+  {
+    "file": "tests/test_gif_dialog.py",
+    "exit_code": 0,
+    "log": "verification/v3.11.0/isolated/test_gif_dialog.log"
+  },
+  {
+    "file": "tests/test_hydrogen_bonds_and_views_v203.py",
+    "exit_code": 0,
+    "log": "verification/v3.11.0/isolated/test_hydrogen_bonds_and_views_v203.log"
+  },
+  {
+    "file": "tests/test_independent_orbitals_v320.py",
+    "exit_code": 5,
+    "log": "verification/v3.11.0/isolated/test_independent_orbitals_v320.log"
+  },
+  {
+    "file": "tests/test_independent_results_v1111.py",
+    "exit_code": 0,
+    "log": "verification/v3.11.0/isolated/test_independent_results_v1111.log"
+  },
+  {
+    "file": "tests/test_isometry_v07.py",
+    "exit_code": 0,
+    "log": "verification/v3.11.0/isolated/test_isometry_v07.log"
+  },
+  {
+    "file": "tests/test_isosurface_controls_v330.py",
+    "exit_code": 0,
+    "log": "verification/v3.11.0/isolated/test_isosurface_controls_v330.log"
+  },
+  {
+    "file": "tests/test_isosurface_integration_v330.py",
+    "exit_code": 0,
+    "log": "verification/v3.11.0/isolated/test_isosurface_integration_v330.log"
+  },
+  {
+    "file": "tests/test_isosurface_render_v330.py",
+    "exit_code": 0,
+    "log": "verification/v3.11.0/isolated/test_isosurface_render_v330.log"
+  },
+  {
+    "file": "tests/test_large_files_v250.py",
+    "exit_code": 0,
+    "log": "verification/v3.11.0/isolated/test_large_files_v250.log"
+  },
+  {
+    "file": "tests/test_lighting_defaults_v380.py",
+    "exit_code": 0,
+    "log": "verification/v3.11.0/isolated/test_lighting_defaults_v380.log"
+  },
+  {
+    "file": "tests/test_long_operations_v270.py",
+    "exit_code": -6,
+    "log": "verification/v3.11.0/isolated/test_long_operations_v270.log"
+  },
+  {
+    "file": "tests/test_mixed_export_v304.py",
+    "exit_code": 0,
+    "log": "verification/v3.11.0/isolated/test_mixed_export_v304.log"
+  },
+  {
+    "file": "tests/test_molden_and_legend_v280.py",
+    "exit_code": 0,
+    "log": "verification/v3.11.0/isolated/test_molden_and_legend_v280.log"
+  },
+  {
+    "file": "tests/test_native_interaction.py",
+    "exit_code": 0,
+    "log": "verification/v3.11.0/isolated/test_native_interaction.log"
+  },
+  {
+    "file": "tests/test_nmr_v350.py",
+    "exit_code": 0,
+    "log": "verification/v3.11.0/isolated/test_nmr_v350.log"
+  },
+  {
+    "file": "tests/test_orca_atom_indices_v3110.py",
+    "exit_code": 0,
+    "log": "verification/v3.11.0/isolated/test_orca_atom_indices_v3110.log"
+  },
+  {
+    "file": "tests/test_orca_loading_v260.py",
+    "exit_code": -6,
+    "log": "verification/v3.11.0/isolated/test_orca_loading_v260.log"
+  },
+  {
+    "file": "tests/test_orca_scan_dialog_v3110.py",
+    "exit_code": 0,
+    "log": "verification/v3.11.0/isolated/test_orca_scan_dialog_v3110.log"
+  },
+  {
+    "file": "tests/test_orca_scan_v3110.py",
+    "exit_code": 0,
+    "log": "verification/v3.11.0/isolated/test_orca_scan_v3110.log"
+  },
+  {
+    "file": "tests/test_orca_v190.py",
+    "exit_code": 0,
+    "log": "verification/v3.11.0/isolated/test_orca_v190.log"
+  },
+  {
+    "file": "tests/test_orca_workflows_ui_v1100.py",
+    "exit_code": 0,
+    "log": "verification/v3.11.0/isolated/test_orca_workflows_ui_v1100.log"
+  },
+  {
+    "file": "tests/test_orca_workflows_v1100.py",
+    "exit_code": 0,
+    "log": "verification/v3.11.0/isolated/test_orca_workflows_v1100.log"
+  },
+  {
+    "file": "tests/test_output_loading_v351.py",
+    "exit_code": 0,
+    "log": "verification/v3.11.0/isolated/test_output_loading_v351.log"
+  },
+  {
+    "file": "tests/test_periodic_fragment_ui_v171.py",
+    "exit_code": 0,
+    "log": "verification/v3.11.0/isolated/test_periodic_fragment_ui_v171.log"
+  },
+  {
+    "file": "tests/test_plane_fields_v370.py",
+    "exit_code": 0,
+    "log": "verification/v3.11.0/isolated/test_plane_fields_v370.log"
+  },
+  {
+    "file": "tests/test_png_export.py",
+    "exit_code": 0,
+    "log": "verification/v3.11.0/isolated/test_png_export.log"
+  },
+  {
+    "file": "tests/test_poscar_export_ui_v391.py",
+    "exit_code": 0,
+    "log": "verification/v3.11.0/isolated/test_poscar_export_ui_v391.log"
+  },
+  {
+    "file": "tests/test_poscar_export_v391.py",
+    "exit_code": 0,
+    "log": "verification/v3.11.0/isolated/test_poscar_export_v391.log"
+  },
+  {
+    "file": "tests/test_poscar_groups.py",
+    "exit_code": 0,
+    "log": "verification/v3.11.0/isolated/test_poscar_groups.log"
+  },
+  {
+    "file": "tests/test_pqr_cube_v2132.py",
+    "exit_code": 0,
+    "log": "verification/v3.11.0/isolated/test_pqr_cube_v2132.log"
+  },
+  {
+    "file": "tests/test_progress_parrot_v3100.py",
+    "exit_code": -6,
+    "log": "verification/v3.11.0/isolated/test_progress_parrot_v3100.log"
+  },
+  {
+    "file": "tests/test_projects_v230.py",
+    "exit_code": 0,
+    "log": "verification/v3.11.0/isolated/test_projects_v230.log"
+  },
+  {
+    "file": "tests/test_qe_cp2k_fixes_v2101.py",
+    "exit_code": 0,
+    "log": "verification/v3.11.0/isolated/test_qe_cp2k_fixes_v2101.log"
+  },
+  {
+    "file": "tests/test_qe_v2100.py",
+    "exit_code": 0,
+    "log": "verification/v3.11.0/isolated/test_qe_v2100.log"
+  },
+  {
+    "file": "tests/test_real_wavecar_reference_v321.py",
+    "exit_code": 0,
+    "log": "verification/v3.11.0/isolated/test_real_wavecar_reference_v321.log"
+  }
+]

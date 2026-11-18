@@ -1,0 +1,139 @@
+{
+  "version": "3.12.0",
+  "date": "2026-11-12",
+  "base_zip": "LELE_v3.11.0_20261112.zip",
+  "base_sha256": "e10f84fd6cf3c7b79b1e307509d2306bedcd07ebae295c2380951c5e1abc9943",
+  "tests": {
+    "passed": 2103,
+    "skipped": 16,
+    "subtests_passed": 78,
+    "seconds": 109.58
+  },
+  "wheel": {
+    "filename": "lele_explorer-3.12.0-py3-none-any.whl",
+    "sha256": "ea565dc030ebca29eeb54a8a066533c087e8ededaeb0a9a2de2e62e7c3eafa82",
+    "matching_python_modules": 174
+  },
+  "changed_files": [
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "ba6382fa8fd616b03b28da2346476ed066eb794845d9cbfca928a3983db6d7c6"
+    },
+    {
+      "path": "README.md",
+      "sha256": "eaefd138e53de912857316c23e8f756d15b720570d4deed6a9591eb8709b14de"
+    },
+    {
+      "path": "README_CN.md",
+      "sha256": "9ad7420945b8fdecb60c90fefb447d8a996f12944a53a6124339c44f39c2236f"
+    },
+    {
+      "path": "dist/lele_explorer-3.12.0-py3-none-any.whl",
+      "sha256": "ea565dc030ebca29eeb54a8a066533c087e8ededaeb0a9a2de2e62e7c3eafa82"
+    },
+    {
+      "path": "docs/FEATURES_v3.12.0_CN.md",
+      "sha256": "2e8c38fc72627d2a7403b830bcfc90481f1af5d0948d7ddc47b3e6ce2b8367d0"
+    },
+    {
+      "path": "docs/VALIDATION_v3.12.0_CN.md",
+      "sha256": "ed0ef1ebe0cb5d0eed4578443f6bf24f5bb6eeacd83559087879d0e419e0e009"
+    },
+    {
+      "path": "lele/__init__.py",
+      "sha256": "b405fcaeb7b360e0eea381bb6ba43fcabbe0e28de3ab33d1d863205976033e3a"
+    },
+    {
+      "path": "lele/app.py",
+      "sha256": "ddeac7e99c3f5c9002692f4c564ce8694a89de32a78f9f33f36eb7f3c3ebb970"
+    },
+    {
+      "path": "lele/batch_export.py",
+      "sha256": "63a6d0235aa170dc6041dc6ec6a94c2b965f92797105e1218029638cc42e0805"
+    },
+    {
+      "path": "lele/document_view.py",
+      "sha256": "a45efa15be0a6be39428e484de073f7cba258feb8ff567565c145ff55a5ab7ce"
+    },
+    {
+      "path": "lele/file_loading.py",
+      "sha256": "01ce6949e9127e9c894fe754c083d3558d9ba29d8b3df4f2c5c5f34c79233c01"
+    },
+    {
+      "path": "lele/import_paths.py",
+      "sha256": "fefdfde3d66c5a697981aeaba3bc150f753898500854919e48ee8beaf33e7128"
+    },
+    {
+      "path": "lele/interaction.py",
+      "sha256": "c2a786df0d47654e1b05ff6f2e5c5c0056593811c03c6d21e52a80a64e6305b6"
+    },
+    {
+      "path": "lele/png_export.py",
+      "sha256": "074d685fd811491cc53f25567f4db22240b3d9d142a657c7a9d0187cb10ddb8e"
+    },
+    {
+      "path": "tests/test_batch_export_v3120.py",
+      "sha256": "33edec55765725acc1558fbdb4afe72297fe29972c5930df6aca52e997d71723"
+    },
+    {
+      "path": "tests/test_document_camera_restore.py",
+      "sha256": "da94674260a8d10014a7cb81118499d394773168557e38398cfbafb685d16665"
+    },
+    {
+      "path": "tests/test_drop_loading_v357.py",
+      "sha256": "43c66722b4a9c30d44b3ce739a8f015593e6ebdb3b4cbb7c3f4bbab26091b306"
+    },
+    {
+      "path": "tests/test_file_head_views_v3120.py",
+      "sha256": "33cd083e4cfb3419920be0fcb74c8c7ba955f0cdee4f1f794a25014d9e74e7d4"
+    },
+    {
+      "path": "tests/test_frame_defaults_v301.py",
+      "sha256": "873d2eba8d8a67d6aaef47bd8b114537e7e04519f0e576591de58d7ccc8fe928"
+    },
+    {
+      "path": "tests/test_import_batches_v3120.py",
+      "sha256": "2420df75842cfe617e88560ae65155be050695d484db438816f36d2323d144a2"
+    },
+    {
+      "path": "tests/test_welcome_v092.py",
+      "sha256": "c63d1c724d5f306fcf1c782b593e8e1f71d63939981a2de4169ec56caaf36faf"
+    },
+    {
+      "path": "verification/v3.12.0/CAMERA_FIX.md",
+      "sha256": "ae762c1a527be7e8b2994ea17aa0682b0ffe665c063895561fd979241f92f1b2"
+    },
+    {
+      "path": "verification/v3.12.0/build_wheel.log",
+      "sha256": "8827b4245cd7c61b31815fcbede7808b22929d5958fc6a81c84bc9a776f564ff"
+    },
+    {
+      "path": "verification/v3.12.0/camera_regression.log",
+      "sha256": "bd026d67234b8a386d22bd46868786c9feeb311f5bd0e5bf6155c3870e63a1e1"
+    },
+    {
+      "path": "verification/v3.12.0/camera_restore_before_after.png",
+      "sha256": "9a9d20d96dd1bfecc3f67cd7d9447b2d818f6a5db316c9c9166a76f009bfcdb2"
+    },
+    {
+      "path": "verification/v3.12.0/full_suite.log",
+      "sha256": "81de3fa7bf5d889517d6c2381e8057e585a52051af169afc6518f264ca8790d8"
+    },
+    {
+      "path": "verification/v3.12.0/full_suite_initial.log",
+      "sha256": "00318b086fd43d121c9edeb19b6a5bab7b32ea6d2245df7711a730352be28132"
+    },
+    {
+      "path": "verification/v3.12.0/import_batches.txt",
+      "sha256": "107a5670a45a57bd872614afd5598b12813d63684c5855a113d47e0e8ec08cbb"
+    },
+    {
+      "path": "verification/v3.12.0/root_integration.log",
+      "sha256": "59e44201ff604bcdf20b0bbcb2ee85ee68a842dbf333038f651df7246a07f7c4"
+    },
+    {
+      "path": "verification/v3.12.0/runtime_versions.txt",
+      "sha256": "ffc2b6cfd5abcc48dde0793d984e272243558f104bf19cac3ee57c112f7b64f0"
+    }
+  ]
+}

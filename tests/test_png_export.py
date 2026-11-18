@@ -55,8 +55,8 @@ def mesh_state(draw):
 def test_default_h_radius_reaches_glyphs_labels_legend_without_changing_bonds(drawing):
     draw,_,_=drawing
     frame=draw.frame;before=frame.positions.copy();bonds=visible_bonds(frame)
-    expected=radius('H')*.5*1.15
-    assert draw.options.bond_scale==.07
+    expected=radius('H')*.45*1.15
+    assert draw.options.bond_scale==.05
     assert draw._atom_radius('H')==pytest.approx(expected)
     assert next(s for s in legend_samples(draw) if s['symbol']=='H')['radius']==pytest.approx(expected)
     glyphs=[a for a in draw.dynamic if a.IsA('vtkActor') and a.GetMapper().IsA('vtkGlyph3DMapper')]
@@ -65,7 +65,7 @@ def test_default_h_radius_reaches_glyphs_labels_legend_without_changing_bonds(dr
     draw.options.labels='Index (1..N)';draw.set_scene(frame)
     assert draw._label_radii[1]==pytest.approx(expected)
     draw.options.atom_palette='GaussView style (Chemcraft)'
-    assert draw._atom_radius('H')==pytest.approx(radius('H')*.5)
+    assert draw._atom_radius('H')==pytest.approx(radius('H')*.45)
     draw.options.atom_palette='Default';draw.options.style='Space filling'
     from lele.display_reference import vesta_radius
     assert draw._atom_radius('H')==vesta_radius('H','Atomic')

@@ -5,6 +5,7 @@ import math
 import numpy as np
 from .core import Frame, unit_cell_edges
 from .periodic_geometry import periodic_basis,normalized_positions,periodic_bonds
+from .lattice_tiles import ordered_range
 
 MAX_DISPLAY_ATOMS=50_000
 MAX_CANDIDATE_TILES=4096
@@ -28,12 +29,14 @@ class BoundaryView:
         return BoundaryView(display, self.source_indices, self.shifts, self.bonds, lines, self.tiles)
 
 
-def boundary_view(frame,bounds,cutoff=1.0):
+def boundary_view(frame,bounds,cutoff=1.0,*,preserve_origin=False):
     """Repeat full cells in integer [start, end) ranges, with shared face edges.
 
     Each copy has every source atom. The displayed frame retains the original
     cell vectors; it is not a larger computational supercell. Copies keep their
     source atom IDs for picking and appearance controls.
+    preserve_origin retains raw source coordinates, zero-first tile ordering,
+    and a saved shifted cell box; the default keeps the legacy wrapped API.
     """
     values=np.asarray(bounds,float)
     if values.shape!=(3,2) or not np.isfinite(values).all() or np.any(values[:,1]<=values[:,0]):
@@ -43,7 +46,7 @@ def boundary_view(frame,bounds,cutoff=1.0):
     limits=values.astype(int)
     cell=periodic_basis(frame)
     if cell is None:raise ValueError('Boundary needs a valid periodic unit cell.')
-    ranges=[range(int(lo),int(hi)) for lo,hi in limits]
+    ranges=[ordered_range(int(lo),int(hi)) if preserve_origin else range(int(lo),int(hi)) for lo,hi in limits]
     count=math.prod(len(r) for r in ranges)
     if count>MAX_CANDIDATE_TILES:raise ValueError('Boundary covers too many cells.')
     n=len(frame.symbols)
@@ -54,12 +57,16 @@ def boundary_view(frame,bounds,cutoff=1.0):
     if phonon is not None:
         graph_frame=frame.clone();graph_frame.positions=np.asarray(phonon['reference_positions']).copy()
     base,floors=normalized_positions(graph_frame)
+    origin = np.zeros(3)
+    if preserve_origin:
+        base = graph_frame.positions.copy()
+        origin = np.asarray(frame.info.get('cell_origin_fractional',(0.,0.,0.)),dtype=float) @ cell
     # Full-cell copies keep their historical ordering. Only boundary atoms
     # receive additional images on the inclusive outer display faces.
     sources=list(np.tile(np.arange(n,dtype=int),count))
     shifts=[tile for tile in tiles for _ in range(n)]
     image_map={(i,tile):k*n+i for k,tile in enumerate(tiles) for i in range(n)}
-    fractional=base@np.linalg.inv(cell)
+    fractional=(base-origin)@np.linalg.inv(cell)
     for i in range(n):
         choices=[]
         for axis,(lo,hi) in enumerate(limits):
@@ -80,13 +87,14 @@ def boundary_view(frame,bounds,cutoff=1.0):
         from .qe_phonons import phonon_offsets
         state={**phonon,'real':np.asarray(phonon['real'])[sources],
                'imaginary':np.asarray(phonon['imaginary'])[sources]}
-        positions+=phonon_offsets(state,shifts-floors[sources])
+        positions+=phonon_offsets(state,shifts if preserve_origin else shifts-floors[sources])
     source_images={}
     for (source,tile),index in image_map.items():
         source_images.setdefault(source,[]).append((tile,index))
     periodic_edges=periodic_bonds(graph_frame,cutoff)
     edges=set()
     for a,b,shift in periodic_edges:
+        if preserve_origin:shift=np.asarray(shift)+floors[a]-floors[b]
         for tile,index in source_images.get(a,()):
             other=image_map.get((b,tuple(np.asarray(tile)+shift)))
             if other is not None:
@@ -97,7 +105,7 @@ def boundary_view(frame,bounds,cutoff=1.0):
     display=Frame([frame.symbols[i] for i in sources],positions,
                   frame.cell.copy(),(False,False,False),info=subset_info(frame.info,sources),atom_appearance=styles)
     from .hydrogen_bonds import repeat_hydrogen_bonds
-    repeat_hydrogen_bonds(frame, display, tiles, image_map=image_map)
+    repeat_hydrogen_bonds(frame, display, tiles, image_map=image_map,wrap=not preserve_origin)
     # Keep each edge one original cell-vector long. Deduplicate shared edges
     # in lattice coordinates, so skew cells retain all internal boundaries.
     grid_edges=set()
@@ -108,8 +116,8 @@ def boundary_view(frame,bounds,cutoff=1.0):
                 p=list(tile);p[other[0]]+=u;p[other[1]]+=v
                 q=p.copy();q[axis]+=1
                 grid_edges.add((tuple(p),tuple(q)))
-    lines=[(np.asarray(p)@cell,np.asarray(q)@cell) for p,q in sorted(grid_edges)]
+    lines=[(np.asarray(p)@cell+origin,np.asarray(q)@cell+origin) for p,q in sorted(grid_edges)]
     if len(tiles) == 1:
-        offset = np.asarray(tiles[0]) @ cell
+        offset = np.asarray(tiles[0]) @ cell + origin
         lines = [(p + offset, q + offset) for p, q in unit_cell_edges(cell)]
     return BoundaryView(display,sources,shifts.reshape(-1,3),sorted(edges),lines,tiles)

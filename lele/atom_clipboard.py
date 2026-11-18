@@ -10,6 +10,15 @@ from .atom_appearance import AtomAppearance
 MIME='application/x-lele-atoms+json'
 
 
+def coordinate_text(frame, selection):
+    """XYZ body in source order, retaining the current Cartesian coordinates."""
+    from .saved_fragments import selected_indices
+    indices = selected_indices(frame, selection)
+    return ''.join(f'{frame.symbols[i]:<3} {frame.positions[i, 0]:.12f} '
+                   f'{frame.positions[i, 1]:.12f} {frame.positions[i, 2]:.12f}\n'
+                   for i in indices)
+
+
 def copy_atoms(frame,selection,cutoff=1.0):
     indices=list(dict.fromkeys(int(i) for i in selection))
     if not indices or any(i<0 or i>=len(frame.symbols) for i in indices):raise ValueError('Select atoms first')
@@ -94,6 +103,10 @@ def paste_atoms(target,fragment,point,cutoff=1.0):
         block_membership=old_blocks+[start+i for i,(_,size) in enumerate(fragment_groups) for _ in range(size)]
     if 'vasp_fixed_axes' in target.info:
         target.info['vasp_fixed_axes']=[list(v) for v in target.info['vasp_fixed_axes']]+[[False]*3 for _ in range(count)]
+    if 'fixed_axes' in target.info:
+        # Added atoms have no source constraint declaration. Preserve unknown
+        # status instead of silently presenting them as explicitly free.
+        target.info['fixed_axes']=[list(v) for v in target.info['fixed_axes']]+[[None]*3 for _ in range(count)]
     from .site_occupancy import site_species
     occupancies=([site_species(target,i) for i in range(n)]+[site_species(fragment,i) for i in range(count)]
                  if 'site_occupancies' in target.info or 'site_occupancies' in fragment.info else None)
@@ -116,4 +129,12 @@ def paste_atoms(target,fragment,point,cutoff=1.0):
         target.info['poscar_groups']=groups_from_ids(target.symbols,block_membership)
     target.energy_ev=None;target.info.pop('energy_source',None);target.info.pop('plane_alignment',None)
     target.info.pop('optimization_converged',None)
+    target.info.pop('coordinate_reorientation',None)
+    # Input isotope masses have no declared values for newly pasted atoms.
+    # Retain the source input text, but do not leave a short per-atom vector.
+    target.info.pop('qe_masses_amu',None)
+    for key in tuple(target.info):
+        if key.startswith(('qe_total_energy_','qe_energy_source_','qe_forces_',
+                           'cartesian_max_force_','cartesian_rms_force_')):
+            target.info.pop(key)
     return list(range(n,n+count))

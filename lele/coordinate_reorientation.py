@@ -77,6 +77,8 @@ def transform_complete_frame(frame,rotation,translation,*,nearest_origin=None,vo
             'image_shifts':shifts.tolist(),'convention':'r_new = (r_old + image_shift @ cell_old) @ R.T + translation'}
     if details:record.update(details)
     frame.positions=new_positions;frame.cell=new_cell
+    from .cell_origin import translate_cell_origin
+    translate_cell_origin(frame,translation)
     frame.periodic_bond_snapshot=edges;frame.hbond_added=hbonds
     if edges is not None and np.any(shifts):
         frame.bond_snapshot=frozenset((i,j) for i,j,s in edges if i!=j and not any(s))

@@ -1,0 +1,83 @@
+{
+  "release": "3.17.0",
+  "base_version": "3.16.0",
+  "regression": {
+    "passed": 2339,
+    "skipped": 14,
+    "subtests": 78,
+    "seconds": 163.66,
+    "omitted": [
+      {
+        "test": "test_supplied_chemcraft_cif_without_spacegroup_metadata",
+        "reason": "Set LELE_CHEMCRAFT_CIF_EXAMPLE to the private 22.cif; it is not redistributed."
+      },
+      {
+        "test": "test_supplied_poscar1_preserves_all_selective_flags_and_rows[unchanged]",
+        "reason": "Set LELE_ROTATION_EXAMPLE_DIR to the private POSCAR1/POSCAR2 directory."
+      },
+      {
+        "test": "test_supplied_poscar1_preserves_all_selective_flags_and_rows[vacuum]",
+        "reason": "Set LELE_ROTATION_EXAMPLE_DIR to the private POSCAR1/POSCAR2 directory."
+      },
+      {
+        "test": "test_supplied_poscar1_preserves_all_selective_flags_and_rows[reindex]",
+        "reason": "Set LELE_ROTATION_EXAMPLE_DIR to the private POSCAR1/POSCAR2 directory."
+      },
+      {
+        "test": "test_actual_chgcar_periodic_meshes_keep_boundary_repetition",
+        "reason": "Set LELE_CHGCAR_EXAMPLE to test the supplied CHGCAR"
+      },
+      {
+        "test": "test_supplied_chgcar_renamed_exact_original_grid",
+        "reason": "Set LELE_CHGCAR_EXAMPLE to the supplied CHGCAR; not redistributed."
+      },
+      {
+        "test": "test_supplied_dpa_cif_matches_explicit_operations",
+        "reason": "Set LELE_DPA_CIF_EXAMPLE to the supplied private DPA CIF."
+      },
+      {
+        "test": "test_actual_poscar_pair_is_a_rigid_reorientation",
+        "reason": "Set LELE_ROTATION_EXAMPLE_DIR to the supplied private POSCAR1/POSCAR2."
+      },
+      {
+        "test": "test_local_axes_match_supplied_rotation_script_without_pymatgen",
+        "reason": "Set LELE_ROTATION_SCRIPT to the supplied v13 rotation script."
+      },
+      {
+        "test": "test_user_poscar_vacuum_append_and_export[poscar-direct]",
+        "reason": "Set LELE_ROTATION_EXAMPLE_DIR to the original POSCAR1 folder"
+      },
+      {
+        "test": "test_user_poscar_vacuum_append_and_export[poscar-cartesian]",
+        "reason": "Set LELE_ROTATION_EXAMPLE_DIR to the original POSCAR1 folder"
+      },
+      {
+        "test": "test_actual_124_atom_example_all_frequencies_and_frozen_rows",
+        "reason": "Set LELE_CP2K_MOLDEN_EXAMPLE to the supplied private example; it is not redistributed."
+      },
+      {
+        "test": "test_real_supplied_qe_files",
+        "reason": "Set LELE_QE_EXAMPLE_DIR; private QE examples are not redistributed"
+      },
+      {
+        "test": "test_real_wavecar_independent_direct_sum",
+        "reason": "No external standard WAVECAR fixture supplied"
+      }
+    ]
+  },
+  "platform": {
+    "system": "Linux",
+    "python": "3.12.14",
+    "qt": "6.12.0",
+    "vtk": "9.7.2",
+    "ase": "3.29.0"
+  },
+  "installed_wheel": {
+    "name": "lele_explorer-3.17.0-py3-none-any.whl",
+    "sha256": "974b422e4ef94348e1328aa8068e8489de4210d2fe6a1467b3bddc758257a15c",
+    "verified_python_files": 184,
+    "copied_assets": 3,
+    "qt_association_menu_and_plot": true,
+    "egl_rendered_atoms": true
+  }
+}

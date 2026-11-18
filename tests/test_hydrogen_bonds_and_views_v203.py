@@ -90,7 +90,7 @@ def test_manual_dashes_follow_display_alignment_and_boundary_images(boundary):
     renderer.options.boundary_enabled=boundary;renderer.options.boundary_bounds=((0,2),(0,1),(0,1))
     renderer.alignment=DisplayAlignment(reference,(0,1,2))
     with patch.object(renderer,'_tube_segments') as draw:renderer.set_scene(source)
-    display=boundary_view(source,renderer.options.boundary_bounds).frame if boundary else source
+    display=boundary_view(source,renderer.options.boundary_bounds,preserve_origin=True).frame if boundary else source
     expected=[]
     for link in hydrogen_bond_links(display,False):
         for k in range(6):

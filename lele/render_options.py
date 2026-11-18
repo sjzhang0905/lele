@@ -11,12 +11,12 @@ class RenderOptions:
     bond_palette: str = 'Element'
     surface_finish: str = 'Glossy'
     element_colors: dict[str, str] = field(default_factory=dict)
-    atom_scale: float = 0.50
+    atom_scale: float = 0.45
     space_filling_radii: str = 'Atomic'
     space_filling_scale: float = 1.0
-    bond_scale: float = 0.07
+    bond_scale: float = 0.05
     bond_model: str = 'Chemcraft pair ranges'
-    bond_cutoff: float = 1.0
+    bond_cutoff: float = 0.88
     background: str = '#FFFFFF'
     bonds: bool = True
     hydrogen_bonds: bool = False
@@ -32,25 +32,28 @@ class RenderOptions:
     axes_basis: str = 'Auto'      # Auto: periodic abc, molecular XYZ; explicit XYZ / abc
     axes_length: float = 2.5     # Cartesian axis length in Angstrom at origin
     volume_iso: float = 0.035
-    volume_opacity: float = 0.65
+    volume_opacity: float = 0.90
     volume_signs: str = "Both"
     volume_independent_negative: bool = False
     volume_negative_iso: float = .035
-    volume_positive_color: str = '#EC6B46'
-    volume_negative_color: str = '#556EE6'
+    volume_positive_color: str = '#80E666'  # VMD lime (0.5, 0.9, 0.4)
+    volume_negative_color: str = '#00C2FF'  # VMD cyan3 (0.0, 0.76, 1.0)
     volume_independent_opacity: bool = False
-    volume_negative_opacity: float = .65
+    volume_negative_opacity: float = .90
     volume_representation: str = 'Surface'
     volume_line_width: float = 1.0
     volume_smooth_normals: bool = True
     volume_surfaces: list[dict] = field(default_factory=list)
+    volume_hidden_regions: list[dict] = field(default_factory=list)
     show_volume: bool = True
     dipole_mode: str = 'Off'
     dipole_source: str = 'permanent'
     dipole_scale: float = .3
     boundary_enabled: bool = True
     boundary_bounds: tuple = ((0.,1.),(0.,1.),(0.,1.))
+    boundary_preserve_origin: bool = True
     lattice_planes: list[dict] = field(default_factory=list)
+    fitted_plane_style: dict = field(default_factory=dict)
     polyhedra_centers: str = 'Auto'
     polyhedra_ligands: str = 'Auto'
     polyhedra_search: str = 'Covalent radii'
@@ -63,6 +66,9 @@ class RenderOptions:
     polyhedra_show_vertices: bool = True
     element_pair_rules: list[dict] = field(default_factory=list)
     pair_rules_only: bool = False
+    light_enabled: tuple = (True, True, False, False)
+    light_intensities: tuple = (.85, .45, .45, .35)
+    light_positions: tuple = ((-.1, .1, 1.), (1., 2., .5), (-1., 2., -1.), (-1., -1., 0.))
 
     def __post_init__(self):
         # Projects saved before 2.13.4 use the palette's former name.

@@ -1,0 +1,136 @@
+..............................ssss...................................... [  3%]
+........................................................................ [  7%]
+........................................................................ [ 10%]
+.......................................................s................ [ 14%]
+..........................................................s............. [ 17%]
+..............s.................................................ss [ 20%]
+........................................................................ [ 24%]
+........................................................................ [ 28%]
+........................................................................ [ 31%]
+.....F........FFF.F.................................................sss. [ 35%]
+........................................................................ [ 38%]
+........................................................................ [ 42%]
+........................................................................ [ 45%]
+........................................................................ [ 49%]
+........................................................................ [ 52%]
+........................................................................ [ 56%]
+....s................................................................... [ 59%]
+........................................................................ [ 63%]
+........................................................................ [ 67%]
+........................................................................ [ 70%]
+....................................................ss.................. [ 74%]
+......................................F...FFF........................... [ 77%]
+..................................................................... [ 81%]
+..................................................................... [ 84%]
+..F........................................................................... [ 88%]
+........................................................................ [ 91%]
+........................................................................ [ 95%]
+........................................................................ [ 98%]
+.....................                                                    [100%]
+=================================== FAILURES ===================================
+_____ test_periodic_octahedron_has_six_images_eight_faces_and_twelve_edges _____
+tests/test_crystal_v220.py:96: in test_periodic_octahedron_has_six_images_eight_faces_and_twelve_edges
+    assert len(polys) == 1
+E   assert 0 == 1
+E    +  where 0 = len([])
+________ test_boundary_repeats_complete_polyhedra_and_keeps_source_ids _________
+tests/test_crystal_v220.py:173: in test_boundary_repeats_complete_polyhedra_and_keeps_source_ids
+    assert len(view.polyhedra) == 12 and len(view.polyhedron_actors) == 12
+E   assert (0 == 12)
+E    +  where 0 = len([])
+E    +    where [] = <lele.renderer.MoleculeRenderer object at 0x7f24685f1bb0>.polyhedra
+______ test_polyhedral_atoms_can_be_hidden_and_clipping_applies_to_faces _______
+tests/test_crystal_v220.py:185: in test_polyhedral_atoms_can_be_hidden_and_clipping_applies_to_faces
+    assert view.polyhedron_actors[0].GetMapper().GetNumberOfClippingPlanes() == 1
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   IndexError: list index out of range
+______ test_polyhedral_style_keeps_frozen_long_bonds_and_manual_removals _______
+tests/test_crystal_v220.py:195: in test_polyhedral_style_keeps_frozen_long_bonds_and_manual_removals
+    assert len(view.polyhedra[0]['source'].ligand_indices) == 5
+               ^^^^^^^^^^^^^^^^^
+E   IndexError: list index out of range
+_____ test_alignment_rotates_planes_and_polyhedra_without_modifying_source _____
+tests/test_crystal_v220.py:223: in test_alignment_rotates_planes_and_polyhedra_without_modifying_source
+    np.testing.assert_allclose(view.polyhedra[0]['vertices'],
+                               ^^^^^^^^^^^^^^^^^
+E   IndexError: list index out of range
+________________________ test_ideal_octahedron_metrics _________________________
+tests/test_rules_analysis_v230.py:122: in test_ideal_octahedron_metrics
+    assert data['coordination'] == 6 and data['shape'] == 'Octahedron'
+E   assert (0 == 6)
+_________ test_source_metrics_ignore_boundary_repeats_and_display_cuts _________
+tests/test_rules_analysis_v230.py:168: in test_source_metrics_ignore_boundary_repeats_and_display_cuts
+    assert data['coordination'] == 6 and data['volume_A3'] == pytest.approx(32/3)
+E   assert (0 == 6)
+________ test_trajectory_keeps_zero_coordination_and_atom_sequence_gaps ________
+tests/test_rules_analysis_v230.py:177: in test_trajectory_keeps_zero_coordination_and_atom_sequence_gaps
+    assert [r['coordination'] for r in rows] == [1, 0, None]
+E   assert [0, 0, None] == [1, 0, None]
+E     
+E     At index 0 diff: 0 != 1
+E     Use -v to get more diff
+_______________ test_polyhedron_dialog_ligand_csv_and_frame_link _______________
+tests/test_rules_analysis_v230.py:189: in test_polyhedron_dialog_ligand_csv_and_frame_link
+    assert dialog.table.rowCount() == 1 and dialog.ligands.rowCount() == 6
+E   assert (1 == 1 and 0 == 6)
+E    +  where 1 = <built-in method rowCount of PySide6.QtWidgets.QTableWidget object at 0x7f244a8deb80>()
+E    +    where <built-in method rowCount of PySide6.QtWidgets.QTableWidget object at 0x7f244a8deb80> = <PySide6.QtWidgets.QTableWidget(0x4337f9e0) at 0x7f244a8deb80>.rowCount
+E    +      where <PySide6.QtWidgets.QTableWidget(0x4337f9e0) at 0x7f244a8deb80> = <lele.polyhedron_dialog.PolyhedronDialog(0x4bda8160) at 0x7f24587042c0>.table
+E    +  and   0 = <built-in method rowCount of PySide6.QtWidgets.QTableWidget object at 0x7f244a8de240>()
+E    +    where <built-in method rowCount of PySide6.QtWidgets.QTableWidget object at 0x7f244a8de240> = <PySide6.QtWidgets.QTableWidget(0x4b991b50) at 0x7f244a8de240>.rowCount
+E    +      where <PySide6.QtWidgets.QTableWidget(0x4b991b50) at 0x7f244a8de240> = <lele.polyhedron_dialog.PolyhedronDialog(0x4bda8160) at 0x7f24587042c0>.ligands
+----------------------------- Captured stderr call -----------------------------
+This plugin does not support propagateSizeHints()
+_ test_selected_outline_is_a_dashed_camera_facing_ring_and_keeps_original_colors _
+tests/test_structure_edits_v2120.py:160: in test_selected_outline_is_a_dashed_camera_facing_ring_and_keeps_original_colors
+    mesh=actor.GetMapper().GetInput();assert mesh.GetNumberOfPolys()==0 and mesh.GetNumberOfLines()==32
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   assert (0 == 0 and 1 == 32)
+E    +  where 0 = <built-in method GetNumberOfPolys of PolyData object at 0x7f24590b78e0>()
+E    +    where <built-in method GetNumberOfPolys of PolyData object at 0x7f24590b78e0> = <PolyData(0x32166cf0) at 0x7f24590b78e0>.GetNumberOfPolys
+E    +  and   1 = <built-in method GetNumberOfLines of PolyData object at 0x7f24590b78e0>()
+E    +    where <built-in method GetNumberOfLines of PolyData object at 0x7f24590b78e0> = <PolyData(0x32166cf0) at 0x7f24590b78e0>.GetNumberOfLines
+=============================== warnings summary ===============================
+../../../../opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+  /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+tests/test_acceptance_regressions_v340.py: 7 warnings
+tests/test_boundary_surface_v354.py: 20 warnings
+tests/test_crystal_v220.py: 2 warnings
+tests/test_feature_integration_v370.py: 6 warnings
+tests/test_field_mapping_v340.py: 24 warnings
+tests/test_fragment_preview_v380.py: 1 warning
+tests/test_isosurface_integration_v330.py: 10 warnings
+tests/test_isosurface_render_v330.py: 6 warnings
+tests/test_periodic_fragment_ui_v171.py: 8 warnings
+tests/test_renderer.py: 4 warnings
+tests/test_selection_ui_v090.py: 4 warnings
+tests/test_surface_erase_v370.py: 12 warnings
+tests/test_volumetric_view_v320.py: 3 warnings
+  /workspace/scratch/c771f19f02ac/LELE/lele/surface_rendering.py:103: DeprecationWarning: Call to deprecated class vtkTransformPolyDataFilter. (Replaced by vtkTransformFilter.) -- Deprecated since version 9.7.0.
+    transformed=vtkTransformPolyDataFilter();transformed.SetInputConnection(contour.GetOutputPort())
+
+tests/test_acceptance_regressions_v340.py: 2 warnings
+tests/test_boundary_surface_v354.py: 22 warnings
+tests/test_field_mapping_v340.py: 5 warnings
+tests/test_surface_erase_v370.py: 3 warnings
+  /workspace/scratch/c771f19f02ac/LELE/lele/surface_rendering.py:142: DeprecationWarning: Call to deprecated class vtkTransformPolyDataFilter. (Replaced by vtkTransformFilter.) -- Deprecated since version 9.7.0.
+    tile_filter=vtkTransformPolyDataFilter();tile_filter.SetInputData(poly)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_crystal_v220.py::test_periodic_octahedron_has_six_images_eight_faces_and_twelve_edges
+FAILED tests/test_crystal_v220.py::test_boundary_repeats_complete_polyhedra_and_keeps_source_ids
+FAILED tests/test_crystal_v220.py::test_polyhedral_atoms_can_be_hidden_and_clipping_applies_to_faces
+FAILED tests/test_crystal_v220.py::test_polyhedral_style_keeps_frozen_long_bonds_and_manual_removals
+FAILED tests/test_crystal_v220.py::test_alignment_rotates_planes_and_polyhedra_without_modifying_source
+FAILED tests/test_rules_analysis_v230.py::test_ideal_octahedron_metrics - ass...
+FAILED tests/test_rules_analysis_v230.py::test_source_metrics_ignore_boundary_repeats_and_display_cuts
+FAILED tests/test_rules_analysis_v230.py::test_trajectory_keeps_zero_coordination_and_atom_sequence_gaps
+FAILED tests/test_rules_analysis_v230.py::test_polyhedron_dialog_ligand_csv_and_frame_link
+FAILED tests/test_structure_edits_v2120.py::test_selected_outline_is_a_dashed_camera_facing_ring_and_keeps_original_colors
+10 failed, 2006 passed, 16 skipped, 140 warnings, 78 subtests passed in 182.84s (0:03:02)

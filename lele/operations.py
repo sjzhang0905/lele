@@ -11,15 +11,16 @@ from functools import wraps
 from time import monotonic
 
 from PySide6.QtCore import QEventLoop, QThread, QTimer, Qt, Signal, QObject, QEvent
-from PySide6.QtWidgets import QApplication, QProgressDialog, QWidget
+from PySide6.QtWidgets import QApplication, QWidget
 
 from .output_text import output_read_session, LoadCancelled, check_load_cancelled
+from .progress_dialog import LeleProgressDialog
 
 DELAY_MS = 400
 _ui_scope = ContextVar('lele_ui_operation', default=None)
 
 
-class OperationProgress(QProgressDialog):
+class OperationProgress(LeleProgressDialog):
     def __init__(self, parent, title, cancellable=False):
         super().__init__(title + '…', 'Cancel' if cancellable else '', 0, 0, parent)
         self.setWindowTitle(title)
@@ -60,7 +61,8 @@ class OperationProgress(QProgressDialog):
             QApplication.processEvents(QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents)
         finally:self._pumping=False
 
-    def finish(self):
+    def finish(self, completed=True):
+        if completed:self.mark_complete()
         self._finishing=True;self.timer.stop();self.close();self.deleteLater()
 
     def reject(self):
@@ -124,12 +126,14 @@ def run_data_task(parent, title, function, *, cancellable=False):
     worker.finished.connect(loop.quit,Qt.ConnectionType.QueuedConnection)
     if cancellable:progress.canceled.connect(worker.requestInterruption)
     guard=InputGuard(progress);app.installEventFilter(guard)
+    completed=False
     try:
         worker.start();loop.exec();worker.wait()
         if worker.error is not None:raise worker.error
+        completed=True
         return worker.value
     finally:
-        app.removeEventFilter(guard);progress.finish();worker.deleteLater()
+        app.removeEventFilter(guard);progress.finish(completed);worker.deleteLater()
         for timer in timers:timer.start()
         if outer is not None:outer.started=monotonic();outer.timer.start()
 
@@ -143,11 +147,13 @@ def ui_operation(parent,title):
         yield _ui_scope.get();return
     progress=OperationProgress(parent,title)
     token=_ui_scope.set(progress)
+    completed=False
     try:
         with output_read_session(progress=progress.checkpoint):
             yield progress
+        completed=True
     finally:
-        _ui_scope.reset(token);progress.finish()
+        _ui_scope.reset(token);progress.finish(completed)
 
 
 def ui_busy():

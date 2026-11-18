@@ -41,8 +41,10 @@ class StartupTests(unittest.TestCase):
             main_thread = threading.get_ident()
             entered, release = threading.Event(), threading.Event()
             import_threads, canvas_threads = [], []
+            painted_sections = set()
             real_load = backend_loader.load_backend_modules
             def gated_load():
+                assert {'title', 'parrot'} <= painted_sections, painted_sections
                 import_threads.append(threading.get_ident())
                 entered.set()
                 assert release.wait(5), 'GUI did not respond during preload'
@@ -86,12 +88,18 @@ class StartupTests(unittest.TestCase):
             class PaintProbe(QObject):
                 def eventFilter(self, watched, event):
                     global painted
-                    if event.type() == QEvent.Type.Paint and not painted:
-                        assert not (scientific & {n.split('.')[0] for n in sys.modules})
-                        painted = True
+                    if event.type() == QEvent.Type.Paint:
+                        if watched is window.welcome_page.title_label:
+                            painted_sections.add('title')
+                        if watched is window.welcome_page.parrot_walk:
+                            painted_sections.add('parrot')
+                        if not painted:
+                            assert not (scientific & {n.split('.')[0] for n in sys.modules})
+                            painted = True
                     return False
             probe = PaintProbe(window)
             window.welcome_page.title_label.installEventFilter(probe)
+            window.welcome_page.parrot_walk.installEventFilter(probe)
             ticks = 0
             def tick():
                 global ticks
@@ -113,19 +121,46 @@ class StartupTests(unittest.TestCase):
                     assert painted and ticks >= 3
                     assert import_threads and main_thread not in import_threads
                     assert canvas_threads == [main_thread]
-                    assert window.doc is None and window.vtk.initialize_count == 0
+                    assert window.doc is None and window.vtk.initialize_count == 1
+                    assert window._vtk_initialized and window.renderer.frame is None
+                    assert window.renderer.source_frame is None
+                    assert window.scene.GetViewProps().GetNumberOfItems() == 0
                     assert window.renderer.options is window.render_options
                     assert window.render_options.atom_palette == 'Pastel'
                     assert window.render_options.background == '#eeeeee'
                     assert window.render_options.bond_cutoff == 1.3
                     assert window.canvas_stack.currentWidget() is window.welcome_page
                     assert {'numpy', 'ase', 'vtkmodules'} <= {n.split('.')[0] for n in sys.modules}
-                    # A ready empty canvas does not need the ASE IO registry,
-                    # SciPy geometry/optimization or image-export plugins.
-                    assert 'ase.io' not in sys.modules
-                    assert 'scipy.spatial' not in sys.modules
-                    assert 'PIL.Image' not in sys.modules
+                    # Ready includes first-structure dependencies and native
+                    # initialization, with no user file required to trigger it.
+                    for name in ('ase.io', 'ase.neighborlist', 'ase.constraints',
+                                 'scipy.spatial', 'PIL.Image', 'lele.orca_results',
+                                 'lele.cp2k_results', 'lele.surface_rendering'):
+                        assert name in sys.modules, name
+                    from ase.io.formats import ioformats
+                    from lele.legacy_converter import GENERIC_SUFFIX_READERS
+                    for _, format_name in GENERIC_SUFFIX_READERS.values():
+                        assert ioformats[format_name].module_name in sys.modules, format_name
                     timer.stop()
+                    # Opening the first actual structure must not become a
+                    # second scientific-library preload phase.
+                    import tempfile
+                    from pathlib import Path
+                    with tempfile.TemporaryDirectory() as directory:
+                        samples = {
+                            'first.pdb': 'HETATM    1  O   HOH A   1       0.000   0.000   0.000  1.00  0.00           O\\nEND\\n',
+                            'next.xyz': '3\\nwater\\nO 0 0 0\\nH .96 0 0\\nH -.24 .92 0\\n',
+                        }
+                        for name, text in samples.items():
+                            before = set(sys.modules)
+                            path = Path(directory) / name
+                            path.write_text(text)
+                            window._open_path_now(path)
+                            assert window.doc is not None and window.doc.path == path
+                            assert window.vtk.initialize_count == 1
+                            new_heavy = [module for module in set(sys.modules) - before
+                                         if module.split('.')[0] in scientific | {'PIL'}]
+                            assert not new_heavy, (name, new_heavy)
                     window.close()
             timer = QTimer()
             timer.timeout.connect(tick)

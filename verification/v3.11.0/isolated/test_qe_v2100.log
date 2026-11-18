@@ -1,0 +1,4 @@
+....................s                                                    [100%]
+=========================== short test summary info ============================
+SKIPPED [1] tests/test_qe_v2100.py:246: Set LELE_QE_EXAMPLE_DIR; private QE examples are not redistributed
+20 passed, 1 skipped in 1.57s

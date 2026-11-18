@@ -22,8 +22,23 @@ BOND_PALETTES = ('Element', 'Neutral gray')
 SURFACE_FINISHES = ('Balanced', 'Glossy', 'Matte')
 CUSTOM_KEY = '__custom__'
 
+# Final display RGB overrides. Keep the Sibyl reference table intact.
+DEFAULT_ELEMENT_COLORS = {
+    'Na': '#167FA0',  # Deep cyan, clear of Li and K.
+    'K':  '#7946A4',
+    'Ti': '#769FC3',  # Blue-gray rather than nearly white Ti / gray V.
+    'V':  '#A98B32',
+    'Cr': '#257052',
+    'Mn': '#BD4086',
+    'Fe': '#A34E21',
+    'Co': '#345DA7',
+    'Ni': '#36AD80',
+    'Zn': '#D9BA7D',
+    'Sn': '#425867',
+}
 
-def _preset(style='Ball and stick', atom_scale=.5, bond_scale=.07,
+
+def _preset(style='Ball and stick', atom_scale=.45, bond_scale=.05,
             background='#FFFFFF', bonds=True, atom_palette='Default',
             bond_palette='Element', surface_finish='Glossy',
             space_filling_radii='Atomic', space_filling_scale=1.):
@@ -77,12 +92,12 @@ def validate_preset(values):
         raise ValueError('Invalid VESTA radius type')
     colors = values.get('element_colors', {})
     if not isinstance(colors, dict):
-        raise ValueError('Invalid element colours')
+        raise ValueError('Invalid element colors')
     for symbol, value in colors.items():
         if not isinstance(symbol, str) or not re.fullmatch(r'[A-Z][a-z]?', symbol):
             raise ValueError('Invalid element symbol')
         if not isinstance(value, str) or not re.fullmatch(r'#[0-9a-fA-F]{6}', value):
-            raise ValueError('Invalid element colour')
+            raise ValueError('Invalid element color')
     normalized['element_colors'] = dict(colors)
     if normalized['style'] not in STYLE_MODES:
         raise ValueError('Unsupported rendering style')
@@ -101,11 +116,11 @@ def validate_preset(values):
         normalized[key] = float(value)
     c = normalized['background']
     if not isinstance(c, str) or len(c) != 7 or c[0] != '#':
-        raise ValueError('Invalid background colour')
+        raise ValueError('Invalid background color')
     try:
         int(c[1:], 16)
     except ValueError as exc:
-        raise ValueError('Invalid background colour') from exc
+        raise ValueError('Invalid background color') from exc
     if not isinstance(normalized['bonds'], bool):
         raise ValueError('Invalid bonds flag')
     return normalized
@@ -117,7 +132,7 @@ def apply_preset(options, values):
 
 
 def mix_color(hex_color, white_share):
-    """Return a pastel shade; input colour is left unchanged."""
+    """Return a pastel shade; input color is left unchanged."""
     raw = hex_color.lstrip('#')
     source = (int(raw[i:i+2], 16) for i in (0, 2, 4))
     return '#' + ''.join(f'{round(x*(1-white_share)+255*white_share):02X}' for x in source)
@@ -132,7 +147,10 @@ def element_palette_color(options, symbol, *, for_bond=False):
     default=LEGACY_ELEMENT_COLORS.get(symbol,'#A9AEB5') if scheme=='Legacy LELE' else colour(symbol)
     if scheme in ('Default', 'Sibyl'):
         from .sibyl_palette import SIBYL_COLORS
-        default=mix_color(mix_color(SIBYL_COLORS.get(symbol,default),.10),.05)
+        # Preserve the original two lightening steps, then add the requested
+        # 15% white once at lookup. Explicit user colors below stay unchanged.
+        default = DEFAULT_ELEMENT_COLORS.get(symbol) or mix_color(
+            mix_color(mix_color(SIBYL_COLORS.get(symbol, default), .10), .05), .15)
     if scheme == 'VESTA':
         from .vesta_palette import VESTA_COLORS
         default = VESTA_COLORS.get(symbol, VESTA_COLORS['XX'])

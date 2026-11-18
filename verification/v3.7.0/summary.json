@@ -1,0 +1,25 @@
+{
+  "version": "3.7.0",
+  "date": "2026-11-10",
+  "full_suite": {
+    "passed": 1806,
+    "skipped": 13,
+    "subtests_passed": 78,
+    "failures": 0,
+    "errors": 0,
+    "seconds": 174.19
+  },
+  "scope": "Linux offscreen Qt/VTK; Windows desktop not directly exercised",
+  "visual_checks": [
+    "HKL field+contours+atoms PNG",
+    "full fitted-plane slice PNG",
+    "masked isosurface and independent slice PNG",
+    "NEB caterpillar 2400px PNG",
+    "NEB path curve PNG"
+  ],
+  "limitations": [
+    "NEB parser checked with synthetic OUTCAR, no user NEB outputs supplied",
+    "Fitted planes retain selection-dependent lifetime; refit after selection/frame change"
+  ],
+  "private_input_samples_included": false
+}

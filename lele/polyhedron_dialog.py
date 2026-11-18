@@ -3,9 +3,8 @@ from copy import deepcopy
 import csv
 import numpy as np
 from PySide6.QtCore import Qt, QSignalBlocker
-from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, QSpinBox,
-    QCheckBox, QPushButton, QTableWidget, QTableWidgetItem, QAbstractItemView,
-    QHeaderView, QSplitter, QFileDialog, QComboBox, QProgressDialog, QApplication)
+from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QLabel, QSpinBox, QCheckBox, QPushButton, QTableWidget, QTableWidgetItem, QAbstractItemView, QHeaderView, QSplitter, QComboBox, QApplication
+from .dialog_policy import QDialog, QFileDialog
 from .polyhedron_analysis import (METRIC_COLUMNS, analyze_polyhedra, summary_rows,
                                   ligand_rows, polyhedron_series)
 from .operations import gui_operation,run_data_task
@@ -138,7 +137,8 @@ class PolyhedronCurveDialog(QDialog):
         layout.addWidget(self.metric_combo)
         self.summary = QLabel();self.summary.setWordWrap(True);layout.addWidget(self.summary)
         from matplotlib.figure import Figure
-        from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg, NavigationToolbar2QT
+        from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
+        from .figure_export import FigureExportToolbar as NavigationToolbar2QT
         self.figure = Figure(figsize=(8, 5), tight_layout=True);self.canvas = FigureCanvasQTAgg(self.figure)
         self.canvas.get_default_filename = lambda:str(document.path.with_name(document.path.stem+'_polyhedron_trajectory.png'))
         layout.addWidget(NavigationToolbar2QT(self.canvas, self));layout.addWidget(self.canvas, 1)

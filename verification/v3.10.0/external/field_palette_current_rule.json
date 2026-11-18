@@ -1,0 +1,22 @@
+{
+  "element_count": 111,
+  "whitening_steps": [
+    0.1,
+    0.05,
+    0.15
+  ],
+  "rounding": "round each channel to 8-bit after each step",
+  "checks": {
+    "source_sha256_matches": true,
+    "raw_palette_matches": true,
+    "atom_colors_match_111": true,
+    "bond_colors_match_111": true,
+    "legend_colors_match_111": true
+  },
+  "examples": {
+    "H": "#DADADA",
+    "C": "#ADADAD",
+    "N": "#5858EC",
+    "O": "#EC4646"
+  }
+}

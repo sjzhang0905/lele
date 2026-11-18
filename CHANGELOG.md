@@ -1,5 +1,123 @@
 # Changelog
 
+## 3.17.0 · 2026-11-18
+
+- Associate CP2K geometry/cell optimization or MD outputs with position trajectories from the loaded-files menu. Link xTB optimization cycles, gradient norms and orbitals to their XYZ geometries.
+- Retain sparse trajectory mappings in curve selection, CSV export and portable projects.
+- Copy the selected text or the whole Results / info panel with Ctrl+C. Remove the raw source text panes and the global-index explanation in Atoms selection.
+
+## 3.16.0 — 2026-11-18
+
+- Reuse VTK atom and bond geometry during fragment rotation, including periodic images. Coalesce pointer paints and retain the final mouse displacement.
+- Read DIM-GROUP XSF structures and named real-space 3D grids, with skew bases, endpoint sampling, multiple datasets and signed isosurfaces.
+- Distinguish eleven common elements in the default palette and use the same palette for element selection swatches.
+- Center the three Style sliders on their default physical values while retaining their previous ranges and per-document settings.
+- Apply a neutral gray main-window title bar.
+
+## 3.15.0 — 2026-11-17
+
+- Correct molecular CUBE periodicity and preserve selected Boundary images for measurements.
+- Embed live VMD-style field mapping controls in the surface-layer editor; correct out-of-range source switches and simplify scalar bars.
+- Select the final optimization frame for Scan step parents.
+- Add loaded-document rename, unload and open-folder context actions.
+- Remember cropped PNG export choices and omit scene axes while cropping.
+- Inherit main-canvas appearance in NEB caterpillar surroundings while preserving path atom styling.
+- Use owner-relative dialog stacking instead of global topmost windows.
+
+
+## 3.14.0 — 2026-11-13
+
+- Confine zero-based ORCA atom indices to Label / Atom labels modes; use one-based atom indices in coordinate tables, editors, selection controls, tooltips and exported analysis tables.
+- Add a synchronized angle slider and live, non-destructive canvas preview for selected-axis rotation. Cancel preserves source geometry; Rotate commits one undoable edit, and changed sources invalidate an open preview.
+- Reduce the default atom-size slider from 47 to 45 and bond thickness from 6 to 5. Add selected-atom size multipliers that persist through projects, replication and image export.
+- Place the application menu above the left sidebar, returning the remainder of that row to the canvas.
+- Add alternating periodic copies in 0, +1, −1, +2, −2 order. Boundary remains display-only; Build supercell adds real atoms and enlarges the cell, with preserved source coordinates, origin-aware outlines, connectivity and undo.
+
+## 3.13.0 — 2026-11-13
+
+- Remove the ORCA-number column from Current selection while retaining it in other index tools.
+- Add documented atom-selection expressions for elements, index ranges, booleans and nearest-selected-atom distance, including periodic minimum images, cancellation and undo.
+- Present menu forms, help, file/color pickers and analysis windows as topmost modeless dialogs. Guard source-dependent acceptance against changed documents, geometry, selection and nested editor lifetimes.
+- Wait for the complete visible welcome paint, automatically preload common readers/ASE/SciPy dependencies, then warm the hidden VTK context and common rendering pipelines before Ready.
+
+## 3.12.0 — 2026-11-12
+
+- Sort each multi-file import batch by Windows logical filename ordering on Windows, with a natural numeric fallback on other platforms; preserve the resulting order in the Files tree.
+- Discover supported scientific files recursively in dropped folders, with cancellation, deduplication and bounded format probes off the GUI thread.
+- Add File → Convert all and Export PNG all for remembered per-document frames/views, unique output filenames and cancellation/failure summaries.
+- Explicitly invalidate the active VTK camera after restoring its fields, preventing cached matrices from rendering the previously viewed document until the next mouse gesture.
+- End interrupted native drags on focus loss and file switches; file headings restore the last viewed frame while explicit geometry nodes retain their selected frame.
+
+## 3.11.0 — 2026-11-12
+
+- Remove the redundant Selected labels buttons; retain all modes in the atom appearance Label dropdown.
+- Add explicit zero-based ORCA atom numbering to labels, atom/coordinate/selection views and atom-index controls, alongside existing one-based indices.
+- Add global-index and ORCA-index range selection to Atoms selection; combine filled rows without duplicate atoms.
+- Copy the selected coordinates as an XYZ body with original Cartesian positions and no header or recentering.
+- Rotate connected fragments around an atom-defined axis, or set a selected four-atom dihedral, with undo and preserved connectivity.
+- Group ORCA relaxed scan optimization histories by scan step; plot final endpoint energies separately and support simultaneous coordinate paths, incomplete-point markers, source-geometry navigation and CSV export.
+
+## 3.10.0 — 2026-11-11
+
+- Replace Current selection's table with copyable, space-aligned monospace plain text; retain occupancy, coordinates and constraints, and defer hidden-panel formatting.
+- Open the application maximized while retaining normal window restoration.
+- Add View → a/b/c along the displayed direct lattice vectors, including oblique cells and trajectory display rotation; disable these views without a valid periodic cell.
+- Show the original walking Lele artwork above every existing import, processing and export progress bar. Its horizontal position follows reported progress; unknown-duration work walks in place.
+- Lower the default Chemcraft bond-distance multiplier from 1.00 to 0.88, synchronizing slider and numeric input while retaining explicitly saved project settings and manual bonds.
+
+## 3.9.1 — 2026-11-11
+
+- Draw selected atoms with continuous closed green rings, retaining their existing width and camera-facing behavior.
+- Prefix POSCAR export filenames with POSCAR, normalizing existing prefix case without duplicating it; check overwrite after filename normalization.
+- Ask whether to group equal elements for Direct and Cartesian POSCAR export. Group only an export copy in stable first-appearance order after occupancy projection, retaining per-atom constraints; No preserves existing species blocks and atom order.
+
+## 3.9.0 — 2026-11-11
+
+- Add scalar-field addition and subtraction with explicit channel selection, compatible-grid validation, source provenance and derived-field project/export support.
+- Rename Selection to Current selection and add Atoms selection after Fragment. Element-local one-based indices/ranges select atoms across element rows, including mixed-occupancy sites.
+- Add canvas-only 1–9 fragment slots: Ctrl replaces a slot, a plain digit recalls it, and Shift adds selected atoms. Preserve existing fragment metadata, undo and atom-identity remapping.
+
+## 3.8.0 — 2026-11-10
+
+- Add PARCHG-based constant-height and constant-current isodensity STM maps, normal sampling for skew cells, spin channels, map repeats and scientific-data export.
+- Simulate powder XRD from structures, including mixed occupancies, atomic scattering factors, explicit reflection multiplicities, LP/B factors and broadened profiles.
+- Prefer SVG for plot exports; unify raster resolution and smoothing across plotting windows, legend and NEB illustrations.
+- Add movable, rotatable world-space canvas text with undo, per-document project persistence and PNG/GIF export.
+- Cache fragment geometry during Alt-middle translation, rebuilding the complete view only after the gesture.
+- Move Field controls to the sidebar, block wheel changes to combo/spin editors, remove GBW loading and conversion, and append structure-export suffixes consistently.
+- Adjust default atom/bond sizes and palette, use VMD lime/cyan3 surfaces at 90% opacity, thicken selected-atom halos and add four independently switchable directional lights (two initially enabled).
+
+## 3.7.0 — 2026-11-10
+
+- Hide isosurface portions inside through-depth screen rectangles without changing sampled fields. Exact mesh subtraction handles crossing triangles, mapped colors and Boundary copies; masks follow model coordinates, remain per-document and support undo, restore and project persistence.
+- Merge the three duplicate crystal menu entrances into Edit → Crystal tools. New HKL planes default to Show only, with opacity applied to faces, slices, contours and edges.
+- Add Isosurface signs → None, including custom layers, while retaining loaded fields and independent planar slices.
+- Extend fitted planes across the displayed cell/Boundary, finite field or full molecular extent. Sample the active scalar field on arbitrary HKL/fitted planes, with color ranges, ELF defaults, contour lines, legends and adjustable resolution.
+- Assemble VASP NEB paths from several loaded outputs in explicit image order, consistently selecting printed final-frame E0 or TOTEN. Show energy/path tables, CSV and curve exports, plus interactive caterpillar views with specified atoms and a selectable surrounding reference frame.
+- Validate fixed cells and atom sequences, reject invalidated final-frame energies, unwrap periodic displacement steps and keep trajectory guide lines separate from chemical bonds. Preserve existing source data and first-paint lazy startup.
+
+## 3.6.0 — 2026-11-10
+
+- Split the lower area into three resizable panes. Add a lazy Selection table with compact source indices, occupancy components, Cartesian/fractional coordinates and explicit fixed-axis flags.
+- Save named fragments per frame; select, delete or stably move them to the beginning/end of atom order. Remap occupancies, constraints, appearances, bonds and source identities, refresh both coordinate tables and retain undo/project support.
+- Read verified fixed-atom syntax across supported calculation inputs, with Cartesian/Direct basis and explicit unknown states. Preserve printed QE/xTB flags in existing output scans without another full-file pass.
+- Add File → Apply new coordinates for loaded Gaussian, ORCA, NWChem, CP2K, QE, SIESTA and POSCAR inputs. Replace only structural text; preview and independently parse the result before an atomic write with a unique original-file backup and stale-preview checks.
+- Preserve target settings and units, use a 30 Å cubic cell for molecular sources applied to periodic templates, and retain molecular target semantics. Reject unverified external/multi-job or atom-specific identity changes instead of rewriting parameters.
+- Fix reader compatibility for Gaussian Cartesian freeze columns and numeric syntax, ORCA Bohr/%coords records, NWChem molecular Cartesian units and QE explicit lattice units. Preserve prior CIF/drop, CHGCAR, Boundary and performance fixes.
+
+## 3.5.7 — 2026-11-10
+
+- Normalize legal CIF screw-axis parentheses/underscore typography such as P2(1)/c and P2_1/c before ASE database lookup. Preserve explicit symmetry operations, coordinates, cell settings and occupancies; do not substitute P1 for unknown groups.
+- Return from native file-drop events before filesystem checks, parsing or rendering. Use copy-only file import and read CIFs in the background even when small.
+- Present import failures with nonmodal messages after releasing active loader/progress state, allowing queued files to continue and preserving shutdown/cancellation behavior.
+
+## 3.5.6 — 2026-11-10
+
+- Read CP2K restart-writer continuation records correctly, including wrapped constraints, KIND aliases and fractional coordinates. Retain restart step/time and identify expanded XC functional settings without inventing a trajectory or energy.
+- Complete CP2K output summaries with printed basis/potential and DFT+U settings, Quickstep/SCF parameters, MD setup and state. Preserve missing LOW-print metadata explicitly and associate printed MD records with the correct energy evaluation.
+- Make every Atoms column manually resizable; widen Atom / show, use a compact Occ. % column, and retain manual column widths through refreshes. Replace hexadecimal color labels with square swatches throughout appearance controls and use American Color consistently in UI text.
+- Keep all lower-panel action buttons at their natural width, including custom font selection and Boundary Apply/Reset; preserve color selections separately from button text.
+
 ## 3.5.5 — 2026-11-09
 
 - Constrain all lower settings editors, including numeric spin boxes and hidden WAVECAR controls: 90 logical pixels for ordinary values and dropdowns, 140 for high-precision isovalues. Preserve native internal line editors and their buttons.

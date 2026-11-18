@@ -21,6 +21,7 @@ class DocumentView:
 class DocumentViewActions:
     def _init_document_views(self):
         self._document_views = {}
+        self._document_labels = {}
         self._view_document = None
         self._scene_document = None
         self._pending_view_camera = None
@@ -49,6 +50,11 @@ class DocumentViewActions:
         if document is self._view_document:
             self.current_doc = index
             return False
+        # A native trackball press can outlive a focus/file switch. Finish the
+        # outgoing gesture before saving its view and restoring another file.
+        cancel_interaction = getattr(self.vtk, 'cancel_interaction', None)
+        if cancel_interaction is not None:
+            cancel_interaction()
         self._remember_document_view()
         state = self._document_views.get(id(document))
         if state is None:
@@ -59,11 +65,23 @@ class DocumentViewActions:
             defaults = RenderOptions()
             options.boundary_enabled = defaults.boundary_enabled
             options.boundary_bounds = defaults.boundary_bounds
+            options.boundary_preserve_origin = defaults.boundary_preserve_origin
+            options.volume_hidden_regions = []
             # Dataset references belong to one document. Retain them when
             # switching back, but never bind them to unrelated newly opened grids.
             if any(layer.get('dataset', -1) >= 0 or layer.get('map_dataset', -1) >= 0
                    for layer in options.volume_surfaces):
                 options.volume_surfaces = []
+            if (document.format_name == 'XCrySDen XSF' and document.volume is not None
+                    and options.volume_iso == defaults.volume_iso and options.volume_signs == 'Both'
+                    and not options.volume_surfaces and not options.volume_independent_negative):
+                from .field_mapping import suggested_isovalue
+                from .render_options import MIN_ISOVALUE
+                data = document.volume.data
+                low, high = float(data.min()), float(data.max())
+                level = options.volume_iso
+                if low < high and not (low < level < high or low < -level < high):
+                    options.volume_iso = max(MIN_ISOVALUE, abs(suggested_isovalue([low, high], level)))
             state = DocumentView(document, options,
                                  deepcopy(self._custom_style_state), self.preset_combo.currentData())
             self._initialize_document_pair_rules(document, state.options)
@@ -82,14 +100,17 @@ class DocumentViewActions:
         self.selection.clear()
         self._fragment_gesture = None
         self._pending_paste = None
+        self.cancel_pointer_action()
         self.playback.stop()
         self.play_btn.setText('Play')
         self._sync_document_view_widgets(state.preset)
-        self._update_source_view()
         return True
 
     def _sync_document_view_widgets(self, preset):
         opts = self.render_options
+        for index, action in enumerate(self.light_actions):
+            with QSignalBlocker(action):
+                action.setChecked(opts.light_enabled[index])
         if preset == 'Space filling (CPK)':preset = 'Space filling (VESTA)'
         self._sync_style_widgets()
         controls = [
@@ -114,20 +135,29 @@ class DocumentViewActions:
         ]
         blockers = [QSignalBlocker(widget) for widget, _, _ in controls]
         try:
+            self.cutoff_slider.setCenter(118 if opts.bond_model == 'Covalent radii' else 88)
             for widget, method, value in controls:
                 getattr(widget, method)(value)
         finally:
             del blockers
         self.custom_font_btn.setText('Font file: ' + Path(opts.label_font_file).name
                                     if opts.label_font_file else 'Choose TTF/OTF font file…')
-        self.boundary_panel.set_values(opts.boundary_enabled, opts.boundary_bounds)
+        self.custom_font_btn.setToolTip(opts.label_font_file or 'Choose a TTF/OTF font file')
+        self.boundary_panel.set_values(opts.boundary_enabled, opts.boundary_bounds, opts.boundary_preserve_origin)
         self.crystal_panel.set_values(opts)
+        self.fitted_plane_controls.set_values(opts.fitted_plane_style)
 
     def _apply_document_camera(self, reset_camera):
         # Restore after constructing the target scene, so neither fit-to-window
         # nor a frequency/Boundary refresh can overwrite a returning view.
         if self._pending_view_camera is not None:
-            self.scene.GetActiveCamera().DeepCopy(self._pending_view_camera)
+            camera = self.scene.GetActiveCamera()
+            camera.DeepCopy(self._pending_view_camera)
+            # vtkCamera.DeepCopy does not advance the destination MTime.
+            # OpenGL can therefore retain the preceding file's projection
+            # until the first mouse gesture modifies the camera. Invalidate
+            # its render caches explicitly while keeping the camera identity.
+            camera.Modified()
             self._pending_view_camera = None
         elif reset_camera or self._view_fit_pending:
             self._set_projection_mode('Isometry')

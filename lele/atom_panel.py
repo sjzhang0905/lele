@@ -1,18 +1,40 @@
 """Element-grouped atom browser and per-atom appearance editor."""
 from collections import defaultdict
 
-from PySide6.QtCore import Qt, Signal, QSignalBlocker, QItemSelectionModel
-from PySide6.QtGui import QColor, QBrush
-from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QTreeWidget, QTreeWidgetItem,
-    QAbstractItemView, QHeaderView, QGroupBox, QFormLayout,
-    QPushButton, QColorDialog, QLineEdit, QSpinBox, QSlider,
-)
+from PySide6.QtCore import Qt, Signal, QSignalBlocker, QItemSelectionModel, QRect
+from PySide6.QtGui import QColor, QBrush, QIcon
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTreeWidget, QTreeWidgetItem, QAbstractItemView, QHeaderView, QGroupBox, QFormLayout, QPushButton, QLineEdit, QSpinBox, QDoubleSpinBox, QSlider, QStyledItemDelegate, QStyleOptionViewItem, QStyle
+from .dialog_policy import QColorDialog
 
 from .panel_controls import PanelComboBox
+from .color_controls import set_color_swatch
 from .atom_appearance import LABEL_MODES, ATOM_REPRESENTATIONS, appearance
 
 COMPONENT_ROLE = int(Qt.ItemDataRole.UserRole) + 1
+
+
+class ColorSwatchDelegate(QStyledItemDelegate):
+    """Paint one small color square, retaining normal row selection and focus."""
+
+    def paint(self, painter, option, index):
+        color = index.data(Qt.ItemDataRole.DecorationRole)
+        if not isinstance(color, QColor) or not color.isValid():
+            return super().paint(painter, option, index)
+        opt = QStyleOptionViewItem(option)
+        self.initStyleOption(opt, index)
+        opt.text = ''
+        opt.icon = QIcon()
+        opt.features &= ~QStyleOptionViewItem.ViewItemFeature.HasDecoration
+        opt.widget.style().drawControl(QStyle.ControlElement.CE_ItemViewItem, opt, painter, opt.widget)
+        size = min(14, opt.rect.width() - 4, opt.rect.height() - 4)
+        if size > 0:
+            center = opt.rect.center()
+            rect = QRect(center.x() - size // 2, center.y() - size // 2, size, size)
+            painter.save()
+            painter.setPen(QColor('#64748b'))
+            painter.setBrush(color)
+            painter.drawRect(rect)
+            painter.restore()
 
 
 class AtomPanel(QWidget):
@@ -33,7 +55,7 @@ class AtomPanel(QWidget):
         layout.setContentsMargins(8, 8, 8, 8)
         layout.setSpacing(6)
         self.tree = QTreeWidget()
-        self.tree.setHeaderLabels(['Atom / show', 'Colour', 'T %', 'Occupancy %'])
+        self.tree.setHeaderLabels(['Atom / show', 'Color', 'T %', 'Occ. %'])
         self.tree.headerItem().setToolTip(3,'占据百分比 · Element occupancy at this site; 100% is fully occupied.')
         self.tree.setUniformRowHeights(True)
         self.tree.setExpandsOnDoubleClick(False)
@@ -41,14 +63,19 @@ class AtomPanel(QWidget):
         self.tree.setMinimumHeight(130)
         self.tree.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.tree.header().setStretchLastSection(False)
-        self.tree.header().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        for column in (1, 2, 3):
-            self.tree.header().setSectionResizeMode(column, QHeaderView.ResizeMode.ResizeToContents)
+        self.tree.header().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+        self.tree.header().setMinimumSectionSize(24)
+        # Set initial widths once. Loading/refreshing atoms must preserve a
+        # width the user has dragged, including the first and last columns.
+        atom_width = max(140, self.tree.fontMetrics().horizontalAdvance('Cl100  ·  #100') + 60)
+        for column, width in enumerate((atom_width, 40, 30, 50)):
+            self.tree.setColumnWidth(column, width)
+        self.tree.setItemDelegateForColumn(1, ColorSwatchDelegate(self.tree))
         self.tree.itemSelectionChanged.connect(self._selection_changed)
         self.tree.itemChanged.connect(self._visibility_changed)
         self.tree.itemDoubleClicked.connect(self._double_clicked)
         self.tree.setToolTip('Each element component has its own row. Components of a mixed site share coordinates and selection.\n'
-                             'Checkbox / labels / transparency affect the shared site. Occupancy % is separate from transparency T %.')
+                             'Checkbox / labels / transparency affect the shared site. Occ. % is occupancy, separate from transparency T %.')
         layout.addWidget(self.tree, 1)
 
         self.editor = QGroupBox('Atom appearance')
@@ -65,19 +92,17 @@ class AtomPanel(QWidget):
         self.representation_combo.currentIndexChanged.connect(self._representation_changed)
         self.representation_combo.setToolTip('Display style for selected atoms only. Each bond half follows its endpoint; Space filling hides that half. Use global style clears this override.')
         form.addRow('Selected style',self.representation_combo)
-        label_actions = QGridLayout()
-        for position, (attr, text, mode) in enumerate((
-            ('show_labels_button', 'Labels', 'Element'),
-            ('show_indices_button', 'Indices', 'Index (1..N)'),
-            ('show_both_button', 'Both', 'Element + index (global)'),
-            ('hide_labels_button', 'Hide', 'None'),
-        )):
-            button = QPushButton(text)
-            button.setToolTip('Apply only to the selected atoms. Other atoms keep their label settings.')
-            button.clicked.connect(lambda checked=False, value=mode: self._emit_patch({'label_mode': value}))
-            setattr(self, attr, button)
-            label_actions.addWidget(button, position//2, position%2)
-        form.addRow('Selected labels', label_actions)
+        self.size_spin = QDoubleSpinBox()
+        self.size_spin.setRange(.05, 10.)
+        self.size_spin.setDecimals(2)
+        self.size_spin.setSingleStep(.1)
+        self.size_spin.setValue(1.)
+        self.size_spin.setKeyboardTracking(False)
+        self.size_spin.lineEdit().setPlaceholderText('Mixed')
+        self.size_spin.setToolTip('Scale the selected atoms relative to their current style. 1.00 is the normal size. Bond widths are unchanged.')
+        self.size_spin.valueChanged.connect(lambda value: self._emit_patch({'size_scale': value}))
+        self.size_spin.editingFinished.connect(self._size_edited)
+        form.addRow('Size scale', self.size_spin)
         self.label_combo = PanelComboBox()
         self.label_combo.addItem('Use global label setting', 'Global')
         for mode in LABEL_MODES:
@@ -91,9 +116,10 @@ class AtomPanel(QWidget):
         self.label_text.editingFinished.connect(self._custom_label_changed)
         form.addRow('Text', self.label_text)
         color_row = QHBoxLayout()
-        self.color_button = QPushButton('Colour…')
+        self.color_button = QPushButton()
+        set_color_swatch(self.color_button, None, 'Selected atoms color')
         self.color_button.clicked.connect(self.choose_color)
-        self.element_color_button = QPushButton('Use element colour')
+        self.element_color_button = QPushButton('Use element color')
         self.element_color_button.clicked.connect(lambda: self._emit_patch({'color': None}))
         color_row.addWidget(self.color_button)
         color_row.addWidget(self.element_color_button)
@@ -177,7 +203,7 @@ class AtomPanel(QWidget):
                     style=appearance(frame,i)
                     percent=f'{sites[i][symbol]*100:.10g}%'
                     coordinates=', '.join(f'{v:.8f}' for v in frame.positions[i])
-                    tooltip=(f'Atom #{i+1}: {symbol}; coordinate-table site index\n'
+                    tooltip=(f'Atom #{i+1}: {symbol}\n'
                              f'Occupancy: {percent}\nCartesian / Å: {coordinates}\n'
                              'Site occupancy: '+description(frame,i))
                     if len(sites[i])>1:
@@ -187,8 +213,10 @@ class AtomPanel(QWidget):
                     item.setForeground(0,QBrush(QColor('#303343' if style.visible else '#999999')))
                     default=self._colors[i] if symbol==frame.symbols[i] else style.color or colour(symbol)
                     value=supplied.get((i,symbol),default);self._component_colors[i,symbol]=value
-                    color=QColor(value);item.setText(1,color.name());item.setBackground(1,QBrush(color))
-                    item.setForeground(1,QBrush(QColor('#ffffff' if color.lightness()<135 else '#202020')))
+                    color=QColor(value);item.setText(1,'')
+                    item.setData(1,Qt.ItemDataRole.DecorationRole,color)
+                    item.setData(1,Qt.ItemDataRole.AccessibleTextRole,f'{symbol} color')
+                    item.setToolTip(1,'Double-click to edit this atom color.')
                     item.setText(2,str(round((1-style.opacity)*100)))
                     item.setTextAlignment(2,Qt.AlignmentFlag.AlignCenter)
                     item.setText(3,percent);item.setTextAlignment(3,Qt.AlignmentFlag.AlignCenter)
@@ -266,13 +294,19 @@ class AtomPanel(QWidget):
             self.transparency_slider.setValue(value)
         self._emit_patch({'opacity': 1 - value / 100})
 
+    def _size_edited(self):
+        # Typing the first site's existing value into a mixed selection may
+        # not emit valueChanged, but it is still an explicit edit to all sites.
+        if self.size_spin.lineEdit().text().strip():
+            self._emit_patch({'size_scale': self.size_spin.value()})
+
     def choose_color(self):
         indices = self.selected_indices()
         if not indices:
             return
         component=self._current_component(indices)
         initial=self._component_colors.get(component,self._colors[indices[0]])
-        color = QColorDialog.getColor(QColor(initial), self, 'Atom colour')
+        color = QColorDialog.getColor(QColor(initial), self, 'Atom color')
         if color.isValid():
             self._emit_patch({'color': color.name()})
 
@@ -287,6 +321,7 @@ class AtomPanel(QWidget):
         self.editor.setEnabled(bool(indices))
         if not indices or self._frame is None:
             self.target_label.setText('Select one or more atoms')
+            set_color_swatch(self.color_button, None, 'Selected atoms color')
             return
         component=self._current_component(indices)
         symbol=component[1] if component is not None else self._frame.symbols[indices[0]]
@@ -304,11 +339,14 @@ class AtomPanel(QWidget):
         active_symbol=component[1] if component is not None else None
         colors = {self._component_colors.get((i,active_symbol),self._colors[i]) for i in indices}
         blockers = [QSignalBlocker(widget) for widget in
-                    (self.label_combo, self.label_text, self.transparency_spin, self.transparency_slider,self.representation_combo)]
+                    (self.label_combo, self.label_text, self.transparency_spin, self.transparency_slider,self.representation_combo,self.size_spin)]
         try:
             representations={style.representation for style in styles}
             self.representation_combo.setCurrentIndex(self.representation_combo.findData(styles[0].representation)
                 if len(representations)==1 else -1)
+            self.size_spin.setValue(styles[0].size_scale)
+            if len({style.size_scale for style in styles}) > 1:
+                self.size_spin.lineEdit().clear()
             self.label_combo.setCurrentIndex(self.label_combo.findData(styles[0].label_mode) if len(modes) == 1 else -1)
             self.label_text.setEnabled(modes == {'Custom'})
             self.label_text.setText(next(iter(texts)) if len(texts) == 1 else '')
@@ -318,6 +356,7 @@ class AtomPanel(QWidget):
             self.transparency_slider.setValue(value)
             if len(values) > 1:
                 self.transparency_spin.lineEdit().clear()
-            self.color_button.setText('Colour… ' + (next(iter(colors)) if len(colors) == 1 else 'Mixed'))
+            set_color_swatch(self.color_button, next(iter(colors)) if len(colors) == 1 else None,
+                             'Selected atoms color')
         finally:
             del blockers

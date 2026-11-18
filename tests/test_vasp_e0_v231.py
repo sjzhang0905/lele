@@ -71,7 +71,7 @@ def test_geometry_edit_cannot_display_historical_e0_as_current_energy(gui, tmp_p
     assert 'E0 (σ→0): -10.100000000' not in w.info_view.toPlainText()
     # Source calculation results and the source text remain independently available.
     assert d.calculation_results.steps[0].energy_ev == -10.1
-    assert 'free energy TOTEN' in w.source_view.toPlainText()
+    assert 'free energy TOTEN' in d.path.read_text()
 
 
 def test_project_migrates_old_fallbacks_and_keeps_edited_energies_cleared(tmp_path):

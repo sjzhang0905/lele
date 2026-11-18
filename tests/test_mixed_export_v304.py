@@ -123,6 +123,7 @@ def test_all_vacant_export_leaves_existing_file_intact(tmp_path):
 @pytest.mark.parametrize('choice,filename',[('XYZ (.xyz)','out.xyz'),('Gaussian GJF (.gjf)','out.gjf'),
     ('POSCAR Direct (POSCAR)','POSCAR_direct'),('POSCAR Cartesian (POSCAR)','POSCAR_cartesian')])
 def test_gui_confirmation_exports_maximum_elements_only_in_copy(gui,tmp_path,choice,filename):
+    from lele.dialog_policy import QMessageBox
     gui.attach(normal());w=gui.window
     assert w.apply_atom_species(0,{'Ni':.6,'Fe':.3})
     source=w.frame;before=deepcopy(source.info);undo_count=len(w.undo_stack)
@@ -130,6 +131,7 @@ def test_gui_confirmation_exports_maximum_elements_only_in_copy(gui,tmp_path,cho
     with patch('lele.app.QInputDialog.getItem',return_value=(choice,True)), \
          patch('lele.structure_edit_dialogs.confirm_maximum_occupancy_export',return_value=True) as confirm, \
          patch('lele.app.QFileDialog.getSaveFileName',return_value=(str(path),'')), \
+         patch('lele.app.QMessageBox.question',return_value=QMessageBox.StandardButton.No), \
          patch('lele.app.QMessageBox.warning') as warning:
         w.export_dialog()
     confirm.assert_called_once_with(w);warning.assert_not_called()
@@ -165,7 +167,7 @@ def test_cif_and_ordered_exports_do_not_ask_for_occupancy_conversion(gui,tmp_pat
 
 @pytest.mark.parametrize('choice',['Use highest-occupancy element','Cancel','close'])
 def test_actual_prompt_buttons_cancel_default_and_close_behavior(gui,choice):
-    from PySide6.QtWidgets import QMessageBox
+    from lele.dialog_policy import QMessageBox
     from lele.structure_edit_dialogs import confirm_maximum_occupancy_export
     def choose(message):
         assert {button.text() for button in message.buttons()}=={'Use highest-occupancy element','Cancel'}

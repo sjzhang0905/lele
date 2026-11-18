@@ -48,8 +48,8 @@ def test_limits_and_invalid_inputs():
 
 
 def test_dialog_ranges_and_export(tmp_path,monkeypatch):
-    from PySide6.QtWidgets import QApplication,QFileDialog
-    from lele.field_slice_dialog import FieldSliceDialog
+    from PySide6.QtWidgets import QApplication
+    from lele.field_slice_dialog import FieldSliceDialog,QFileDialog
     app=QApplication.instance() or QApplication([])
     volume=Volume(np.arange(24).reshape(2,3,4),[1,2,3],np.eye(3),label='Test',unit='e/Å³')
     dialog=FieldSliceDialog(volume)

@@ -1,8 +1,8 @@
 """Qt-only controls for building a real supercell of the current frame."""
 from math import prod
 
-from PySide6.QtWidgets import (QDialog, QVBoxLayout, QFormLayout, QHBoxLayout,
-                               QSpinBox, QLabel, QCheckBox, QDialogButtonBox)
+from PySide6.QtWidgets import QVBoxLayout, QFormLayout, QHBoxLayout, QSpinBox, QLabel, QCheckBox, QDialogButtonBox, QComboBox
+from .dialog_policy import QDialog
 
 
 class SupercellDialog(QDialog):
@@ -30,8 +30,12 @@ class SupercellDialog(QDialog):
             row.addWidget(QLabel(f'× ({vector}) Å'), 1)
             form.addRow(name, row)
         layout.addLayout(form)
+        self.growth_combo=QComboBox()
+        self.growth_combo.addItems(['Alternate + / −; keep original coordinates','Forward + only (legacy)'])
+        layout.addWidget(self.growth_combo)
         self.wrap = QCheckBox('Wrap atoms into the original unit cell before repeating')
-        self.wrap.setChecked(True); layout.addWidget(self.wrap)
+        self.wrap.setChecked(False);self.wrap.setEnabled(False);layout.addWidget(self.wrap)
+        self.growth_combo.currentIndexChanged.connect(self._growth_changed)
         self.preview = QLabel(); self.preview.setWordWrap(True); layout.addWidget(self.preview)
         details = 'Only this frame is changed; other trajectory frames remain available.\n'
         details += 'Source energy and spin multiplicity are cleared. Known net charge scales with the cell count.'
@@ -48,6 +52,13 @@ class SupercellDialog(QDialog):
     def repeats(self):
         return tuple(spin.value() for spin in self.spins)
 
+    def growth(self):return 'alternating' if self.growth_combo.currentIndex()==0 else 'forward'
+
+    def _growth_changed(self,*_):
+        forward=self.growth()=='forward'
+        self.wrap.setEnabled(forward);self.wrap.setChecked(forward)
+        self._update_preview()
+
     def _update_preview(self):
         if len(self.spins) != 3 or not hasattr(self, 'buttons'):
             return
@@ -57,6 +68,10 @@ class SupercellDialog(QDialog):
         valid = factor > 1 and atoms <= MAX_SUPERCELL_ATOMS
         self.buttons.button(QDialogButtonBox.StandardButton.Ok).setEnabled(valid)
         message = f'{len(self._frame.symbols):,} → {atoms:,} atoms · {factor:,} cells'
+        if self.growth()=='alternating':
+            from .lattice_tiles import axis_tiles
+            message+='\nCopies by axis: '+ '; '.join(f'{axis}: '+', '.join(f'{v:+d}' if v else '0' for v in axis_tiles(n))
+                for axis,n in zip('abc',self.repeats()))
         if factor == 1:
             message += '\nIncrease at least one repeat factor.'
         elif atoms > MAX_SUPERCELL_ATOMS:

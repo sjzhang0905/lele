@@ -1,0 +1,16 @@
+[
+  {
+    "sample": "NCM111_PBEU_geoopt-1.restart",
+    "ok": true,
+    "atoms": 36,
+    "kind": "cp2k_in",
+    "original_unchanged": true
+  },
+  {
+    "sample": "RuO2-1.restart",
+    "ok": true,
+    "atoms": 216,
+    "kind": "cp2k_in",
+    "original_unchanged": true
+  }
+]

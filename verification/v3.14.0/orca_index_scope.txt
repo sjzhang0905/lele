@@ -1,0 +1,60 @@
+LELE v3.14.0 — ORCA index scope verification
+2026-11-13
+
+ORCA zero-based numbering remains available through the atom Label modes:
+  ORCA index (0..N-1)
+  Element + ORCA index
+Other generic atom controls, tables, summaries and CSV exports use normal
+one-based atom numbers. The selection expression language accepts index only;
+orca predicates are rejected without changing the selection. Generated scan
+coordinate labels, stage headings, axis labels and CSV headings use one-based
+atom numbers. Native ORCA scan atom tuples and explicit NMR source-atom fields
+retain the original source numbering.
+
+Runtime: /workspace/scratch/20b20befcaeb/.venv313/bin/python
+Environment: QT_QPA_PLATFORM=offscreen LIBGL_ALWAYS_SOFTWARE=1
+
+Batch 1:
+python -m pytest -q tests/test_selection_expression_v3130.py
+  tests/test_atoms_selection_v390.py tests/test_orca_atom_indices_v3110.py
+  tests/test_selection_text_v3100.py tests/test_coordinate_copy_v3110.py
+  tests/test_footer_contacts_v201.py
+Result: 91 passed, 8 existing matplotlib Qt deprecation warnings in 12.54s.
+
+Batch 2 (after adding coordinate-table assertions):
+python -m pytest -q tests/test_scan_window_v3110.py
+  tests/test_orca_atom_indices_v3110.py tests/test_selection_analysis_v200.py
+  tests/test_nmr_v350.py tests/test_vasp_neb_dialog_v370.py
+  tests/test_vasp_neb_v370.py tests/test_coordinate_reorientation_v2110.py
+  tests/test_structure_edits_v2120.py tests/test_coordinate_update_ui_v360.py
+  tests/test_coordinate_table_ui.py
+Result: 155 passed, 2 skipped, 1 failed, 48 dependency deprecation warnings
+  in 90.95s. The one failure is the old sidebar layout source assertion in
+  CoordinateUIRegressionTests.test_layout_has_one_sidebar_with_six_tabs_and_no_right_panel:
+  expected root.addWidget(sidebar_tabs), now root.addWidget(self.sidebar_column).
+  Reported to the owner of the sidebar/menu layout changes for correction.
+  All ORCA scope, scan navigation, editable coordinates, NMR, NEB,
+  reorientation and structure-edit regressions passed.
+
+Batch 3 (polyhedron table/CSV contract):
+python -m pytest -q tests/test_rules_analysis_v230.py
+Result: 22 passed, 16 existing matplotlib Qt deprecation warnings in 3.58s.
+
+python -m compileall -q lele: passed.
+
+Final source inventory for the phrase 'ORCA index' finds only retained atom
+label modes in atom_appearance.py/core.py. No generic ORCA index controls or
+extra export columns remain. ScanCoordinate.atoms stays zero-based internally.
+Older projects refresh generated scan captions on load without changing raw
+source text, source indices, scan values, energies or convergence records.
+
+Final scan display regression:
+python -m pytest -q tests/test_orca_scan_v3110.py
+  tests/test_orca_scan_dialog_v3110.py tests/test_scan_window_v3110.py
+  tests/test_orca_atom_indices_v3110.py
+Result: 17 passed, 16 existing matplotlib Qt deprecation warnings in 5.78s.
+
+Legacy project caption migration regression:
+python -m pytest -q tests/test_orca_scan_v3110.py tests/test_projects_v230.py
+Result: 29 passed in 4.22s. Native scan atom tuples remain unchanged after
+project save/load; legacy stage/frame captions are refreshed to one-based text.

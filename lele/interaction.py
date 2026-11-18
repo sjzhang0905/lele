@@ -40,6 +40,7 @@ class InteractiveVTKView(QVTKRenderWindowInteractor):
     fragmentGestureBegin = Signal(str, float, float)
     fragmentGestureMove = Signal(str, float, float)
     fragmentGestureEnd = Signal(str)
+    fragmentSlotRequested = Signal(str, int)
     rectangleSelected = Signal(float,float,float,float,bool)
 
     def __init__(self, *args, **kwargs):
@@ -57,6 +58,37 @@ class InteractiveVTKView(QVTKRenderWindowInteractor):
         self._box_start=None
         self._rubber_band=None
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+
+    def _fragment_key_request(self, event):
+        if not self.hasFocus():
+            return None
+        from .fragment_shortcuts import fragment_key_request
+        return fragment_key_request(event)
+
+    def event(self, event):
+        from PySide6.QtCore import QEvent
+        if (event.type() == QEvent.Type.ShortcutOverride
+                and self._fragment_key_request(event) is not None):
+            event.accept()
+            return True
+        return super().event(event)
+
+    def keyPressEvent(self, event):
+        request = self._fragment_key_request(event)
+        if request is not None:
+            if not event.isAutoRepeat():
+                self.fragmentSlotRequested.emit(*request)
+            event.accept()
+            return
+        super().keyPressEvent(event)
+
+    def keyReleaseEvent(self, event):
+        # VTK's character shortcuts (notably '3' for stereo) must never receive
+        # either half of a numbered-fragment key stroke.
+        if self._fragment_key_request(event) is not None:
+            event.accept()
+            return
+        super().keyReleaseEvent(event)
 
     def mousePressEvent(self, event):
         if getattr(self,'_box_enabled',False) and event.button()==Qt.MouseButton.LeftButton:
@@ -96,6 +128,21 @@ class InteractiveVTKView(QVTKRenderWindowInteractor):
             self._left_start = event.position()
         super().mousePressEvent(event)
 
+    def _update_fragment_drag(self, now):
+        dx = float(now.x() - self._fragment_last.x())
+        dy = float(now.y() - self._fragment_last.y())
+        if not self._fragment_dragged:
+            # Keep the initial displacement so fine mouse movements accumulate.
+            if self._fragment_mode == 'roll':
+                if abs(dx) < 1.:
+                    return
+            elif dx * dx + dy * dy <= 9.:
+                return
+            self._fragment_dragged = True
+        self._fragment_last = now
+        if dx or dy:
+            self.fragmentGestureMove.emit(self._fragment_mode, dx, dy)
+
     def mouseMoveEvent(self, event):
         if getattr(self,'_box_start',None) is not None:
             from PySide6.QtCore import QRect,QPoint
@@ -103,18 +150,7 @@ class InteractiveVTKView(QVTKRenderWindowInteractor):
             self._rubber_band.setGeometry(QRect(QPoint(round(a.x()),round(a.y())),QPoint(round(b.x()),round(b.y()))).normalized())
             event.accept();return
         if self._fragment_mode is not None:
-            now = event.position()
-            if not self._fragment_dragged:
-                dx_total = now.x() - self._fragment_start.x()
-                dy_total = now.y() - self._fragment_start.y()
-                if dx_total**2 + dy_total**2 > 9:
-                    self._fragment_dragged = True
-            if self._fragment_dragged:
-                self.fragmentGestureMove.emit(
-                    self._fragment_mode,
-                    float(now.x() - self._fragment_last.x()),
-                    float(now.y() - self._fragment_last.y()))
-            self._fragment_last = now
+            self._update_fragment_drag(event.position())
             event.accept()
             return
         if self._right_last is not None:
@@ -148,6 +184,7 @@ class InteractiveVTKView(QVTKRenderWindowInteractor):
             self.rectangleSelected.emit(start.x(),start.y(),event.position().x(),event.position().y(),append)
             event.accept();return
         if self._fragment_mode is not None:
+            self._update_fragment_drag(event.position())
             mode = self._fragment_mode
             self._fragment_mode = None
             self._fragment_last = None
@@ -178,9 +215,24 @@ class InteractiveVTKView(QVTKRenderWindowInteractor):
         super().mouseReleaseEvent(event)
 
     def focusOutEvent(self, event):
+        self.cancel_interaction()
+        super().focusOutEvent(event)
+
+    def cancel_interaction(self):
+        """End both Qt and native VTK gestures without moving the camera."""
         if getattr(self,'_box_start',None) is not None:
             self._box_start=None;self._rubber_band.hide()
-        # Never leave the widget in rolling mode if focus was lost mid-drag.
+        # Clearing the Python flags alone leaves vtkInteractorStyle in Rotate
+        # or Pan state: a later no-button mouse move would move another file.
+        window = self.GetRenderWindow()
+        interactor = window.GetInteractor() if hasattr(window, 'GetInteractor') else None
+        style = interactor.GetInteractorStyle() if interactor is not None else None
+        if style is not None:
+            if style.GetState():
+                style.StopState()
+            style.ReleaseFocus()
+        if hasattr(self, '_ActiveButton'):
+            self._ActiveButton = Qt.MouseButton.NoButton
         self._right_last = None
         self._right_start = None
         self._right_dragged = False
@@ -192,7 +244,6 @@ class InteractiveVTKView(QVTKRenderWindowInteractor):
             self._fragment_start = None
             self._fragment_dragged = False
             self.fragmentGestureEnd.emit(mode)
-        super().focusOutEvent(event)
 
     def set_box_selection(self,enabled):
         self._box_enabled=bool(enabled)

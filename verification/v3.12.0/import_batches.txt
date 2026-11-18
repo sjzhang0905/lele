@@ -1,0 +1,33 @@
+Import batch verification (2026-11-12)
+Runtime: Python 3.12 (.venv312)
+Environment: QT_QPA_PLATFORM=offscreen LIBGL_ALWAYS_SOFTWARE=1
+Command: python -m pytest -q tests/test_import_batches_v3120.py tests/test_drop_loading_v357.py
+Result: 19 passed in 2.95s
+
+Covered: natural numeric name sorting; native Windows comparator dispatch with
+stable parent/name ties; native-drop callback without filesystem access;
+recursive folder discovery; overlapping folder/file deduplication; symlink loop
+avoidance; bounded generic-log content probes; unsupported/project filtering;
+worker-thread discovery; queue order across later file requests; cancellation;
+load failures continuing the import queue; backend-not-ready pending batches.
+
+StrCmpLogicalW execution itself requires Windows. Tests exercise comparator
+selection and tie handling using an injected platform comparator on Linux.
+
+Additional regression:
+- tests/test_orca_loading_v260.py: 11 passed as part of the initial combined
+  welcome/import-parser run (the only three failures were stale welcome tests
+  that expected synchronous dialog/startup imports).
+- Updated those three welcome tests to wait for asynchronous batch discovery;
+  direct open_path synchronous expectations remain unchanged.
+- python -m pytest -q tests/test_welcome_v092.py
+  Result: 11 passed in 5.42s.
+
+Compound filename follow-up:
+- Added .input to bounded content detection, including case-insensitive
+  water.molden.input / WATER.MOLDEN.INPUT; unrelated .input text stays excluded.
+- Real minimal Molden fixtures are both discovered and loaded into O/H/H frames.
+- Rechecked finalensemble.xyz, MEP trajectory XYZ, NEB.log, interp/interp.final,
+  and CP2K restart.bak-N filename acceptance.
+- python -m pytest -q tests/test_import_batches_v3120.py
+  Result: 20 passed in 1.51s.

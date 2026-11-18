@@ -1,0 +1,10 @@
+{
+  "version": "3.9.1",
+  "targeted_tests_passed": 92,
+  "python_modules": 166,
+  "wheel": "lele_explorer-3.9.1-py3-none-any.whl",
+  "wheel_sha256": "b640aed75c01d2f40a2c1828685c4bc464039286a6fcd25f16a10b8233264ae3",
+  "wheel_matches_source": true,
+  "full_suite_rerun": false,
+  "windows_native_validation": false
+}

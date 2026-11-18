@@ -6,5 +6,7 @@ POLYHEDRA_KEYS = ('polyhedra_centers', 'polyhedra_ligands', 'polyhedra_search',
 
 
 def default_plane():
-    return dict(enabled=True, hkl=(0, 0, 1), offset=.5, unit='d', mode='Keep below',
-                thickness=.5, show=True, color='#36A8D8', opacity=.20)
+    return dict(enabled=True, hkl=(0, 0, 1), offset=.5, unit='d', mode='Show only',
+                thickness=.5, show=True, color='#36A8D8', opacity=.20,
+                field=True, field_palette='Auto', field_range=None, field_contours=False,
+                field_legend=True, field_resolution=256)

@@ -46,7 +46,7 @@ def test_outcar_rows_keep_step_names_energy_and_status_when_clicked(gui, tmp_pat
         assert [item.text(0) for item in rows] == labels
 
 
-def test_opening_and_file_headers_choose_last_structure_but_child_steps_still_work(gui, tmp_path):
+def test_opening_chooses_last_structure_and_file_headers_recall_last_viewed_step(gui, tmp_path):
     document = outcar(tmp_path)
     window = attach_new(gui, document)
     assert window.frame_index == 2 and window.frame_spin.value() == 3
@@ -55,13 +55,16 @@ def test_opening_and_file_headers_choose_last_structure_but_child_steps_still_wo
     window.files_tree.setCurrentItem(window._frame_tree_items[0, 0])
     assert window.frame_index == 0
     window.files_tree.setCurrentItem(window.files_tree.topLevelItem(0))
-    assert window.frame_index == 2
+    assert window.frame_index == 0
+    np.testing.assert_array_equal(window.frame.positions, document.frames[0].positions)
     other = Document(tmp_path / 'trajectory.xyz', 'XYZ',
                      [Frame(['H'], [[0, 0, z]]) for z in (0., 1.)])
     window._attach_loaded_document(other)
     assert window.current_doc == 1 and window.frame_index == 1
     window.files_tree.setCurrentItem(window.files_tree.topLevelItem(0))
-    assert window.doc is document and window.frame_index == 2
+    assert window.doc is document and window.frame_index == 0
+    window.files_tree.setCurrentItem(window._frame_tree_items[0, 2])
+    assert window.frame_index == 2
 
 
 def test_long_outcar_opens_last_lazy_page_without_materializing_the_whole_tree(gui, tmp_path):

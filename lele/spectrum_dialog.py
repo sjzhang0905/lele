@@ -3,15 +3,16 @@ from pathlib import Path
 import csv
 from .operations import run_data_task,gui_operation,ui_checkpoint,ui_operation
 from .output_text import progress_items
-from PySide6.QtWidgets import (QDialog,QVBoxLayout,QGridLayout,QComboBox,QDoubleSpinBox,
-    QLabel,QPushButton,QTableWidget,QTableWidgetItem,QFileDialog,QMessageBox,QAbstractItemView)
+from PySide6.QtWidgets import QVBoxLayout, QGridLayout, QComboBox, QDoubleSpinBox, QLabel, QPushButton, QTableWidget, QTableWidgetItem, QAbstractItemView
+from .dialog_policy import QDialog, QFileDialog, QMessageBox
 
 
 class SpectrumDialog(QDialog):
     def __init__(self,document,kind='IR',parent=None):
         super().__init__(parent);self.document=document;self.setWindowTitle('Simulated spectra — '+document.path.name);self.resize(1000,800)
         from matplotlib.figure import Figure
-        from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg,NavigationToolbar2QT
+        from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
+        from .figure_export import FigureExportToolbar as NavigationToolbar2QT
         layout=QVBoxLayout(self);grid=QGridLayout();layout.addLayout(grid)
         self.kind=QComboBox();self.kind.addItems(['IR','Raman','UV-Vis']);self.kind.setCurrentText(kind)
         self.calculation=QComboBox();self.shape=QComboBox();self.shape.addItems(['Gaussian','Lorentzian'])

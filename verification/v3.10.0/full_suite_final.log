@@ -1,0 +1,63 @@
+..............................ssss...................................... [  3%]
+........................................................................ [  7%]
+........................................................................ [ 10%]
+.......................................................s................ [ 14%]
+..........................................................s............. [ 17%]
+..............s.................................................ss [ 20%]
+........................................................................ [ 24%]
+........................................................................ [ 27%]
+........................................................................ [ 31%]
+....................................................................sss. [ 35%]
+........................................................................ [ 38%]
+........................................................................ [ 42%]
+........................................................................ [ 45%]
+........................................................................ [ 49%]
+........................................................................ [ 52%]
+........................................................................ [ 56%]
+....s................................................................... [ 59%]
+........................................................................ [ 63%]
+........................................................................ [ 66%]
+........................................................................ [ 70%]
+......................................................ss................ [ 73%]
+........................................................................ [ 77%]
+..................................................................... [ 80%]
+..................................................................... [ 84%]
+........................ [ 85%]
+...................................................... [ 88%]
+........................................................................ [ 91%]
+........................................................................ [ 95%]
+........................................................................ [ 98%]
+..........................                                               [100%]
+=============================== warnings summary ===============================
+../../../../opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+  /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+tests/test_acceptance_regressions_v340.py: 7 warnings
+tests/test_boundary_surface_v354.py: 20 warnings
+tests/test_crystal_v220.py: 2 warnings
+tests/test_feature_integration_v370.py: 6 warnings
+tests/test_field_mapping_v340.py: 24 warnings
+tests/test_fragment_preview_v380.py: 1 warning
+tests/test_isosurface_integration_v330.py: 10 warnings
+tests/test_isosurface_render_v330.py: 6 warnings
+tests/test_periodic_fragment_ui_v171.py: 8 warnings
+tests/test_renderer.py: 4 warnings
+tests/test_selection_ui_v090.py: 4 warnings
+tests/test_surface_erase_v370.py: 12 warnings
+tests/test_volumetric_view_v320.py: 3 warnings
+  /workspace/scratch/c771f19f02ac/LELE/lele/surface_rendering.py:103: DeprecationWarning: Call to deprecated class vtkTransformPolyDataFilter. (Replaced by vtkTransformFilter.) -- Deprecated since version 9.7.0.
+    transformed=vtkTransformPolyDataFilter();transformed.SetInputConnection(contour.GetOutputPort())
+
+tests/test_acceptance_regressions_v340.py: 2 warnings
+tests/test_boundary_surface_v354.py: 22 warnings
+tests/test_field_mapping_v340.py: 5 warnings
+tests/test_surface_erase_v370.py: 3 warnings
+  /workspace/scratch/c771f19f02ac/LELE/lele/surface_rendering.py:142: DeprecationWarning: Call to deprecated class vtkTransformPolyDataFilter. (Replaced by vtkTransformFilter.) -- Deprecated since version 9.7.0.
+    tile_filter=vtkTransformPolyDataFilter();tile_filter.SetInputData(poly)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+2021 passed, 16 skipped, 140 warnings, 78 subtests passed in 163.64s (0:02:43)

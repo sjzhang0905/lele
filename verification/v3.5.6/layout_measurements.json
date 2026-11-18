@@ -1,0 +1,2256 @@
+[
+  {
+    "style": "Windows",
+    "tabs": [
+      {
+        "tab": "Axes",
+        "requested_width": 450,
+        "width": 449,
+        "controls": [
+          {
+            "name": "axes_position_combo",
+            "width": 90,
+            "size_hint": 173,
+            "min": 90,
+            "max": 90,
+            "left": 107,
+            "visible": true
+          },
+          {
+            "name": "axes_basis_combo",
+            "width": 90,
+            "size_hint": 258,
+            "min": 90,
+            "max": 90,
+            "left": 107,
+            "visible": true
+          },
+          {
+            "name": "axes_length_spin",
+            "width": 90,
+            "size_hint": 70,
+            "min": 90,
+            "max": 90,
+            "left": 107,
+            "visible": true
+          }
+        ],
+        "hscroll": 0
+      },
+      {
+        "tab": "Labels",
+        "requested_width": 450,
+        "width": 449,
+        "controls": [
+          {
+            "name": "label_combo",
+            "width": 90,
+            "size_hint": 171,
+            "min": 90,
+            "max": 90,
+            "left": 112,
+            "visible": true
+          },
+          {
+            "name": "label_font_combo",
+            "width": 90,
+            "size_hint": 74,
+            "min": 90,
+            "max": 90,
+            "left": 112,
+            "visible": true
+          },
+          {
+            "name": "label_size_spin",
+            "width": 90,
+            "size_hint": 38,
+            "min": 90,
+            "max": 90,
+            "left": 112,
+            "visible": true
+          },
+          {
+            "name": "custom_font_btn",
+            "width": 158,
+            "size_hint": 158,
+            "min": 0,
+            "max": 265,
+            "left": 21,
+            "visible": true
+          },
+          {
+            "name": "label_color_btn",
+            "width": 26,
+            "size_hint": 33,
+            "min": 26,
+            "max": 26,
+            "left": 112,
+            "visible": true
+          }
+        ],
+        "hscroll": 0
+      },
+      {
+        "tab": "Field",
+        "requested_width": 450,
+        "width": 449,
+        "controls": [
+          {
+            "name": "field_combo",
+            "width": 90,
+            "size_hint": 74,
+            "min": 90,
+            "max": 90,
+            "left": 120,
+            "visible": true
+          },
+          {
+            "name": "field_signs",
+            "width": 90,
+            "size_hint": 80,
+            "min": 90,
+            "max": 90,
+            "left": 120,
+            "visible": true
+          },
+          {
+            "name": "surface_style",
+            "width": 90,
+            "size_hint": 89,
+            "min": 90,
+            "max": 90,
+            "left": 183,
+            "visible": true
+          },
+          {
+            "name": "mo_combo",
+            "width": 90,
+            "size_hint": 74,
+            "min": 90,
+            "max": 90,
+            "left": 120,
+            "visible": true
+          },
+          {
+            "name": "wavecar_spin",
+            "width": 90,
+            "size_hint": 74,
+            "min": 90,
+            "max": 90,
+            "left": 120,
+            "visible": true
+          },
+          {
+            "name": "wavecar_kpoint",
+            "width": 90,
+            "size_hint": 74,
+            "min": 90,
+            "max": 90,
+            "left": 120,
+            "visible": true
+          },
+          {
+            "name": "wavecar_kind",
+            "width": 90,
+            "size_hint": 163,
+            "min": 90,
+            "max": 90,
+            "left": 120,
+            "visible": true
+          },
+          {
+            "name": "negative_iso",
+            "width": 140,
+            "size_hint": 125,
+            "min": 140,
+            "max": 140,
+            "left": 183,
+            "visible": true
+          },
+          {
+            "name": "negative_opacity",
+            "width": 90,
+            "size_hint": 51,
+            "min": 90,
+            "max": 90,
+            "left": 183,
+            "visible": true
+          },
+          {
+            "name": "surface_line_width",
+            "width": 90,
+            "size_hint": 55,
+            "min": 90,
+            "max": 90,
+            "left": 183,
+            "visible": true
+          },
+          {
+            "name": "iso_spin",
+            "width": 140,
+            "size_hint": 125,
+            "min": 140,
+            "max": 140,
+            "left": 183,
+            "visible": true
+          },
+          {
+            "name": "mo_spacing",
+            "width": 90,
+            "size_hint": 60,
+            "min": 90,
+            "max": 90,
+            "left": 120,
+            "visible": true
+          },
+          {
+            "name": "wavecar_band",
+            "width": 90,
+            "size_hint": 39,
+            "min": 90,
+            "max": 90,
+            "left": 120,
+            "visible": true
+          },
+          {
+            "name": "field_import_button",
+            "width": 148,
+            "size_hint": 148,
+            "min": 0,
+            "max": 265,
+            "left": 21,
+            "visible": true
+          },
+          {
+            "name": "positive_color",
+            "width": 26,
+            "size_hint": 33,
+            "min": 26,
+            "max": 26,
+            "left": 183,
+            "visible": true
+          },
+          {
+            "name": "negative_color",
+            "width": 26,
+            "size_hint": 33,
+            "min": 26,
+            "max": 26,
+            "left": 183,
+            "visible": true
+          },
+          {
+            "name": "layers_button",
+            "width": 212,
+            "size_hint": 212,
+            "min": 0,
+            "max": 265,
+            "left": 32,
+            "visible": true
+          },
+          {
+            "name": "iso_apply_button",
+            "width": 75,
+            "size_hint": 75,
+            "min": 0,
+            "max": 265,
+            "left": 329,
+            "visible": true
+          },
+          {
+            "name": "slice_button",
+            "width": 82,
+            "size_hint": 82,
+            "min": 0,
+            "max": 265,
+            "left": 21,
+            "visible": true
+          },
+          {
+            "name": "field_export_button",
+            "width": 155,
+            "size_hint": 155,
+            "min": 0,
+            "max": 265,
+            "left": 21,
+            "visible": true
+          },
+          {
+            "name": "mo_generate",
+            "width": 125,
+            "size_hint": 125,
+            "min": 0,
+            "max": 265,
+            "left": 21,
+            "visible": true
+          },
+          {
+            "name": "wavecar_generate",
+            "width": 166,
+            "size_hint": 166,
+            "min": 0,
+            "max": 265,
+            "left": 32,
+            "visible": true
+          }
+        ],
+        "hscroll": 3
+      },
+      {
+        "tab": "Boundary",
+        "requested_width": 450,
+        "width": 449,
+        "controls": [
+          {
+            "name": "QSpinBox@(44, 58)",
+            "width": 90,
+            "size_hint": 41,
+            "min": 90,
+            "max": 90,
+            "left": 44,
+            "visible": true
+          },
+          {
+            "name": "QSpinBox@(140, 58)",
+            "width": 90,
+            "size_hint": 41,
+            "min": 90,
+            "max": 90,
+            "left": 140,
+            "visible": true
+          },
+          {
+            "name": "QSpinBox@(44, 84)",
+            "width": 90,
+            "size_hint": 41,
+            "min": 90,
+            "max": 90,
+            "left": 44,
+            "visible": true
+          },
+          {
+            "name": "QSpinBox@(140, 84)",
+            "width": 90,
+            "size_hint": 41,
+            "min": 90,
+            "max": 90,
+            "left": 140,
+            "visible": true
+          },
+          {
+            "name": "QSpinBox@(44, 110)",
+            "width": 90,
+            "size_hint": 41,
+            "min": 90,
+            "max": 90,
+            "left": 44,
+            "visible": true
+          },
+          {
+            "name": "QSpinBox@(140, 110)",
+            "width": 90,
+            "size_hint": 41,
+            "min": 90,
+            "max": 90,
+            "left": 140,
+            "visible": true
+          },
+          {
+            "name": "QPushButton@(11, 136)",
+            "width": 75,
+            "size_hint": 75,
+            "min": 0,
+            "max": 265,
+            "left": 11,
+            "visible": true
+          },
+          {
+            "name": "QPushButton@(11, 167)",
+            "width": 101,
+            "size_hint": 101,
+            "min": 0,
+            "max": 265,
+            "left": 11,
+            "visible": true
+          }
+        ],
+        "hscroll": 0
+      },
+      {
+        "tab": "Axes",
+        "requested_width": 700,
+        "width": 698,
+        "controls": [
+          {
+            "name": "axes_position_combo",
+            "width": 90,
+            "size_hint": 173,
+            "min": 90,
+            "max": 90,
+            "left": 107,
+            "visible": true
+          },
+          {
+            "name": "axes_basis_combo",
+            "width": 90,
+            "size_hint": 258,
+            "min": 90,
+            "max": 90,
+            "left": 107,
+            "visible": true
+          },
+          {
+            "name": "axes_length_spin",
+            "width": 90,
+            "size_hint": 70,
+            "min": 90,
+            "max": 90,
+            "left": 107,
+            "visible": true
+          }
+        ],
+        "hscroll": 0
+      },
+      {
+        "tab": "Labels",
+        "requested_width": 700,
+        "width": 698,
+        "controls": [
+          {
+            "name": "label_combo",
+            "width": 90,
+            "size_hint": 171,
+            "min": 90,
+            "max": 90,
+            "left": 112,
+            "visible": true
+          },
+          {
+            "name": "label_font_combo",
+            "width": 90,
+            "size_hint": 74,
+            "min": 90,
+            "max": 90,
+            "left": 112,
+            "visible": true
+          },
+          {
+            "name": "label_size_spin",
+            "width": 90,
+            "size_hint": 38,
+            "min": 90,
+            "max": 90,
+            "left": 112,
+            "visible": true
+          },
+          {
+            "name": "custom_font_btn",
+            "width": 158,
+            "size_hint": 158,
+            "min": 0,
+            "max": 265,
+            "left": 21,
+            "visible": true
+          },
+          {
+            "name": "label_color_btn",
+            "width": 26,
+            "size_hint": 33,
+            "min": 26,
+            "max": 26,
+            "left": 112,
+            "visible": true
+          }
+        ],
+        "hscroll": 0
+      },
+      {
+        "tab": "Field",
+        "requested_width": 700,
+        "width": 698,
+        "controls": [
+          {
+            "name": "field_combo",
+            "width": 90,
+            "size_hint": 74,
+            "min": 90,
+            "max": 90,
+            "left": 120,
+            "visible": true
+          },
+          {
+            "name": "field_signs",
+            "width": 90,
+            "size_hint": 80,
+            "min": 90,
+            "max": 90,
+            "left": 120,
+            "visible": true
+          },
+          {
+            "name": "surface_style",
+            "width": 90,
+            "size_hint": 89,
+            "min": 90,
+            "max": 90,
+            "left": 183,
+            "visible": true
+          },
+          {
+            "name": "mo_combo",
+            "width": 90,
+            "size_hint": 74,
+            "min": 90,
+            "max": 90,
+            "left": 120,
+            "visible": true
+          },
+          {
+            "name": "wavecar_spin",
+            "width": 90,
+            "size_hint": 74,
+            "min": 90,
+            "max": 90,
+            "left": 120,
+            "visible": true
+          },
+          {
+            "name": "wavecar_kpoint",
+            "width": 90,
+            "size_hint": 74,
+            "min": 90,
+            "max": 90,
+            "left": 120,
+            "visible": true
+          },
+          {
+            "name": "wavecar_kind",
+            "width": 90,
+            "size_hint": 163,
+            "min": 90,
+            "max": 90,
+            "left": 120,
+            "visible": true
+          },
+          {
+            "name": "negative_iso",
+            "width": 140,
+            "size_hint": 125,
+            "min": 140,
+            "max": 140,
+            "left": 183,
+            "visible": true
+          },
+          {
+            "name": "negative_opacity",
+            "width": 90,
+            "size_hint": 51,
+            "min": 90,
+            "max": 90,
+            "left": 183,
+            "visible": true
+          },
+          {
+            "name": "surface_line_width",
+            "width": 90,
+            "size_hint": 55,
+            "min": 90,
+            "max": 90,
+            "left": 183,
+            "visible": true
+          },
+          {
+            "name": "iso_spin",
+            "width": 140,
+            "size_hint": 125,
+            "min": 140,
+            "max": 140,
+            "left": 183,
+            "visible": true
+          },
+          {
+            "name": "mo_spacing",
+            "width": 90,
+            "size_hint": 60,
+            "min": 90,
+            "max": 90,
+            "left": 120,
+            "visible": true
+          },
+          {
+            "name": "wavecar_band",
+            "width": 90,
+            "size_hint": 39,
+            "min": 90,
+            "max": 90,
+            "left": 120,
+            "visible": true
+          },
+          {
+            "name": "field_import_button",
+            "width": 148,
+            "size_hint": 148,
+            "min": 0,
+            "max": 265,
+            "left": 21,
+            "visible": true
+          },
+          {
+            "name": "positive_color",
+            "width": 26,
+            "size_hint": 33,
+            "min": 26,
+            "max": 26,
+            "left": 183,
+            "visible": true
+          },
+          {
+            "name": "negative_color",
+            "width": 26,
+            "size_hint": 33,
+            "min": 26,
+            "max": 26,
+            "left": 183,
+            "visible": true
+          },
+          {
+            "name": "layers_button",
+            "width": 212,
+            "size_hint": 212,
+            "min": 0,
+            "max": 265,
+            "left": 32,
+            "visible": true
+          },
+          {
+            "name": "iso_apply_button",
+            "width": 75,
+            "size_hint": 75,
+            "min": 0,
+            "max": 265,
+            "left": 329,
+            "visible": true
+          },
+          {
+            "name": "slice_button",
+            "width": 82,
+            "size_hint": 82,
+            "min": 0,
+            "max": 265,
+            "left": 21,
+            "visible": true
+          },
+          {
+            "name": "field_export_button",
+            "width": 155,
+            "size_hint": 155,
+            "min": 0,
+            "max": 265,
+            "left": 21,
+            "visible": true
+          },
+          {
+            "name": "mo_generate",
+            "width": 125,
+            "size_hint": 125,
+            "min": 0,
+            "max": 265,
+            "left": 21,
+            "visible": true
+          },
+          {
+            "name": "wavecar_generate",
+            "width": 166,
+            "size_hint": 166,
+            "min": 0,
+            "max": 265,
+            "left": 32,
+            "visible": true
+          }
+        ],
+        "hscroll": 0
+      },
+      {
+        "tab": "Boundary",
+        "requested_width": 700,
+        "width": 698,
+        "controls": [
+          {
+            "name": "QSpinBox@(44, 58)",
+            "width": 90,
+            "size_hint": 41,
+            "min": 90,
+            "max": 90,
+            "left": 44,
+            "visible": true
+          },
+          {
+            "name": "QSpinBox@(140, 58)",
+            "width": 90,
+            "size_hint": 41,
+            "min": 90,
+            "max": 90,
+            "left": 140,
+            "visible": true
+          },
+          {
+            "name": "QSpinBox@(44, 84)",
+            "width": 90,
+            "size_hint": 41,
+            "min": 90,
+            "max": 90,
+            "left": 44,
+            "visible": true
+          },
+          {
+            "name": "QSpinBox@(140, 84)",
+            "width": 90,
+            "size_hint": 41,
+            "min": 90,
+            "max": 90,
+            "left": 140,
+            "visible": true
+          },
+          {
+            "name": "QSpinBox@(44, 110)",
+            "width": 90,
+            "size_hint": 41,
+            "min": 90,
+            "max": 90,
+            "left": 44,
+            "visible": true
+          },
+          {
+            "name": "QSpinBox@(140, 110)",
+            "width": 90,
+            "size_hint": 41,
+            "min": 90,
+            "max": 90,
+            "left": 140,
+            "visible": true
+          },
+          {
+            "name": "QPushButton@(11, 136)",
+            "width": 75,
+            "size_hint": 75,
+            "min": 0,
+            "max": 265,
+            "left": 11,
+            "visible": true
+          },
+          {
+            "name": "QPushButton@(11, 167)",
+            "width": 101,
+            "size_hint": 101,
+            "min": 0,
+            "max": 265,
+            "left": 11,
+            "visible": true
+          }
+        ],
+        "hscroll": 0
+      },
+      {
+        "tab": "Axes",
+        "requested_width": 1000,
+        "width": 998,
+        "controls": [
+          {
+            "name": "axes_position_combo",
+            "width": 90,
+            "size_hint": 173,
+            "min": 90,
+            "max": 90,
+            "left": 107,
+            "visible": true
+          },
+          {
+            "name": "axes_basis_combo",
+            "width": 90,
+            "size_hint": 258,
+            "min": 90,
+            "max": 90,
+            "left": 107,
+            "visible": true
+          },
+          {
+            "name": "axes_length_spin",
+            "width": 90,
+            "size_hint": 70,
+            "min": 90,
+            "max": 90,
+            "left": 107,
+            "visible": true
+          }
+        ],
+        "hscroll": 0
+      },
+      {
+        "tab": "Labels",
+        "requested_width": 1000,
+        "width": 998,
+        "controls": [
+          {
+            "name": "label_combo",
+            "width": 90,
+            "size_hint": 171,
+            "min": 90,
+            "max": 90,
+            "left": 112,
+            "visible": true
+          },
+          {
+            "name": "label_font_combo",
+            "width": 90,
+            "size_hint": 74,
+            "min": 90,
+            "max": 90,
+            "left": 112,
+            "visible": true
+          },
+          {
+            "name": "label_size_spin",
+            "width": 90,
+            "size_hint": 38,
+            "min": 90,
+            "max": 90,
+            "left": 112,
+            "visible": true
+          },
+          {
+            "name": "custom_font_btn",
+            "width": 158,
+            "size_hint": 158,
+            "min": 0,
+            "max": 265,
+            "left": 21,
+            "visible": true
+          },
+          {
+            "name": "label_color_btn",
+            "width": 26,
+            "size_hint": 33,
+            "min": 26,
+            "max": 26,
+            "left": 112,
+            "visible": true
+          }
+        ],
+        "hscroll": 0
+      },
+      {
+        "tab": "Field",
+        "requested_width": 1000,
+        "width": 998,
+        "controls": [
+          {
+            "name": "field_combo",
+            "width": 90,
+            "size_hint": 74,
+            "min": 90,
+            "max": 90,
+            "left": 120,
+            "visible": true
+          },
+          {
+            "name": "field_signs",
+            "width": 90,
+            "size_hint": 80,
+            "min": 90,
+            "max": 90,
+            "left": 120,
+            "visible": true
+          },
+          {
+            "name": "surface_style",
+            "width": 90,
+            "size_hint": 89,
+            "min": 90,
+            "max": 90,
+            "left": 183,
+            "visible": true
+          },
+          {
+            "name": "mo_combo",
+            "width": 90,
+            "size_hint": 74,
+            "min": 90,
+            "max": 90,
+            "left": 120,
+            "visible": true
+          },
+          {
+            "name": "wavecar_spin",
+            "width": 90,
+            "size_hint": 74,
+            "min": 90,
+            "max": 90,
+            "left": 120,
+            "visible": true
+          },
+          {
+            "name": "wavecar_kpoint",
+            "width": 90,
+            "size_hint": 74,
+            "min": 90,
+            "max": 90,
+            "left": 120,
+            "visible": true
+          },
+          {
+            "name": "wavecar_kind",
+            "width": 90,
+            "size_hint": 163,
+            "min": 90,
+            "max": 90,
+            "left": 120,
+            "visible": true
+          },
+          {
+            "name": "negative_iso",
+            "width": 140,
+            "size_hint": 125,
+            "min": 140,
+            "max": 140,
+            "left": 183,
+            "visible": true
+          },
+          {
+            "name": "negative_opacity",
+            "width": 90,
+            "size_hint": 51,
+            "min": 90,
+            "max": 90,
+            "left": 183,
+            "visible": true
+          },
+          {
+            "name": "surface_line_width",
+            "width": 90,
+            "size_hint": 55,
+            "min": 90,
+            "max": 90,
+            "left": 183,
+            "visible": true
+          },
+          {
+            "name": "iso_spin",
+            "width": 140,
+            "size_hint": 125,
+            "min": 140,
+            "max": 140,
+            "left": 183,
+            "visible": true
+          },
+          {
+            "name": "mo_spacing",
+            "width": 90,
+            "size_hint": 60,
+            "min": 90,
+            "max": 90,
+            "left": 120,
+            "visible": true
+          },
+          {
+            "name": "wavecar_band",
+            "width": 90,
+            "size_hint": 39,
+            "min": 90,
+            "max": 90,
+            "left": 120,
+            "visible": true
+          },
+          {
+            "name": "field_import_button",
+            "width": 148,
+            "size_hint": 148,
+            "min": 0,
+            "max": 265,
+            "left": 21,
+            "visible": true
+          },
+          {
+            "name": "positive_color",
+            "width": 26,
+            "size_hint": 33,
+            "min": 26,
+            "max": 26,
+            "left": 183,
+            "visible": true
+          },
+          {
+            "name": "negative_color",
+            "width": 26,
+            "size_hint": 33,
+            "min": 26,
+            "max": 26,
+            "left": 183,
+            "visible": true
+          },
+          {
+            "name": "layers_button",
+            "width": 212,
+            "size_hint": 212,
+            "min": 0,
+            "max": 265,
+            "left": 32,
+            "visible": true
+          },
+          {
+            "name": "iso_apply_button",
+            "width": 75,
+            "size_hint": 75,
+            "min": 0,
+            "max": 265,
+            "left": 329,
+            "visible": true
+          },
+          {
+            "name": "slice_button",
+            "width": 82,
+            "size_hint": 82,
+            "min": 0,
+            "max": 265,
+            "left": 21,
+            "visible": true
+          },
+          {
+            "name": "field_export_button",
+            "width": 155,
+            "size_hint": 155,
+            "min": 0,
+            "max": 265,
+            "left": 21,
+            "visible": true
+          },
+          {
+            "name": "mo_generate",
+            "width": 125,
+            "size_hint": 125,
+            "min": 0,
+            "max": 265,
+            "left": 21,
+            "visible": true
+          },
+          {
+            "name": "wavecar_generate",
+            "width": 166,
+            "size_hint": 166,
+            "min": 0,
+            "max": 265,
+            "left": 32,
+            "visible": true
+          }
+        ],
+        "hscroll": 0
+      },
+      {
+        "tab": "Boundary",
+        "requested_width": 1000,
+        "width": 998,
+        "controls": [
+          {
+            "name": "QSpinBox@(44, 58)",
+            "width": 90,
+            "size_hint": 41,
+            "min": 90,
+            "max": 90,
+            "left": 44,
+            "visible": true
+          },
+          {
+            "name": "QSpinBox@(140, 58)",
+            "width": 90,
+            "size_hint": 41,
+            "min": 90,
+            "max": 90,
+            "left": 140,
+            "visible": true
+          },
+          {
+            "name": "QSpinBox@(44, 84)",
+            "width": 90,
+            "size_hint": 41,
+            "min": 90,
+            "max": 90,
+            "left": 44,
+            "visible": true
+          },
+          {
+            "name": "QSpinBox@(140, 84)",
+            "width": 90,
+            "size_hint": 41,
+            "min": 90,
+            "max": 90,
+            "left": 140,
+            "visible": true
+          },
+          {
+            "name": "QSpinBox@(44, 110)",
+            "width": 90,
+            "size_hint": 41,
+            "min": 90,
+            "max": 90,
+            "left": 44,
+            "visible": true
+          },
+          {
+            "name": "QSpinBox@(140, 110)",
+            "width": 90,
+            "size_hint": 41,
+            "min": 90,
+            "max": 90,
+            "left": 140,
+            "visible": true
+          },
+          {
+            "name": "QPushButton@(11, 136)",
+            "width": 75,
+            "size_hint": 75,
+            "min": 0,
+            "max": 265,
+            "left": 11,
+            "visible": true
+          },
+          {
+            "name": "QPushButton@(11, 167)",
+            "width": 101,
+            "size_hint": 101,
+            "min": 0,
+            "max": 265,
+            "left": 11,
+            "visible": true
+          }
+        ],
+        "hscroll": 0
+      }
+    ]
+  },
+  {
+    "style": "Fusion",
+    "tabs": [
+      {
+        "tab": "Axes",
+        "requested_width": 450,
+        "width": 449,
+        "controls": [
+          {
+            "name": "axes_position_combo",
+            "width": 90,
+            "size_hint": 171,
+            "min": 90,
+            "max": 90,
+            "left": 108,
+            "visible": true
+          },
+          {
+            "name": "axes_basis_combo",
+            "width": 90,
+            "size_hint": 256,
+            "min": 90,
+            "max": 90,
+            "left": 108,
+            "visible": true
+          },
+          {
+            "name": "axes_length_spin",
+            "width": 90,
+            "size_hint": 72,
+            "min": 90,
+            "max": 90,
+            "left": 108,
+            "visible": true
+          }
+        ],
+        "hscroll": 0
+      },
+      {
+        "tab": "Labels",
+        "requested_width": 450,
+        "width": 449,
+        "controls": [
+          {
+            "name": "label_combo",
+            "width": 90,
+            "size_hint": 169,
+            "min": 90,
+            "max": 90,
+            "left": 113,
+            "visible": true
+          },
+          {
+            "name": "label_font_combo",
+            "width": 90,
+            "size_hint": 72,
+            "min": 90,
+            "max": 90,
+            "left": 113,
+            "visible": true
+          },
+          {
+            "name": "label_size_spin",
+            "width": 90,
+            "size_hint": 40,
+            "min": 90,
+            "max": 90,
+            "left": 113,
+            "visible": true
+          },
+          {
+            "name": "custom_font_btn",
+            "width": 162,
+            "size_hint": 162,
+            "min": 0,
+            "max": 265,
+            "left": 22,
+            "visible": true
+          },
+          {
+            "name": "label_color_btn",
+            "width": 26,
+            "size_hint": 33,
+            "min": 26,
+            "max": 26,
+            "left": 113,
+            "visible": true
+          }
+        ],
+        "hscroll": 0
+      },
+      {
+        "tab": "Field",
+        "requested_width": 450,
+        "width": 449,
+        "controls": [
+          {
+            "name": "field_combo",
+            "width": 90,
+            "size_hint": 72,
+            "min": 90,
+            "max": 90,
+            "left": 121,
+            "visible": true
+          },
+          {
+            "name": "field_signs",
+            "width": 90,
+            "size_hint": 78,
+            "min": 90,
+            "max": 90,
+            "left": 121,
+            "visible": true
+          },
+          {
+            "name": "surface_style",
+            "width": 90,
+            "size_hint": 87,
+            "min": 90,
+            "max": 90,
+            "left": 185,
+            "visible": true
+          },
+          {
+            "name": "mo_combo",
+            "width": 90,
+            "size_hint": 72,
+            "min": 90,
+            "max": 90,
+            "left": 121,
+            "visible": true
+          },
+          {
+            "name": "wavecar_spin",
+            "width": 90,
+            "size_hint": 72,
+            "min": 90,
+            "max": 90,
+            "left": 122,
+            "visible": true
+          },
+          {
+            "name": "wavecar_kpoint",
+            "width": 90,
+            "size_hint": 72,
+            "min": 90,
+            "max": 90,
+            "left": 122,
+            "visible": true
+          },
+          {
+            "name": "wavecar_kind",
+            "width": 90,
+            "size_hint": 161,
+            "min": 90,
+            "max": 90,
+            "left": 122,
+            "visible": true
+          },
+          {
+            "name": "negative_iso",
+            "width": 140,
+            "size_hint": 127,
+            "min": 140,
+            "max": 140,
+            "left": 185,
+            "visible": true
+          },
+          {
+            "name": "negative_opacity",
+            "width": 90,
+            "size_hint": 53,
+            "min": 90,
+            "max": 90,
+            "left": 185,
+            "visible": true
+          },
+          {
+            "name": "surface_line_width",
+            "width": 90,
+            "size_hint": 57,
+            "min": 90,
+            "max": 90,
+            "left": 185,
+            "visible": true
+          },
+          {
+            "name": "iso_spin",
+            "width": 140,
+            "size_hint": 127,
+            "min": 140,
+            "max": 140,
+            "left": 185,
+            "visible": true
+          },
+          {
+            "name": "mo_spacing",
+            "width": 90,
+            "size_hint": 62,
+            "min": 90,
+            "max": 90,
+            "left": 121,
+            "visible": true
+          },
+          {
+            "name": "wavecar_band",
+            "width": 90,
+            "size_hint": 41,
+            "min": 90,
+            "max": 90,
+            "left": 122,
+            "visible": true
+          },
+          {
+            "name": "field_import_button",
+            "width": 152,
+            "size_hint": 152,
+            "min": 0,
+            "max": 265,
+            "left": 22,
+            "visible": true
+          },
+          {
+            "name": "positive_color",
+            "width": 26,
+            "size_hint": 33,
+            "min": 26,
+            "max": 26,
+            "left": 185,
+            "visible": true
+          },
+          {
+            "name": "negative_color",
+            "width": 26,
+            "size_hint": 33,
+            "min": 26,
+            "max": 26,
+            "left": 185,
+            "visible": true
+          },
+          {
+            "name": "layers_button",
+            "width": 216,
+            "size_hint": 216,
+            "min": 0,
+            "max": 265,
+            "left": 34,
+            "visible": true
+          },
+          {
+            "name": "iso_apply_button",
+            "width": 80,
+            "size_hint": 80,
+            "min": 0,
+            "max": 265,
+            "left": 331,
+            "visible": true
+          },
+          {
+            "name": "slice_button",
+            "width": 86,
+            "size_hint": 86,
+            "min": 0,
+            "max": 265,
+            "left": 22,
+            "visible": true
+          },
+          {
+            "name": "field_export_button",
+            "width": 159,
+            "size_hint": 159,
+            "min": 0,
+            "max": 265,
+            "left": 22,
+            "visible": true
+          },
+          {
+            "name": "mo_generate",
+            "width": 129,
+            "size_hint": 129,
+            "min": 0,
+            "max": 265,
+            "left": 22,
+            "visible": true
+          },
+          {
+            "name": "wavecar_generate",
+            "width": 170,
+            "size_hint": 170,
+            "min": 0,
+            "max": 265,
+            "left": 34,
+            "visible": true
+          }
+        ],
+        "hscroll": 10
+      },
+      {
+        "tab": "Boundary",
+        "requested_width": 450,
+        "width": 449,
+        "controls": [
+          {
+            "name": "QSpinBox@(43, 57)",
+            "width": 90,
+            "size_hint": 43,
+            "min": 90,
+            "max": 90,
+            "left": 43,
+            "visible": true
+          },
+          {
+            "name": "QSpinBox@(139, 57)",
+            "width": 90,
+            "size_hint": 43,
+            "min": 90,
+            "max": 90,
+            "left": 139,
+            "visible": true
+          },
+          {
+            "name": "QSpinBox@(43, 86)",
+            "width": 90,
+            "size_hint": 43,
+            "min": 90,
+            "max": 90,
+            "left": 43,
+            "visible": true
+          },
+          {
+            "name": "QSpinBox@(139, 86)",
+            "width": 90,
+            "size_hint": 43,
+            "min": 90,
+            "max": 90,
+            "left": 139,
+            "visible": true
+          },
+          {
+            "name": "QSpinBox@(43, 115)",
+            "width": 90,
+            "size_hint": 43,
+            "min": 90,
+            "max": 90,
+            "left": 43,
+            "visible": true
+          },
+          {
+            "name": "QSpinBox@(139, 115)",
+            "width": 90,
+            "size_hint": 43,
+            "min": 90,
+            "max": 90,
+            "left": 139,
+            "visible": true
+          },
+          {
+            "name": "QPushButton@(10, 144)",
+            "width": 80,
+            "size_hint": 80,
+            "min": 0,
+            "max": 265,
+            "left": 10,
+            "visible": true
+          },
+          {
+            "name": "QPushButton@(10, 173)",
+            "width": 105,
+            "size_hint": 105,
+            "min": 0,
+            "max": 265,
+            "left": 10,
+            "visible": true
+          }
+        ],
+        "hscroll": 0
+      },
+      {
+        "tab": "Axes",
+        "requested_width": 700,
+        "width": 698,
+        "controls": [
+          {
+            "name": "axes_position_combo",
+            "width": 90,
+            "size_hint": 171,
+            "min": 90,
+            "max": 90,
+            "left": 108,
+            "visible": true
+          },
+          {
+            "name": "axes_basis_combo",
+            "width": 90,
+            "size_hint": 256,
+            "min": 90,
+            "max": 90,
+            "left": 108,
+            "visible": true
+          },
+          {
+            "name": "axes_length_spin",
+            "width": 90,
+            "size_hint": 72,
+            "min": 90,
+            "max": 90,
+            "left": 108,
+            "visible": true
+          }
+        ],
+        "hscroll": 0
+      },
+      {
+        "tab": "Labels",
+        "requested_width": 700,
+        "width": 698,
+        "controls": [
+          {
+            "name": "label_combo",
+            "width": 90,
+            "size_hint": 169,
+            "min": 90,
+            "max": 90,
+            "left": 113,
+            "visible": true
+          },
+          {
+            "name": "label_font_combo",
+            "width": 90,
+            "size_hint": 72,
+            "min": 90,
+            "max": 90,
+            "left": 113,
+            "visible": true
+          },
+          {
+            "name": "label_size_spin",
+            "width": 90,
+            "size_hint": 40,
+            "min": 90,
+            "max": 90,
+            "left": 113,
+            "visible": true
+          },
+          {
+            "name": "custom_font_btn",
+            "width": 162,
+            "size_hint": 162,
+            "min": 0,
+            "max": 265,
+            "left": 22,
+            "visible": true
+          },
+          {
+            "name": "label_color_btn",
+            "width": 26,
+            "size_hint": 33,
+            "min": 26,
+            "max": 26,
+            "left": 113,
+            "visible": true
+          }
+        ],
+        "hscroll": 0
+      },
+      {
+        "tab": "Field",
+        "requested_width": 700,
+        "width": 698,
+        "controls": [
+          {
+            "name": "field_combo",
+            "width": 90,
+            "size_hint": 72,
+            "min": 90,
+            "max": 90,
+            "left": 121,
+            "visible": true
+          },
+          {
+            "name": "field_signs",
+            "width": 90,
+            "size_hint": 78,
+            "min": 90,
+            "max": 90,
+            "left": 121,
+            "visible": true
+          },
+          {
+            "name": "surface_style",
+            "width": 90,
+            "size_hint": 87,
+            "min": 90,
+            "max": 90,
+            "left": 185,
+            "visible": true
+          },
+          {
+            "name": "mo_combo",
+            "width": 90,
+            "size_hint": 72,
+            "min": 90,
+            "max": 90,
+            "left": 121,
+            "visible": true
+          },
+          {
+            "name": "wavecar_spin",
+            "width": 90,
+            "size_hint": 72,
+            "min": 90,
+            "max": 90,
+            "left": 122,
+            "visible": true
+          },
+          {
+            "name": "wavecar_kpoint",
+            "width": 90,
+            "size_hint": 72,
+            "min": 90,
+            "max": 90,
+            "left": 122,
+            "visible": true
+          },
+          {
+            "name": "wavecar_kind",
+            "width": 90,
+            "size_hint": 161,
+            "min": 90,
+            "max": 90,
+            "left": 122,
+            "visible": true
+          },
+          {
+            "name": "negative_iso",
+            "width": 140,
+            "size_hint": 127,
+            "min": 140,
+            "max": 140,
+            "left": 185,
+            "visible": true
+          },
+          {
+            "name": "negative_opacity",
+            "width": 90,
+            "size_hint": 53,
+            "min": 90,
+            "max": 90,
+            "left": 185,
+            "visible": true
+          },
+          {
+            "name": "surface_line_width",
+            "width": 90,
+            "size_hint": 57,
+            "min": 90,
+            "max": 90,
+            "left": 185,
+            "visible": true
+          },
+          {
+            "name": "iso_spin",
+            "width": 140,
+            "size_hint": 127,
+            "min": 140,
+            "max": 140,
+            "left": 185,
+            "visible": true
+          },
+          {
+            "name": "mo_spacing",
+            "width": 90,
+            "size_hint": 62,
+            "min": 90,
+            "max": 90,
+            "left": 121,
+            "visible": true
+          },
+          {
+            "name": "wavecar_band",
+            "width": 90,
+            "size_hint": 41,
+            "min": 90,
+            "max": 90,
+            "left": 122,
+            "visible": true
+          },
+          {
+            "name": "field_import_button",
+            "width": 152,
+            "size_hint": 152,
+            "min": 0,
+            "max": 265,
+            "left": 22,
+            "visible": true
+          },
+          {
+            "name": "positive_color",
+            "width": 26,
+            "size_hint": 33,
+            "min": 26,
+            "max": 26,
+            "left": 185,
+            "visible": true
+          },
+          {
+            "name": "negative_color",
+            "width": 26,
+            "size_hint": 33,
+            "min": 26,
+            "max": 26,
+            "left": 185,
+            "visible": true
+          },
+          {
+            "name": "layers_button",
+            "width": 216,
+            "size_hint": 216,
+            "min": 0,
+            "max": 265,
+            "left": 34,
+            "visible": true
+          },
+          {
+            "name": "iso_apply_button",
+            "width": 80,
+            "size_hint": 80,
+            "min": 0,
+            "max": 265,
+            "left": 331,
+            "visible": true
+          },
+          {
+            "name": "slice_button",
+            "width": 86,
+            "size_hint": 86,
+            "min": 0,
+            "max": 265,
+            "left": 22,
+            "visible": true
+          },
+          {
+            "name": "field_export_button",
+            "width": 159,
+            "size_hint": 159,
+            "min": 0,
+            "max": 265,
+            "left": 22,
+            "visible": true
+          },
+          {
+            "name": "mo_generate",
+            "width": 129,
+            "size_hint": 129,
+            "min": 0,
+            "max": 265,
+            "left": 22,
+            "visible": true
+          },
+          {
+            "name": "wavecar_generate",
+            "width": 170,
+            "size_hint": 170,
+            "min": 0,
+            "max": 265,
+            "left": 34,
+            "visible": true
+          }
+        ],
+        "hscroll": 0
+      },
+      {
+        "tab": "Boundary",
+        "requested_width": 700,
+        "width": 698,
+        "controls": [
+          {
+            "name": "QSpinBox@(43, 57)",
+            "width": 90,
+            "size_hint": 43,
+            "min": 90,
+            "max": 90,
+            "left": 43,
+            "visible": true
+          },
+          {
+            "name": "QSpinBox@(139, 57)",
+            "width": 90,
+            "size_hint": 43,
+            "min": 90,
+            "max": 90,
+            "left": 139,
+            "visible": true
+          },
+          {
+            "name": "QSpinBox@(43, 86)",
+            "width": 90,
+            "size_hint": 43,
+            "min": 90,
+            "max": 90,
+            "left": 43,
+            "visible": true
+          },
+          {
+            "name": "QSpinBox@(139, 86)",
+            "width": 90,
+            "size_hint": 43,
+            "min": 90,
+            "max": 90,
+            "left": 139,
+            "visible": true
+          },
+          {
+            "name": "QSpinBox@(43, 115)",
+            "width": 90,
+            "size_hint": 43,
+            "min": 90,
+            "max": 90,
+            "left": 43,
+            "visible": true
+          },
+          {
+            "name": "QSpinBox@(139, 115)",
+            "width": 90,
+            "size_hint": 43,
+            "min": 90,
+            "max": 90,
+            "left": 139,
+            "visible": true
+          },
+          {
+            "name": "QPushButton@(10, 144)",
+            "width": 80,
+            "size_hint": 80,
+            "min": 0,
+            "max": 265,
+            "left": 10,
+            "visible": true
+          },
+          {
+            "name": "QPushButton@(10, 173)",
+            "width": 105,
+            "size_hint": 105,
+            "min": 0,
+            "max": 265,
+            "left": 10,
+            "visible": true
+          }
+        ],
+        "hscroll": 0
+      },
+      {
+        "tab": "Axes",
+        "requested_width": 1000,
+        "width": 998,
+        "controls": [
+          {
+            "name": "axes_position_combo",
+            "width": 90,
+            "size_hint": 171,
+            "min": 90,
+            "max": 90,
+            "left": 108,
+            "visible": true
+          },
+          {
+            "name": "axes_basis_combo",
+            "width": 90,
+            "size_hint": 256,
+            "min": 90,
+            "max": 90,
+            "left": 108,
+            "visible": true
+          },
+          {
+            "name": "axes_length_spin",
+            "width": 90,
+            "size_hint": 72,
+            "min": 90,
+            "max": 90,
+            "left": 108,
+            "visible": true
+          }
+        ],
+        "hscroll": 0
+      },
+      {
+        "tab": "Labels",
+        "requested_width": 1000,
+        "width": 998,
+        "controls": [
+          {
+            "name": "label_combo",
+            "width": 90,
+            "size_hint": 169,
+            "min": 90,
+            "max": 90,
+            "left": 113,
+            "visible": true
+          },
+          {
+            "name": "label_font_combo",
+            "width": 90,
+            "size_hint": 72,
+            "min": 90,
+            "max": 90,
+            "left": 113,
+            "visible": true
+          },
+          {
+            "name": "label_size_spin",
+            "width": 90,
+            "size_hint": 40,
+            "min": 90,
+            "max": 90,
+            "left": 113,
+            "visible": true
+          },
+          {
+            "name": "custom_font_btn",
+            "width": 162,
+            "size_hint": 162,
+            "min": 0,
+            "max": 265,
+            "left": 22,
+            "visible": true
+          },
+          {
+            "name": "label_color_btn",
+            "width": 26,
+            "size_hint": 33,
+            "min": 26,
+            "max": 26,
+            "left": 113,
+            "visible": true
+          }
+        ],
+        "hscroll": 0
+      },
+      {
+        "tab": "Field",
+        "requested_width": 1000,
+        "width": 998,
+        "controls": [
+          {
+            "name": "field_combo",
+            "width": 90,
+            "size_hint": 72,
+            "min": 90,
+            "max": 90,
+            "left": 121,
+            "visible": true
+          },
+          {
+            "name": "field_signs",
+            "width": 90,
+            "size_hint": 78,
+            "min": 90,
+            "max": 90,
+            "left": 121,
+            "visible": true
+          },
+          {
+            "name": "surface_style",
+            "width": 90,
+            "size_hint": 87,
+            "min": 90,
+            "max": 90,
+            "left": 185,
+            "visible": true
+          },
+          {
+            "name": "mo_combo",
+            "width": 90,
+            "size_hint": 72,
+            "min": 90,
+            "max": 90,
+            "left": 121,
+            "visible": true
+          },
+          {
+            "name": "wavecar_spin",
+            "width": 90,
+            "size_hint": 72,
+            "min": 90,
+            "max": 90,
+            "left": 122,
+            "visible": true
+          },
+          {
+            "name": "wavecar_kpoint",
+            "width": 90,
+            "size_hint": 72,
+            "min": 90,
+            "max": 90,
+            "left": 122,
+            "visible": true
+          },
+          {
+            "name": "wavecar_kind",
+            "width": 90,
+            "size_hint": 161,
+            "min": 90,
+            "max": 90,
+            "left": 122,
+            "visible": true
+          },
+          {
+            "name": "negative_iso",
+            "width": 140,
+            "size_hint": 127,
+            "min": 140,
+            "max": 140,
+            "left": 185,
+            "visible": true
+          },
+          {
+            "name": "negative_opacity",
+            "width": 90,
+            "size_hint": 53,
+            "min": 90,
+            "max": 90,
+            "left": 185,
+            "visible": true
+          },
+          {
+            "name": "surface_line_width",
+            "width": 90,
+            "size_hint": 57,
+            "min": 90,
+            "max": 90,
+            "left": 185,
+            "visible": true
+          },
+          {
+            "name": "iso_spin",
+            "width": 140,
+            "size_hint": 127,
+            "min": 140,
+            "max": 140,
+            "left": 185,
+            "visible": true
+          },
+          {
+            "name": "mo_spacing",
+            "width": 90,
+            "size_hint": 62,
+            "min": 90,
+            "max": 90,
+            "left": 121,
+            "visible": true
+          },
+          {
+            "name": "wavecar_band",
+            "width": 90,
+            "size_hint": 41,
+            "min": 90,
+            "max": 90,
+            "left": 122,
+            "visible": true
+          },
+          {
+            "name": "field_import_button",
+            "width": 152,
+            "size_hint": 152,
+            "min": 0,
+            "max": 265,
+            "left": 22,
+            "visible": true
+          },
+          {
+            "name": "positive_color",
+            "width": 26,
+            "size_hint": 33,
+            "min": 26,
+            "max": 26,
+            "left": 185,
+            "visible": true
+          },
+          {
+            "name": "negative_color",
+            "width": 26,
+            "size_hint": 33,
+            "min": 26,
+            "max": 26,
+            "left": 185,
+            "visible": true
+          },
+          {
+            "name": "layers_button",
+            "width": 216,
+            "size_hint": 216,
+            "min": 0,
+            "max": 265,
+            "left": 34,
+            "visible": true
+          },
+          {
+            "name": "iso_apply_button",
+            "width": 80,
+            "size_hint": 80,
+            "min": 0,
+            "max": 265,
+            "left": 331,
+            "visible": true
+          },
+          {
+            "name": "slice_button",
+            "width": 86,
+            "size_hint": 86,
+            "min": 0,
+            "max": 265,
+            "left": 22,
+            "visible": true
+          },
+          {
+            "name": "field_export_button",
+            "width": 159,
+            "size_hint": 159,
+            "min": 0,
+            "max": 265,
+            "left": 22,
+            "visible": true
+          },
+          {
+            "name": "mo_generate",
+            "width": 129,
+            "size_hint": 129,
+            "min": 0,
+            "max": 265,
+            "left": 22,
+            "visible": true
+          },
+          {
+            "name": "wavecar_generate",
+            "width": 170,
+            "size_hint": 170,
+            "min": 0,
+            "max": 265,
+            "left": 34,
+            "visible": true
+          }
+        ],
+        "hscroll": 0
+      },
+      {
+        "tab": "Boundary",
+        "requested_width": 1000,
+        "width": 998,
+        "controls": [
+          {
+            "name": "QSpinBox@(43, 57)",
+            "width": 90,
+            "size_hint": 43,
+            "min": 90,
+            "max": 90,
+            "left": 43,
+            "visible": true
+          },
+          {
+            "name": "QSpinBox@(139, 57)",
+            "width": 90,
+            "size_hint": 43,
+            "min": 90,
+            "max": 90,
+            "left": 139,
+            "visible": true
+          },
+          {
+            "name": "QSpinBox@(43, 86)",
+            "width": 90,
+            "size_hint": 43,
+            "min": 90,
+            "max": 90,
+            "left": 43,
+            "visible": true
+          },
+          {
+            "name": "QSpinBox@(139, 86)",
+            "width": 90,
+            "size_hint": 43,
+            "min": 90,
+            "max": 90,
+            "left": 139,
+            "visible": true
+          },
+          {
+            "name": "QSpinBox@(43, 115)",
+            "width": 90,
+            "size_hint": 43,
+            "min": 90,
+            "max": 90,
+            "left": 43,
+            "visible": true
+          },
+          {
+            "name": "QSpinBox@(139, 115)",
+            "width": 90,
+            "size_hint": 43,
+            "min": 90,
+            "max": 90,
+            "left": 139,
+            "visible": true
+          },
+          {
+            "name": "QPushButton@(10, 144)",
+            "width": 80,
+            "size_hint": 80,
+            "min": 0,
+            "max": 265,
+            "left": 10,
+            "visible": true
+          },
+          {
+            "name": "QPushButton@(10, 173)",
+            "width": 105,
+            "size_hint": 105,
+            "min": 0,
+            "max": 265,
+            "left": 10,
+            "visible": true
+          }
+        ],
+        "hscroll": 0
+      }
+    ]
+  }
+]

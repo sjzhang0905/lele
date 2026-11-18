@@ -2,7 +2,8 @@
 from copy import deepcopy
 from pathlib import Path
 from PySide6.QtCore import QTimer
-from PySide6.QtWidgets import QDialog,QVBoxLayout,QHBoxLayout,QLabel,QPushButton,QFileDialog,QMessageBox
+from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QLabel, QPushButton
+from .dialog_policy import QDialog, QFileDialog, QMessageBox
 from .operations import gui_operation,ui_operation,ui_checkpoint
 
 
@@ -52,19 +53,24 @@ class AtomLegendDialog(QDialog):
         default=self.source_path.with_name(self.source_path.stem+'_atom_legend.png')
         path,_=QFileDialog.getSaveFileName(self,'Save atom legend',str(default),'PNG image (*.png)')
         if not path:return
-        try:self.write_png(path)
+        from .png_dialog import PngExportDialog
+        dialog = PngExportDialog(self, view_size=self.canvas.GetRenderWindow().GetSize())
+        if dialog.exec() != QDialog.DialogCode.Accepted:return
+        path = Path(path)
+        if path.suffix.lower() != '.png':path = path.with_name(path.name + '.png')
+        try:self.write_png(path, dialog.settings())
         except Exception as exc:QMessageBox.warning(self,'Export failed',str(exc))
 
-    def write_png(self,path):
-        from vtkmodules.vtkRenderingCore import vtkWindowToImageFilter
-        from vtkmodules.vtkIOImage import vtkPNGWriter
+    def write_png(self, path, settings=None):
+        from .png_export import export_png, PngSettings
         self._initialize()
-        with ui_operation(self,'Exporting atom legend'):
-            image=vtkWindowToImageFilter();image.SetInput(self.canvas.GetRenderWindow())
-            image.SetScale(2);image.ReadFrontBufferOff()
-            image.AddObserver('ProgressEvent',lambda obj,_:ui_checkpoint('Capturing legend',obj.GetProgress(),1));image.Update()
-            writer=vtkPNGWriter();writer.SetFileName(str(path));writer.SetInputConnection(image.GetOutputPort())
-            writer.AddObserver('ProgressEvent',lambda obj,_:ui_checkpoint('Writing legend PNG',obj.GetProgress(),1));writer.Write()
+        window = self.canvas.GetRenderWindow()
+        if settings is None:
+            width, height = window.GetSize()
+            settings = PngSettings(min(8192, 2 * width), min(8192, 2 * height))
+        with ui_operation(self, 'Exporting atom legend'):
+            return export_png(path, window, settings, mesh_items=self.legend.spheres,
+                              progress=ui_checkpoint)
 
     def closeEvent(self,event):
         if not self._finalized:

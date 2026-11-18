@@ -1,0 +1,4 @@
+s                                                                        [100%]
+=========================== short test summary info ============================
+SKIPPED [1] tests/test_real_wavecar_reference_v321.py:14: No external standard WAVECAR fixture supplied
+1 skipped in 0.07s

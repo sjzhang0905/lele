@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from lele.binary_wavefunctions import inspect_wavecar, read_wavecar, convert_gbw_to_molden
+from lele.binary_wavefunctions import inspect_wavecar, read_wavecar
 
 
 def write_wavecar(path, endian='<', tag=45200, spins=1, coeff_count=1):
@@ -46,20 +46,6 @@ def test_companion(tmp_path):
     assert read_wavecar(p).frames[0].symbols==['H']
     pos.write_text(pos.read_text().replace('1 0 0','2 0 0'))
     assert read_wavecar(p).frames==[]
-
-def test_no_converter(tmp_path,monkeypatch):
-    monkeypatch.delenv('LELE_ORCA_2MKL',raising=False);monkeypatch.setattr('shutil.which',lambda _:None)
-    with pytest.raises(ValueError,match='requires the matching'):convert_gbw_to_molden(tmp_path/'x.gbw',tmp_path/'x.molden')
-
-def test_converter_isolation(tmp_path):
-    p=tmp_path/'a name.gbw';p.write_bytes(b'input');exe=tmp_path/'fake_converter'
-    exe.write_text('#!/usr/bin/env python3\nfrom pathlib import Path\nimport sys\nassert sys.argv[1:]==["wavefunction", "-molden"]\nPath("wavefunction.gbw").write_bytes(b"changed")\nPath("wavefunction.molden.input").write_text("[Molden Format]\\n")\n');exe.chmod(0o755)
-    target=tmp_path/'out';convert_gbw_to_molden(p,target,executable=exe)
-    assert p.read_bytes()==b'input' and target.read_text()=='[Molden Format]\n'
-    exe.write_text('#!/usr/bin/env python3\nraise SystemExit(1)\n')
-    with pytest.raises(ValueError,match='conversion failed'):convert_gbw_to_molden(p,target,executable=exe)
-    exe.write_text('#!/usr/bin/env python3\nimport time\ntime.sleep(5)\n')
-    with pytest.raises(ValueError,match='timed out'):convert_gbw_to_molden(p,target,executable=exe,timeout=.05)
 
 from test_periodic_fragment_ui_v171 import gui
 

@@ -1,0 +1,15 @@
+{
+  "file": "DPA-1044209.cif",
+  "native_drop_returned_before_read": true,
+  "document_atoms": 88,
+  "composition": {
+    "C": 52,
+    "H": 36
+  },
+  "coordinate_table_rows": 88,
+  "file_tree_entries": 1,
+  "structure_page_active": true,
+  "error_dialog": false,
+  "elapsed_seconds": 0.5627532660000725,
+  "environment": "Linux offscreen Qt; VTK scene constructed with native Render stubbed; not native Windows Explorer"
+}

@@ -1,0 +1,45 @@
+{
+  "cp2k_optimization": {
+    "atoms": 128,
+    "trajectory_frames_verified": 134,
+    "output_records": 135,
+    "independent_initial_geometry": 1,
+    "geometry_frames": 135,
+    "maximum_and_rms_gradient_records": 133
+  },
+  "second_cp2k_optimization_output": {
+    "atoms": 309,
+    "force_evaluations": 151,
+    "optimization_summaries": 145,
+    "maximum_and_rms_gradient_records": 145
+  },
+  "xtb_optimization": {
+    "atoms": 329,
+    "cycles": 37,
+    "trajectory_frames_verified": 37,
+    "gradient_norm_series": 2
+  },
+  "RuO2_aimd": {
+    "atoms": 216,
+    "output_records": 3001,
+    "coordinate_source": "Matching CP2K restart, exported as one EXTXYZ frame using only its step, time, cell and positions",
+    "snapshot_step": 2300,
+    "time_fs": 2299.9999999999254,
+    "matched_potential_Eh": -5244.675456080685,
+    "matched_temperature_K": 274.577993
+  },
+  "dpdata_0.2.17_native_cp2k_pairs": {
+    "aimd": {
+      "output_records": 30,
+      "trajectory_frames_verified": 30,
+      "atoms": 533,
+      "ensemble": "REFTRAJ"
+    },
+    "aimd_stress": {
+      "output_records": 7,
+      "trajectory_frames_verified": 1,
+      "atoms": 5,
+      "ensemble": "NVT"
+    }
+  }
+}

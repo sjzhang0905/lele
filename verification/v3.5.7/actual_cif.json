@@ -1,0 +1,26 @@
+{
+  "file": "DPA-1044209.cif",
+  "sha256": "6db314e8191d67a42ab553c81613e40429aa0c85a88b0150b774b03125f65f3c",
+  "asymmetric_sites": 22,
+  "atoms": 88,
+  "composition": {
+    "C": 52,
+    "H": 36
+  },
+  "cell_lengths_angles": [
+    17.973,
+    7.352,
+    6.244999999999999,
+    90.0,
+    90.646,
+    90.0
+  ],
+  "cell_volume_angstrom3": 825.1462127376665,
+  "spacegroup": "P21/c (14)",
+  "explicit_symmetry_operations": 4,
+  "independent_manual_operation_expansion_max_fractional_difference": 1.1102230246251565e-16,
+  "source_unchanged": true,
+  "upstream_warnings": [
+    "crystal system 'Monoclinic' is not interpreted for space group Spacegroup(14, setting=1). This may result in wrong setting!"
+  ]
+}

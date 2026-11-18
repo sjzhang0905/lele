@@ -20,6 +20,10 @@ _MAX_LINE = 65536
 
 def named_vasp_volume_kind(path):
     """Retain field units for canonical, copied and prefixed filenames."""
+    # PARCHG commonly carries a bias or band suffix without a separator,
+    # for example PARCHG+0.3, PARCHG-0.5 and PARCHG.0001.ALLK.
+    if Path(path).name.upper().startswith('PARCHG'):
+        return 'PARCHG'
     match = _NAMED_FIELD.search(Path(path).name)
     return match[1].upper() if match else None
 

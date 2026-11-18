@@ -1,6 +1,6 @@
 """Explicit atom-order and reciprocal-scale association for structure-free modes."""
-from PySide6.QtWidgets import (QDialog,QVBoxLayout,QFormLayout,QLabel,QComboBox,
-    QSpinBox,QDoubleSpinBox,QPushButton,QDialogButtonBox,QFileDialog,QMessageBox)
+from PySide6.QtWidgets import QVBoxLayout, QFormLayout, QLabel, QComboBox, QSpinBox, QDoubleSpinBox, QPushButton, QDialogButtonBox
+from .dialog_policy import QDialog, QFileDialog, QMessageBox
 from .operations import run_data_task
 
 

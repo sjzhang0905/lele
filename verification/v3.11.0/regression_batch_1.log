@@ -1,0 +1,54 @@
+..............................ssss...................................... [ 12%]
+........................................................................ [ 25%]
+........................................................................ [ 38%]
+........................................................................ [ 51%]
+....s................................................................... [ 63%]
+.......s...........................s.............................. [ 75%]
+.....................ss................................................. [ 88%]
+...........................................................F.....        [100%]
+=================================== FAILURES ===================================
+_______ test_self_apply_retains_named_fragments_and_refreshes_selection ________
+
+gui = <fragment_ui_harness.SelectionWorkflowTests testMethod=test_invert_complements_selection_and_updates_coordinate_table>
+tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-11/test_self_apply_retains_named_0')
+
+    def test_self_apply_retains_named_fragments_and_refreshes_selection(gui, tmp_path):
+        w, path, target, source = setup_documents(gui, tmp_path)
+        w.change_frame(0, switch_doc=0)
+        w.frame.positions += [2, 0, 0]
+        add_fragment(w.frame, [0, 2])
+        w.selection = [0, 2]
+        w.refresh_scene()
+        plan = prepare_coordinate_update(path, w.frame)
+        assert w.apply_coordinate_update(plan, target)
+        assert w.doc is target
+        assert fragments(w.frame) == [{'name': 'fragment1', 'indices': [0, 2]}]
+        assert w.selection_panel.model.indices == [0, 2]
+>       assert '2.00000000' == w.selection_panel.model.data(w.selection_panel.model.index(0, 3))
+E       AssertionError: assert '2.00000000' == '100'
+E         
+E         - 100
+E         + 2.00000000
+
+tests/test_coordinate_update_ui_v360.py:66: AssertionError
+=============================== warnings summary ===============================
+tests/test_acceptance_regressions_v340.py: 7 warnings
+tests/test_boundary_surface_v354.py: 20 warnings
+  /workspace/scratch/20b20befcaeb/work/LELE/lele/surface_rendering.py:103: DeprecationWarning: Call to deprecated class vtkTransformPolyDataFilter. (Replaced by vtkTransformFilter.) -- Deprecated since version 9.7.0.
+    transformed=vtkTransformPolyDataFilter();transformed.SetInputConnection(contour.GetOutputPort())
+
+tests/test_acceptance_regressions_v340.py: 2 warnings
+tests/test_boundary_surface_v354.py: 22 warnings
+  /workspace/scratch/20b20befcaeb/work/LELE/lele/surface_rendering.py:142: DeprecationWarning: Call to deprecated class vtkTransformPolyDataFilter. (Replaced by vtkTransformFilter.) -- Deprecated since version 9.7.0.
+    tile_filter=vtkTransformPolyDataFilter();tile_filter.SetInputData(poly)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+SKIPPED [1] tests/test_acceptance_extended_v2121.py:240: Set LELE_CHEMCRAFT_CIF_EXAMPLE to the private 22.cif; it is not redistributed.
+SKIPPED [3] tests/test_acceptance_extended_v2121.py:248: Set LELE_ROTATION_EXAMPLE_DIR to the private POSCAR1/POSCAR2 directory.
+SKIPPED [1] tests/test_boundary_surface_v354.py:166: Set LELE_CHGCAR_EXAMPLE to test the supplied CHGCAR
+SKIPPED [1] tests/test_chgcar_gui_v352.py:48: Set LELE_CHGCAR_EXAMPLE to the supplied CHGCAR; not redistributed.
+SKIPPED [1] tests/test_cif_spacegroup_v357.py:97: Set LELE_DPA_CIF_EXAMPLE to the supplied private DPA CIF.
+SKIPPED [1] tests/test_coordinate_reorientation_v2110.py:172: Set LELE_ROTATION_EXAMPLE_DIR to the supplied private POSCAR1/POSCAR2.
+SKIPPED [1] tests/test_coordinate_reorientation_v2110.py:190: Set LELE_ROTATION_SCRIPT to the supplied v13 rotation script.
+1 failed, 553 passed, 9 skipped, 51 warnings, 6 subtests passed in 16.48s

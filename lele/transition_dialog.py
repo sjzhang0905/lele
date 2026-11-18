@@ -1,6 +1,6 @@
 """Electronic states and all printed orbital contributions, including signs."""
-from PySide6.QtWidgets import (QDialog,QVBoxLayout,QComboBox,QLabel,QTableWidget,
-    QTableWidgetItem,QAbstractItemView,QPushButton,QFileDialog)
+from PySide6.QtWidgets import QVBoxLayout, QComboBox, QLabel, QTableWidget, QTableWidgetItem, QAbstractItemView, QPushButton
+from .dialog_policy import QDialog, QFileDialog
 from .gaussian_properties import contribution_text,transition_state_label
 from .operations import run_data_task,gui_operation
 from .output_text import progress_items

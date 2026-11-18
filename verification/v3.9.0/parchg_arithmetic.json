@@ -1,0 +1,13 @@
+{
+  "source": "PARCHG+0.3",
+  "shape": [
+    168,
+    168,
+    480
+  ],
+  "zero_result_nonzero_values": 0,
+  "identity_bitwise_equal": true,
+  "zero_seconds": 0.2797171920001347,
+  "three_term_seconds": 0.41609971199977736,
+  "source_modified": false
+}

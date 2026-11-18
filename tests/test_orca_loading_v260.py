@@ -105,10 +105,15 @@ def test_small_output_uses_worker_and_displays_stage_and_elapsed_without_thresho
 
 
 def test_long_orca_load_uses_real_qt_event_loop_and_keeps_timer_alive(gui,tmp_path):
-    from PySide6.QtCore import QEventLoop,QTimer
+    from PySide6.QtCore import QCoreApplication,QEvent,QEventLoop,QTimer
     path=make_orca(tmp_path/'responsive.out',2403,noise=50)
     w=gui.window;w._closing=False;w._backend_state='ready'
     w.show();gui.app.processEvents()
+    # Earlier headless fixtures schedule QWidget/VTK cleanup with deleteLater.
+    # processEvents alone does not drain DeferredDelete; entering this real
+    # event loop would otherwise time destruction of earlier tests' windows
+    # together with the import. Finish that cleanup before measuring this load.
+    QCoreApplication.sendPostedEvents(None,QEvent.Type.DeferredDelete)
     ticks=[];loop=QEventLoop();original=w._attach_loaded_document;attached=[];start=time.monotonic();stages=[]
     def attach(doc):
         attached.append((threading.get_ident(),len(ticks),time.monotonic()-start));original(doc)

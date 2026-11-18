@@ -22,6 +22,14 @@ def has_curve_data(document):
         if any(finite(f.info.get('cartesian_'+key+'_ev_ang')) for f in document.frames for key in ('max_force','rms_force')):return True
     if results is None:return False
     if any(finite(s.energy_ev) for s in results.steps):return True
+    if results.program=='xTB' and document.trajectory_link:
+        return any(finite(s.optimizer_gradient_norm) or
+                   (s.geometry is not None and finite(s.geometry.info.get('xtb_trajectory_gnorm')))
+                   for s in results.steps)
+    if results.program=='CP2K' and any(s.kind=='md' for s in results.stages):
+        if any(any(key in s.info for key in ('cp2k_md_temperature_K','cp2k_md_conserved_hartree',
+                                                'cp2k_md_kinetic_hartree')) for s in results.steps):
+            return True
     return results.program!='xTB' and any(finite(pair[0]) for s in results.steps for pair in s.convergence.values())
 
 
@@ -47,7 +55,9 @@ def results_text(document):
             if results.program == 'CP2K':
                 if job.charge is not None:lines.append(f'Charge: {job.charge}')
                 if job.multiplicity is not None:lines.append(f'Multiplicity: {job.multiplicity}')
-                if job.route:lines.append('Run / input: '+job.route)
+                from .cp2k_results import summary_lines
+                lines.extend(summary_lines(results,job.index))
+                if job.scf_cycles is not None:lines.append(f'Last inner SCF cycles: {job.scf_cycles}')
         if results.program == 'VASP' and not count:
             lines.append('E0 (σ→0): not printed in the available ionic records.')
         for row in getattr(results, 'frequency_records', []):

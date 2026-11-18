@@ -1,0 +1,55 @@
+{
+  "version": "3.5.7",
+  "date": "2026-11-10",
+  "full_suite": {
+    "passed": 1542,
+    "skipped": 13,
+    "subtests_passed": 78,
+    "failures": 0,
+    "errors": 0,
+    "seconds": 70.83
+  },
+  "actual_cif": {
+    "file": "DPA-1044209.cif",
+    "sha256": "6db314e8191d67a42ab553c81613e40429aa0c85a88b0150b774b03125f65f3c",
+    "asymmetric_sites": 22,
+    "atoms": 88,
+    "composition": {
+      "C": 52,
+      "H": 36
+    },
+    "cell_lengths_angles": [
+      17.973,
+      7.352,
+      6.244999999999999,
+      90.0,
+      90.646,
+      90.0
+    ],
+    "cell_volume_angstrom3": 825.1462127376665,
+    "spacegroup": "P21/c (14)",
+    "explicit_symmetry_operations": 4,
+    "independent_manual_operation_expansion_max_fractional_difference": 1.1102230246251565e-16,
+    "source_unchanged": true,
+    "upstream_warnings": [
+      "crystal system 'Monoclinic' is not interpreted for space group Spacegroup(14, setting=1). This may result in wrong setting!"
+    ]
+  },
+  "actual_cif_drop": {
+    "file": "DPA-1044209.cif",
+    "native_drop_returned_before_read": true,
+    "document_atoms": 88,
+    "composition": {
+      "C": 52,
+      "H": 36
+    },
+    "coordinate_table_rows": 88,
+    "file_tree_entries": 1,
+    "structure_page_active": true,
+    "error_dialog": false,
+    "elapsed_seconds": 0.5627532660000725,
+    "environment": "Linux offscreen Qt; VTK scene constructed with native Render stubbed; not native Windows Explorer"
+  },
+  "platform_scope": "Linux Qt/VTK offscreen regression; Windows Explorer not directly exercised",
+  "private_samples_redistributed": false
+}

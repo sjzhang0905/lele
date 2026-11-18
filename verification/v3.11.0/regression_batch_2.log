@@ -1,0 +1,32 @@
+........................................................................ [ 14%]
+........................................................................ [ 29%]
+..........................sss........................................... [ 44%]
+........................................................................ [ 59%]
+........................................................................ [ 73%]
+........................................................................ [ 88%]
+.......................................................                  [100%]
+=============================== warnings summary ===============================
+tests/test_cp2k_v240.py: 24 warnings
+  /workspace/scratch/20b20befcaeb/.venv/lib/python3.11/site-packages/matplotlib/backends/backend_qt.py:726: DeprecationWarning: Enum value 'Qt::ApplicationAttribute.AA_UseHighDpiPixmaps' is marked as deprecated, please check the documentation for more information.
+    use_high_dpi_pixmaps = app.testAttribute(QtCore.Qt.AA_UseHighDpiPixmaps)
+
+tests/test_crystal_v220.py: 2 warnings
+tests/test_feature_integration_v370.py: 6 warnings
+tests/test_field_mapping_v340.py: 24 warnings
+tests/test_fragment_preview_v380.py: 1 warning
+  /workspace/scratch/20b20befcaeb/work/LELE/lele/surface_rendering.py:103: DeprecationWarning: Call to deprecated class vtkTransformPolyDataFilter. (Replaced by vtkTransformFilter.) -- Deprecated since version 9.7.0.
+    transformed=vtkTransformPolyDataFilter();transformed.SetInputConnection(contour.GetOutputPort())
+
+tests/test_field_mapping_v340.py::test_boundary_repeats_cell_sized_source_without_changing_periodicity[False]
+tests/test_field_mapping_v340.py::test_boundary_repeats_cell_sized_source_without_changing_periodicity[True]
+tests/test_field_mapping_v340.py::test_periodic_seams_negative_roundoff_and_translated_grid_clipping
+tests/test_field_mapping_v340.py::test_periodic_seams_negative_roundoff_and_translated_grid_clipping
+tests/test_field_mapping_v340.py::test_periodic_seams_negative_roundoff_and_translated_grid_clipping
+  /workspace/scratch/20b20befcaeb/work/LELE/lele/surface_rendering.py:142: DeprecationWarning: Call to deprecated class vtkTransformPolyDataFilter. (Replaced by vtkTransformFilter.) -- Deprecated since version 9.7.0.
+    tile_filter=vtkTransformPolyDataFilter();tile_filter.SetInputData(poly)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+SKIPPED [1] tests/test_delta_acceptance_v2131.py:115: Set QA_SIBYL_TCL to the original Sibyl.tcl
+SKIPPED [2] tests/test_delta_acceptance_v2131.py:142: Set LELE_ROTATION_EXAMPLE_DIR to the original POSCAR1 folder
+484 passed, 3 skipped, 62 warnings in 20.72s

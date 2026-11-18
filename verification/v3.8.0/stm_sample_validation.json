@@ -1,0 +1,21 @@
+{
+  "source": "PARCHG+0.3",
+  "shape": [
+    168,
+    168,
+    480
+  ],
+  "channels": 1,
+  "vacuum_A": 13.574052462488003,
+  "height_A": 2,
+  "constant_height_density_range": [
+    4.757180067826994e-05,
+    0.00028245599241927266
+  ],
+  "constant_current_setpoint_e_A3": 0.00017981113342102617,
+  "valid_fraction": 1.0,
+  "constant_current_height_range_A": [
+    1.4304351801024338,
+    2.2038554815608937
+  ]
+}

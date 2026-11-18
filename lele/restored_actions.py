@@ -1,7 +1,8 @@
 """GUI actions restored from the 1.4/1.5 feature set; backend imports are lazy."""
 from pathlib import Path
 from PySide6.QtCore import Qt,QSignalBlocker,QMimeData
-from PySide6.QtWidgets import QApplication,QPushButton,QFileDialog,QMessageBox,QLineEdit,QTextEdit,QPlainTextEdit,QAbstractSpinBox
+from PySide6.QtWidgets import QApplication, QPushButton, QLineEdit, QTextEdit, QPlainTextEdit, QAbstractSpinBox
+from .dialog_policy import QFileDialog, QMessageBox
 
 
 class RestoredActions:
@@ -47,24 +48,28 @@ class RestoredActions:
         self.renderer.dipole_label=dipole_label(self.doc,source)
         self.dipole_panel.set_vector(self.renderer.dipole_vector,self.render_options.dipole_mode,self.render_options.dipole_scale)
         self.boundary_panel.setEnabled(periodic_basis(self.frame) is not None)
-        self.boundary_panel.set_values(self.render_options.boundary_enabled,self.render_options.boundary_bounds)
+        self.boundary_panel.set_values(self.render_options.boundary_enabled,self.render_options.boundary_bounds,
+                                       self.render_options.boundary_preserve_origin)
 
     def _apply_boundary(self,enabled,bounds):
         if self.frame is None:return
         from .boundary import boundary_view
+        preserve=self.boundary_panel.preserve.isChecked()
         if enabled:
-            try:boundary_view(self.frame,bounds,self.render_options.bond_cutoff)
+            try:boundary_view(self.frame,bounds,self.render_options.bond_cutoff,preserve_origin=preserve)
             except ValueError as ex:
-                self.boundary_panel.set_values(self.render_options.boundary_enabled,self.render_options.boundary_bounds)
+                self.boundary_panel.set_values(self.render_options.boundary_enabled,self.render_options.boundary_bounds,
+                                               self.render_options.boundary_preserve_origin)
                 QMessageBox.warning(self,'Invalid boundary',str(ex));return
         self.render_options.boundary_enabled=enabled
         self.render_options.boundary_bounds=tuple(tuple(v) for v in bounds)
-        self.renderer.periodic_preview=None;self.refresh_scene(reset_camera=True)
+        self.render_options.boundary_preserve_origin=preserve
+        self.renderer.periodic_preview=None;self.refresh_scene(reset_camera=not preserve)
 
     def show_spectrum(self,kind='IR'):
         if self.doc is None:return
         from .spectrum_dialog import SpectrumDialog
-        SpectrumDialog(self.doc,kind,self).exec()
+        return self._show_analysis_window(SpectrumDialog(self.doc,kind,self))
 
     def save_dipole_image(self):
         old=self.render_options.dipole_mode
@@ -113,6 +118,7 @@ class RestoredActions:
         except (ValueError,KeyError,TypeError,IndexError) as ex:
             self.statusBar().showMessage('Clipboard has no valid atom coordinates: '+str(ex),5000);return
         self.box_select_action.setChecked(False)
+        if hasattr(self,'surface_hide_check'):self.surface_hide_check.setChecked(False)
         self.statusBar().showMessage('Click in the view to paste on the camera focal plane. Esc to cancel.',10000)
 
     def _paste_at_click(self,x,y):
@@ -143,14 +149,21 @@ class RestoredActions:
         self.statusBar().showMessage(message,6000);return True
 
     def _set_box_select(self,enabled):
-        if enabled:self._pending_paste=None
+        if enabled:
+            self._pending_paste=None
+            if hasattr(self,'surface_hide_check'):self.surface_hide_check.setChecked(False)
         with QSignalBlocker(self.box_select_button):self.box_select_button.setChecked(enabled)
-        if self.vtk is not None and hasattr(self.vtk,'set_box_selection'):self.vtk.set_box_selection(enabled)
+        hide = hasattr(self,'surface_hide_check') and self.surface_hide_check.isChecked()
+        if self.vtk is not None and hasattr(self.vtk,'set_box_selection'):self.vtk.set_box_selection(enabled or hide)
 
     def cancel_pointer_action(self):
+        if hasattr(self, '_pending_annotation'):
+            self._cancel_annotation_placement()
         self._pending_paste=None;self.box_select_action.setChecked(False)
+        if hasattr(self,'surface_hide_check'):self.surface_hide_check.setChecked(False)
 
     def _rectangle_selected(self,x1,y1,x2,y2,append=False):
+        if self._surface_rectangle_selected(x1,y1,x2,y2):return
         if self.frame is None:return
         from .interaction import vtk_display_from_qt
         from .atom_appearance import atom_is_drawn

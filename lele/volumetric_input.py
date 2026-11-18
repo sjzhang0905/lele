@@ -249,12 +249,15 @@ def read_cube_document(path,*,max_points=MAX_GRID_VALUES):
     labels=result.get('labels',[])
     fields=[_volume(data,result['origin'],result['spacing'],
                     f'Orbital {labels[i]}' if i<len(labels) else ('Scalar field' if len(result['datas'])==1 else f'Field {i+1}'),
-                    'source units') for i,data in enumerate(result['datas'])]
+                    'source units', periodic=result.get('periodic',False))
+            for i,data in enumerate(result['datas'])]
     metadata=result.get('metadata',{})
     if len(fields)==1 and metadata:
         fields[0].label=metadata.get('label') or fields[0].label
         fields[0].unit=metadata.get('unit') or fields[0].unit
         fields[0].periodic=metadata.get('periodic',False)
+        if isinstance(metadata.get('provenance'),dict):
+            fields[0].provenance=metadata['provenance']
     doc=Document(path,'Gaussian CUBE',[frame],fields[0],
                  'CUBE scalar values retain source units; geometry is in Å.');doc.volumes=fields
     return doc

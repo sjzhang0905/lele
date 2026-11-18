@@ -1,0 +1,4 @@
+
+=========================== short test summary info ============================
+SKIPPED [1] tests/test_independent_orbitals_v320.py:10: could not import 'pyscf': No module named 'pyscf'
+1 skipped in 0.05s

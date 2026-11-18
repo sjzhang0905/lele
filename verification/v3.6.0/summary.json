@@ -1,0 +1,67 @@
+{
+  "version": "3.6.0",
+  "date": "2026-11-10",
+  "full_suite": {
+    "passed": 1741,
+    "skipped": 13,
+    "subtests_passed": 78,
+    "failures": 0,
+    "errors": 0,
+    "seconds": 164.3
+  },
+  "actual_cp2k_templates": [
+    {
+      "sample": "RuO2-1.restart",
+      "atoms": 216,
+      "maximum_coordinate_error_angstrom": 4.973799150320701e-14,
+      "all_non_structure_lines_identical": true,
+      "source_unchanged": true,
+      "source_sha256": "ff2a542ec9a97803bcdadf8dad1bf0cb2826952bb9337153a2524dfccbc495ed"
+    },
+    {
+      "sample": "NCM111_PBEU_geoopt-1.restart",
+      "atoms": 36,
+      "maximum_coordinate_error_angstrom": 7.105427357601002e-15,
+      "all_non_structure_lines_identical": true,
+      "source_unchanged": true,
+      "source_sha256": "bf8445811e5a45295dc2093f71324b7003d69a22541c65ba7c7e86c27de39074"
+    }
+  ],
+  "identity_guard_review": [
+    {
+      "sample": "nwchem.nw",
+      "safely_rejected": true,
+      "reason": "This template contains atom-specific settings. Its atom count, element order and atom identities must remain unchanged; reordering would attach those settings to different atoms.",
+      "original_unchanged": true
+    },
+    {
+      "sample": "cp2k.inp",
+      "safely_rejected": true,
+      "reason": "Atom order changed while the target contains atom-specific settings; their identity mapping is not verified.",
+      "original_unchanged": true
+    },
+    {
+      "sample": "spin.fdf",
+      "safely_rejected": true,
+      "reason": "Atom order changed while the target contains atom-specific settings; their identity mapping is not verified.",
+      "original_unchanged": true
+    },
+    {
+      "sample": "pw.in",
+      "safely_rejected": true,
+      "reason": "Atom order changed while the target contains atom-specific settings; their identity mapping is not verified.",
+      "original_unchanged": true
+    }
+  ],
+  "layout": {
+    "window_width": 1380,
+    "lower_pane_widths": [
+      313,
+      395,
+      365
+    ],
+    "minimum_window_width": 934
+  },
+  "scope": "Linux offscreen Qt/VTK; Windows desktop not directly exercised",
+  "private_input_samples_included": false
+}

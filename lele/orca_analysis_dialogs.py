@@ -6,8 +6,8 @@ from .output_text import progress_items
 import numpy as np
 from ase.units import Hartree
 from PySide6.QtCore import Qt,QSignalBlocker
-from PySide6.QtWidgets import (QDialog,QVBoxLayout,QHBoxLayout,QLabel,QComboBox,QTableWidget,
-    QTableWidgetItem,QAbstractItemView,QPushButton,QFileDialog,QDoubleSpinBox,QCheckBox,QTabWidget,QWidget)
+from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QTableWidget, QTableWidgetItem, QAbstractItemView, QPushButton, QDoubleSpinBox, QCheckBox, QTabWidget, QWidget
+from .dialog_policy import QDialog, QFileDialog
 
 
 def table(parent,headers):
@@ -39,7 +39,8 @@ def selected_row(widget):
 
 def figure(layout):
     from matplotlib.figure import Figure
-    from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg,NavigationToolbar2QT
+    from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
+    from .figure_export import FigureExportToolbar as NavigationToolbar2QT
     fig=Figure(figsize=(9,5),tight_layout=True);canvas=FigureCanvasQTAgg(fig)
     layout.addWidget(NavigationToolbar2QT(canvas,layout.parentWidget()));layout.addWidget(canvas,2)
     return fig,canvas

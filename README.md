@@ -2,6 +2,83 @@
 
 **Local Environment and Lattice Explorer**
 
+Version **3.17.0** adds manual CP2K optimization/MD and xTB trajectory association, clickable per-step curves, and text copying in Results / info. [Release notes](docs/FEATURES_v3.17.0_CN.md).
+
+Version **3.16.0** speeds up Alt+right fragment rotation, opens DIM-GROUP XSF
+structures and renders named 3D XSF grids. Common elements have more distinctive
+default colors, the three Style sliders put their defaults at mid-track, and the
+main window has a gray title bar. [Release notes](docs/FEATURES_v3.16.0_CN.md).
+
+Version **3.15.0** fixes molecular CUBE periodicity, independent electron/hole layers,
+scan-step endpoint selection and boundary-image measurements. Surface mapping now
+has embedded live range sliders and VMD-style palettes. Loaded files have context
+actions, scene PNG export remembers cropping, NEB caterpillar views follow the
+main appearance, and dialogs stay above LELE without global topmost flags. See the
+[update notes](docs/FEATURES_v3.15.0_CN.md).
+
+Version **3.14.0** confines zero-based ORCA indices to atom label modes, adds live
+axis-rotation previews and per-atom size scales, reduces the default atom/bond
+sizes, places menus above the sidebar, and grows periodic copies alternately
+around the original cell without shifting source coordinates. See the
+[update notes](docs/FEATURES_v3.14.0_CN.md).
+
+Version **3.13.0** adds documented atom-selection expressions, topmost modeless
+forms/help, and automatic reader and rendering warmup after the complete welcome
+page has painted. Current selection omits its ORCA column. See the
+[update notes](docs/FEATURES_v3.13.0_CN.md).
+
+Version **3.12.0** sorts batch imports naturally, accepts dropped folders,
+adds Convert all / Export PNG all, and fixes stale camera rendering when
+switching documents. See the [update notes](docs/FEATURES_v3.12.0_CN.md).
+
+Version **3.11.0** adds zero-based ORCA atom indices, global-index selection,
+one-click coordinate copying, fragment axis/dihedral rotation, and grouped ORCA
+relaxed-scan paths with endpoint energy curves. See the
+[update notes](docs/FEATURES_v3.11.0_CN.md).
+
+Version **3.10.0** adds aligned plain-text selection details, maximized startup,
+direct-lattice a/b/c views and Lele walking above operation progress bars.
+The default bond-distance multiplier is now 0.88. See the
+[update notes](docs/FEATURES_v3.10.0_CN.md).
+
+The 16 previously skipped external/dependency checks have now been run as
+19 passing test cases. See the [supplemental validation](docs/EXTERNAL_VALIDATION_v3.10.0_CN.md).
+
+Version **3.9.1** uses solid selection rings and POSCAR-prefixed export names,
+with an explicit choice to group equal elements in the exported copy.
+See the [update notes](docs/FIXES_v3.9.1_CN.md).
+
+Version **3.9.0** adds scalar-field addition/subtraction, element-local atom
+selection, and canvas-only numbered fragment shortcuts. See the
+[feature notes](docs/FEATURES_v3.9.0_CN.md).
+
+Version **3.8.0** adds PARCHG STM maps, simulated powder XRD, movable/rotatable
+canvas text and four directional lights. Plot exports prefer SVG; raster exports
+offer resolution and smoothing. Fragment panning uses cached geometry. Field
+controls move to the sidebar and GBW support is removed. See the
+[feature notes](docs/FEATURES_v3.8.0_CN.md).
+
+Version **3.7.0** adds reversible through-depth rectangle hiding for isosurfaces,
+colored scalar-field slices on complete HKL and fitted planes, and VASP NEB
+paths assembled from loaded output files with energy curves and caterpillar
+views. Crystal tools have one entry under Edit; Isosurface signs → None keeps
+fields available for slices. See the [feature notes](docs/FEATURES_v3.7.0_CN.md).
+
+Version **3.6.0** adds a third lower pane with live Selection details and saved
+Fragments, stable atom-order editing, explicit fixed-axis information, and
+File → Apply new coordinates for loaded calculation inputs. Changes are previewed,
+validated and saved with the original settings retained and an automatic backup.
+See the [feature notes](docs/FEATURES_v3.6.0_CN.md) and [constraint coverage](docs/CONSTRAINTS_v3.6.0_CN.md).
+
+Version **3.5.7** reads CIF screw-axis spellings such as `P2(1)/c`, preserving
+the supplied symmetry operations. File drops return before parsing begins, and
+import failures use nonblocking messages. See the [fix notes](docs/FIXES_v3.5.7_CN.md).
+
+Version **3.5.6** fixes CP2K restart continuation parsing and completes printed
+CP2K result summaries. Atoms columns are resizable with compact occupancy and
+square color swatches; lower-panel buttons keep their natural width.
+See the [fix and validation notes](docs/FIXES_v3.5.6_CN.md).
+
 Version **3.5.5** also compacts lower-tab numeric inputs, including Boundary
 ranges and high-precision isovalues, keeping them left-aligned as the panel grows.
 See the [layout correction notes](docs/LAYOUT_v3.5.5_CN.md).
@@ -339,11 +416,12 @@ open leaves the welcome page visible. Command-line file arguments open
 automatically after the window appears and preloading finishes.
 
 The welcome window and its settings load without NumPy, SciPy, ASE or VTK.
-Immediately after the welcome header is painted, a background thread preloads
-the core scientific libraries and readers automatically. The full ASE format
-registry, SciPy spatial analysis and image-export dependencies load on demand.
-The GUI thread then prepares
-the hidden 3D canvas and the status bar shows Ready. The welcome animation and
+After the complete visible welcome page has painted, a background thread
+automatically preloads common readers, the ASE format registry and neighbor
+search, SciPy spatial analysis and image dependencies. The GUI thread then
+initializes the hidden VTK context and warms atom, bond, label, axes and surface
+pipelines before the status bar shows Ready. The welcome page stays visible
+and no synthetic document is added. The welcome animation and
 menus remain active during imports. Files chosen while loading are queued and
 open when ready; display settings carry over. Rebuild the Windows executable
 with `build_windows.bat` to apply this startup optimization.

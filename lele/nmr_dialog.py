@@ -3,9 +3,8 @@ from pathlib import Path
 import csv
 import numpy as np
 from PySide6.QtCore import Qt,Signal,QSignalBlocker
-from PySide6.QtWidgets import (QDialog,QVBoxLayout,QHBoxLayout,QGridLayout,QComboBox,
-    QDoubleSpinBox,QLineEdit,QLabel,QPushButton,QTableWidget,QTableWidgetItem,
-    QFileDialog,QMessageBox,QAbstractItemView,QSplitter)
+from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QGridLayout, QComboBox, QDoubleSpinBox, QLineEdit, QLabel, QPushButton, QTableWidget, QTableWidgetItem, QAbstractItemView, QSplitter
+from .dialog_policy import QDialog, QFileDialog, QMessageBox
 from .nmr import spectrum,chemical_shift,export_nmr_csv
 from .operations import run_data_task
 
@@ -17,7 +16,8 @@ class NMRDialog(QDialog):
         super().__init__(parent);self.document=document;self.setWindowTitle('NMR — '+document.path.name)
         self.resize(1120,850);self._curve=None;self._display_nuclei=[]
         from matplotlib.figure import Figure
-        from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg,NavigationToolbar2QT
+        from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
+        from .figure_export import FigureExportToolbar as NavigationToolbar2QT
         layout=QVBoxLayout(self);grid=QGridLayout();layout.addLayout(grid)
         self.calculation=QComboBox()
         for i,r in enumerate(document.nmr_results):
@@ -51,7 +51,7 @@ class NMRDialog(QDialog):
         buttons=QHBoxLayout();layout.addLayout(buttons)
         self.export_table=QPushButton('Export all nuclei CSV…');self.export_table.clicked.connect(self.save_table)
         self.export_curve=QPushButton('Export displayed spectrum CSV…');self.export_curve.clicked.connect(self.save_curve)
-        self.export_image=QPushButton('Save plot PNG / SVG…');self.export_image.clicked.connect(self.save_image)
+        self.export_image=QPushButton('Save plot SVG / image…');self.export_image.clicked.connect(self.save_image)
         for widget in (self.export_table,self.export_curve,self.export_image):
             widget.setAutoDefault(False);buttons.addWidget(widget)
         self.calculation.currentIndexChanged.connect(self.change_result)
@@ -103,7 +103,7 @@ class NMRDialog(QDialog):
         r=self.result;element=self.element.currentText();shift=self.axis.currentIndex()==1
         self._display_nuclei=[n for n in r.nuclei if n.symbol==element]
         self.width.setEnabled(self.shape.currentText()!='Sticks')
-        note='One equal-area line per printed nucleus. Broadening is a display model; J splitting, isotope abundance, equivalent-site averaging and conformer populations are not simulated.'
+        note='Atom is 1-based. Source atom retains the number printed by the calculation. One equal-area line per printed nucleus. Broadening is a display model; J splitting, isotope abundance, equivalent-site averaging and conformer populations are not simulated.'
         if r.note:note+='\n'+r.note
         blocker=QSignalBlocker(self.table)
         self.table.setSortingEnabled(False);self.table.setRowCount(len(self._display_nuclei))
@@ -184,8 +184,6 @@ class NMRDialog(QDialog):
         except OSError as exc:QMessageBox.warning(self,'Export failed',str(exc))
 
     def save_image(self):
-        if self._curve is None:return
-        path,_=QFileDialog.getSaveFileName(self,'Save NMR plot',str(self.document.path.with_name(self.document.path.stem+'_nmr.png')),'PNG (*.png);;SVG (*.svg)')
-        if path:
-            try:self.figure.savefig(path,dpi=300)
-            except (OSError,ValueError) as exc:QMessageBox.warning(self,'Export failed',str(exc))
+        from .figure_export import save_figure_dialog
+        return save_figure_dialog(self, self.figure,
+            self.document.path.with_name(self.document.path.stem + '_nmr'))

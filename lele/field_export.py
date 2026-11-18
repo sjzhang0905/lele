@@ -55,10 +55,12 @@ def export_active_cube(path, document, frame):
     factor, unit, note = cube_scalar_units(volume.unit)
     metadata = dict(label=volume.label, unit=unit, source_unit=volume.unit,
                     periodic=bool(volume.periodic), atom_pbc=list(frame.pbc),
-                    cell=np.asarray(frame.cell).tolist())
+                    cell=np.asarray(frame.cell).tolist(), provenance=volume.provenance)
     # ASCII JSON survives legacy scientific readers; only standard numeric
     # CUBE records carry the grid, so other tools may simply ignore this line.
     comment = 'LELE_CUBE '+json.dumps(metadata,ensure_ascii=True,separators=(',',':'))
+    if len(comment)+1 > 1024*1024:
+        raise ValueError('Field metadata exceeds the 1 MiB CUBE comment limit. Save a LELE project to preserve the complete derivation.')
     path = Path(path)
     temporary = None
     report = load_progress('Writing CUBE scalar grid',data.size)
@@ -90,7 +92,7 @@ def export_active_cube(path, document, frame):
 
 
 def export_active_field_dialog(window):
-    from PySide6.QtWidgets import QFileDialog, QMessageBox
+    from .dialog_policy import QFileDialog, QMessageBox
     from .operations import run_data_task
     from .output_text import LoadCancelled
     doc, frame = window.doc, window.frame
