@@ -3,23 +3,24 @@ import csv
 import re
 import numpy as np
 from PySide6.QtCore import Qt, QSignalBlocker
-from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QFormLayout,
-    QLabel, QComboBox, QCheckBox, QPushButton, QLineEdit, QTableWidget,
-    QTableWidgetItem, QAbstractItemView, QHeaderView, QFileDialog, QMessageBox)
+from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QFormLayout, QLabel, QComboBox, QCheckBox, QPushButton, QLineEdit, QTableWidget, QTableWidgetItem, QAbstractItemView, QHeaderView
+from .dialog_policy import QDialog, QFileDialog, QMessageBox
 
 from .trajectory_analysis import GeometryParameter, PARAMETER_KINDS, parameter_values
 from .operations import run_data_task,gui_operation,ui_checkpoint
 from .output_text import progress_items
 
 
-def parse_atoms(text):
+def parse_atoms(text, *, base=1):
+    if base not in (0, 1):
+        raise ValueError("Atom numbering base must be 0 or 1.")
     fields = re.split(r'[\s,;]+', text.strip())
     if not text.strip(): return ()
     result = []
     for field in fields:
-        if not field.isdigit() or int(field) < 1:
-            raise ValueError('Enter atom numbers starting at 1, separated by spaces or commas')
-        result.append(int(field) - 1)
+        if not field.isdigit() or int(field) < base:
+            raise ValueError(f'Enter atom numbers starting at {base}, separated by spaces or commas')
+        result.append(int(field) - base)
     return tuple(result)
 
 
@@ -33,7 +34,8 @@ class GeometryCurveDialog(QDialog):
         self.setWindowTitle('Geometry parameter curves — ' + document.path.name)
         self.resize(1050, 860)
         from matplotlib.figure import Figure
-        from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg, NavigationToolbar2QT
+        from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
+        from .figure_export import FigureExportToolbar as NavigationToolbar2QT
         layout = QVBoxLayout(self)
         top = QHBoxLayout(); layout.addLayout(top)
         self.sequence_combo = QComboBox(); top.addWidget(self.sequence_combo, 1)
@@ -141,6 +143,9 @@ class GeometryCurveDialog(QDialog):
         self.add_parameter(GeometryParameter({2: 'Distance', 3: 'Angle', 4: 'Dihedral'}[len(atoms)],
                                             atoms, nearest_images=self.nearest_check.isChecked()))
 
+    def parameter_label(self, parameter):
+        return parameter.label
+
     def add_custom(self):
         try:
             self.add_parameter(GeometryParameter(self.kind_combo.currentText(), parse_atoms(self.first_edit.text()),
@@ -167,11 +172,11 @@ class GeometryCurveDialog(QDialog):
             valid = values[np.isfinite(values)]
             stats = [f'{func(valid):.5f} {parameter.unit}' if len(valid) else '—'
                      for func in (np.min, np.max, np.mean, np.std)]
-            cells = [parameter.label, 'Nearest' if parameter.nearest_images else 'As printed', str(len(valid)), *stats]
+            cells = [self.parameter_label(parameter), 'Nearest' if parameter.nearest_images else 'As printed', str(len(valid)), *stats]
             for column, value in enumerate(cells): self.table.setItem(row, column, QTableWidgetItem(value))
             # NaNs intentionally break lines between undefined geometries.
             line, = axes[parameter.unit].plot(np.arange(1, len(values)+1), values, '.-',
-                        label=parameter.label, color=colors[row % len(colors)], picker=7)
+                        label=self.parameter_label(parameter), color=colors[row % len(colors)], picker=7)
             self.line_frames[line] = self.sequence
         for unit, ax in axes.items():
             ax.set_xlabel('Position in selected trajectory'); ax.set_ylabel('Distance (Å)' if unit == 'Å' else 'Angle (°)')
@@ -197,7 +202,7 @@ class GeometryCurveDialog(QDialog):
         with open(path, 'w', encoding='utf-8-sig', newline='') as stream:
             writer = csv.writer(stream)
             writer.writerow(['trajectory_position', 'source_frame_1based', 'stage_index', 'neb_iteration', 'neb_image',
-                             *[p.label + ' (' + p.unit + ')' + (' [unwrapped]' if self.unwrap_check.isChecked() and p.kind == 'Dihedral' else '')
+                             *[self.parameter_label(p) + ' (' + p.unit + ')' + (' [unwrapped]' if self.unwrap_check.isChecked() and p.kind == 'Dihedral' else '')
                                for p in self.parameters]])
             for k, index in enumerate(progress_items(self.sequence,'Writing geometry CSV')):
                 info = self.document.frames[index].info

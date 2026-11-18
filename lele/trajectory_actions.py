@@ -1,7 +1,7 @@
 """Lazy GUI integration for selection analysis and display-only alignment."""
 from PySide6.QtCore import QSignalBlocker
-from PySide6.QtWidgets import (QCheckBox, QPushButton, QHBoxLayout, QDialog,
-    QVBoxLayout, QFormLayout, QComboBox, QSpinBox, QLabel, QDialogButtonBox)
+from PySide6.QtWidgets import QCheckBox, QPushButton, QHBoxLayout, QVBoxLayout, QFormLayout, QComboBox, QSpinBox, QLabel, QDialogButtonBox
+from .dialog_policy import QDialog
 
 
 class TrajectoryAnalysisActions:
@@ -112,6 +112,8 @@ class AlignmentDialog(QDialog):
         buttons.rejected.connect(self.reject); layout.addWidget(buttons)
 
     def apply(self):
+        from .dialog_policy import ensure_source_current
+        if not ensure_source_current(self):return
         from .trajectory_analysis import DisplayAlignment
         index = self.sequence[self.reference_spin.value()-1]
         reference = self.document.frames[index]

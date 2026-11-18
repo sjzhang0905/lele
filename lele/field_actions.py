@@ -1,11 +1,11 @@
 """Volumetric field selection and explicit molecular-orbital evaluation."""
 from PySide6.QtCore import QSignalBlocker
 from .panel_controls import PanelComboBox
-from PySide6.QtWidgets import (QLabel, QDoubleSpinBox, QPushButton,
-                              QHBoxLayout, QMessageBox, QGroupBox, QFormLayout, QSpinBox,
-                              QCheckBox, QColorDialog, QDialog)
+from PySide6.QtWidgets import QLabel, QDoubleSpinBox, QPushButton, QHBoxLayout, QVBoxLayout, QGroupBox, QFormLayout, QSpinBox, QCheckBox
+from .dialog_policy import QMessageBox, QColorDialog, QDialog
 from .operations import run_data_task
 from .output_text import LoadCancelled
+from .color_controls import set_color_swatch
 
 
 def field_reference(document, volume):
@@ -39,9 +39,13 @@ class FieldActions:
         form.addRow('Dataset', self.field_combo)
         self.field_import_button=QPushButton('Import another field file…')
         self.field_import_button.clicked.connect(self._import_field_file);form.addRow(self.field_import_button)
+        self.field_arithmetic_button=QPushButton('Add / subtract fields…')
+        self.field_arithmetic_button.clicked.connect(self._field_arithmetic)
+        form.addRow(self.field_arithmetic_button)
         self.field_note = QLabel('No volumetric field loaded.')
         self.field_note.setWordWrap(True); form.addRow(self.field_note)
-        self.field_signs = PanelComboBox(); self.field_signs.addItems(['Both', 'Positive', 'Negative'])
+        self.field_signs = PanelComboBox(); self.field_signs.addItems(['Both', 'Positive', 'Negative', 'None'])
+        self.field_signs.setToolTip('None hides all isosurface layers; datasets remain available for plane slices. With custom layers, the other choices retain those layer settings.')
         self.field_signs.currentTextChanged.connect(lambda value: self._set_option('volume_signs', value))
         form.addRow('Isosurface signs', self.field_signs)
         self._build_isosurface_style_controls(form)
@@ -67,6 +71,8 @@ class FieldActions:
         self.negative_iso.valueChanged.connect(lambda value:self._set_surface_option('volume_negative_iso',value))
         appearance.addRow('Negative |isovalue|',self.negative_iso)
         self.positive_color = QPushButton();self.negative_color = QPushButton()
+        set_color_swatch(self.positive_color, self.render_options.volume_positive_color, 'Positive color')
+        set_color_swatch(self.negative_color, self.render_options.volume_negative_color, 'Negative color')
         self.positive_color.clicked.connect(lambda:self._pick_surface_color('volume_positive_color'))
         self.negative_color.clicked.connect(lambda:self._pick_surface_color('volume_negative_color'))
         appearance.addRow('Positive color',self.positive_color);appearance.addRow('Negative color',self.negative_color)
@@ -74,7 +80,7 @@ class FieldActions:
         self.negative_opacity_independent.toggled.connect(lambda value:self._set_surface_option('volume_independent_opacity',value))
         appearance.addRow(self.negative_opacity_independent)
         self.negative_opacity = QDoubleSpinBox();self.negative_opacity.setRange(0,1)
-        self.negative_opacity.setDecimals(2);self.negative_opacity.setSingleStep(.05);self.negative_opacity.setValue(.65)
+        self.negative_opacity.setDecimals(2);self.negative_opacity.setSingleStep(.05);self.negative_opacity.setValue(self.render_options.volume_negative_opacity)
         self.negative_opacity.valueChanged.connect(lambda value:self._set_surface_option('volume_negative_opacity',value))
         appearance.addRow('Negative opacity',self.negative_opacity)
         self.surface_style = PanelComboBox();self.surface_style.addItems(['Surface','Wireframe','Points'])
@@ -88,12 +94,23 @@ class FieldActions:
         self.surface_smooth.setToolTip('Interpolate surface normals for lighting; grid values are unchanged.')
         self.surface_smooth.toggled.connect(lambda value:self._set_surface_option('volume_smooth_normals',value))
         appearance.addRow(self.surface_smooth)
-        self.layers_button = QPushButton('Surface layers / ESP color mapping…')
+        self.layers_button = QPushButton('Surface layers / ESP mapping…')
         self.layers_button.clicked.connect(self._edit_surface_layers);appearance.addRow(self.layers_button)
         self.layers_note=QLabel();self.layers_note.setWordWrap(True);appearance.addRow(self.layers_note)
         form.addRow(self.surface_group)
         self.slice_button=QPushButton('Planar slice…');self.slice_button.clicked.connect(self._show_field_slice)
         form.addRow(self.slice_button)
+        self.surface_hide_check=QCheckBox('Rectangle hide (through depth)')
+        self.surface_hide_check.setToolTip('Drag a rectangle on the canvas to hide every isosurface portion inside it, through the full depth. Atoms, bonds and source grids are unchanged. Esc exits; Ctrl+Z undoes the last hide.')
+        self.surface_hide_check.toggled.connect(self._set_surface_hide)
+        form.addRow(self.surface_hide_check)
+        self.surface_hide_undo=QPushButton('Undo last surface hide')
+        self.surface_hide_undo.clicked.connect(self._undo_surface_hide)
+        self.surface_hide_restore=QPushButton('Restore all hidden surfaces')
+        self.surface_hide_restore.clicked.connect(self._restore_surfaces)
+        hide_buttons=QVBoxLayout();hide_buttons.addWidget(self.surface_hide_undo)
+        hide_buttons.addWidget(self.surface_hide_restore);hide_buttons.addStretch(1)
+        form.addRow(hide_buttons)
         self.field_export_button=QPushButton('Export active field CUBE…')
         self.field_export_button.clicked.connect(self._export_active_field);form.addRow(self.field_export_button)
 
@@ -102,28 +119,92 @@ class FieldActions:
         # Display settings remain editable before any structure is loaded.
         self._refresh_isosurface_style_controls()
 
+    def _set_surface_hide(self,enabled):
+        if enabled:
+            self._pending_paste=None
+            box=getattr(self,'box_select_action',None)
+            if box is not None:box.setChecked(False)
+        vtk=getattr(self,'vtk',None)
+        box=getattr(self,'box_select_action',None)
+        if vtk is not None and hasattr(vtk,'set_box_selection'):
+            vtk.set_box_selection(bool(enabled or (box is not None and box.isChecked())))
+        if enabled and hasattr(self,'statusBar'):
+            self.statusBar().showMessage('Drag to hide isosurfaces through the full depth. Esc exits; Ctrl+Z undoes the last hide.',10000)
+
+    def _surface_rectangle_selected(self,x1,y1,x2,y2):
+        if not self.surface_hide_check.isChecked():return False
+        if self.doc is None or self.doc.volume is None or self.renderer is None:return True
+        if not self.renderer.field_actors:return True
+        # Clicking without a real drag must never erase a strip or change atoms.
+        if abs(x2-x1)<2 or abs(y2-y1)<2:return True
+        from .interaction import vtk_display_from_qt
+        from .surface_erase import rectangle_hidden_region,validate_hidden_regions
+        vw,vh=self.vtk.GetRenderWindow().GetSize()
+        a=vtk_display_from_qt(x1,y1,self.vtk.width(),self.vtk.height(),vw,vh)
+        b=vtk_display_from_qt(x2,y2,self.vtk.width(),self.vtk.height(),vw,vh)
+        try:
+            region=rectangle_hidden_region(self.scene,(*a,*b),
+                rotation=self.renderer.display_rotation,translation=self.renderer.display_translation)
+            regions=validate_hidden_regions([*getattr(self.render_options,'volume_hidden_regions',[]),region])
+        except ValueError as exc:
+            QMessageBox.warning(self,'Cannot hide isosurface region',str(exc));return True
+        self._set_option('volume_hidden_regions',regions)
+        if hasattr(self,'statusBar'):
+            self.statusBar().showMessage('Isosurface region hidden through depth. Ctrl+Z or Undo last surface hide restores it.',6000)
+        return True
+
+    def _undo_surface_hide(self):
+        regions=getattr(self.render_options,'volume_hidden_regions',[])
+        if regions:self._set_option('volume_hidden_regions',regions[:-1])
+
+    def _restore_surfaces(self):
+        if getattr(self.render_options,'volume_hidden_regions',[]):
+            self._set_option('volume_hidden_regions',[])
+
     def _pick_surface_color(self, option):
         from PySide6.QtGui import QColor
         color=QColorDialog.getColor(QColor(getattr(self.render_options,option)),self,'Isosurface color')
         if color.isValid():self._set_surface_option(option,color.name())
 
     def _edit_surface_layers(self):
+        from copy import deepcopy
         from .isosurface_dialog import IsosurfaceLayersDialog
+        from .surface_rendering import update_mapping_colors
         fields=[] if self.doc is None else self.doc.volumes
         active=next((i for i,v in enumerate(fields) if v is self.doc.volume),-1) if self.doc else -1
-        dialog=IsosurfaceLayersDialog(self.render_options,self,fields=fields,active_index=active)
-        if dialog.exec()==QDialog.DialogCode.Accepted:
-            self._set_surface_option('volume_surfaces',dialog.layers)
+        document=self.doc;options=self.render_options
+        original=deepcopy(options.volume_surfaces)
+        def preview(layers):
+            if self.doc is not document or self.render_options is not options:return
+            previous=options.volume_surfaces
+            renderer=getattr(self,'renderer',None)
+            if renderer is not None and update_mapping_colors(renderer,previous,layers):
+                options.volume_surfaces=deepcopy(layers)
+                self.vtk.GetRenderWindow().Render()
+                self._refresh_isosurface_style_controls()
+            else:self._set_surface_option('volume_surfaces',layers)
+        dialog=IsosurfaceLayersDialog(options,self,fields=fields,active_index=active,preview=preview)
+        accepted=False
+        try:
+            accepted=dialog.exec()==QDialog.DialogCode.Accepted
+            if accepted:preview(dialog.layers)
+        finally:
+            if not accepted:
+                options.volume_surfaces=original
+                if self.doc is document and self.render_options is options:
+                    self._set_surface_option('volume_surfaces',original)
+            from shiboken6 import isValid
+            if isValid(dialog):dialog.deleteLater()
 
     def _import_field_file(self):
         from pathlib import Path
-        from PySide6.QtWidgets import QFileDialog
+        from .dialog_policy import QFileDialog
         from .formats import load_document
         from .field_mapping import prepare_field_attachment
         doc=self.doc;frame=getattr(self,'frame',None)
         if doc is None or frame is None:return
         path,_=QFileDialog.getOpenFileName(self,'Import scalar field for overlay / ESP',str(doc.path.parent),
-            'Scalar grids (*.cube *.cub CHGCAR* CHG PARCHG* ELFCAR* LOCPOT* AECCAR*);;All files (*)')
+            'Scalar grids (*.xsf *.XSF *.cube *.cub CHGCAR* CHG PARCHG* ELFCAR* LOCPOT* AECCAR*);;All files (*)')
         if not path:return
         def prepare():
             incoming=load_document(Path(path))
@@ -142,7 +223,35 @@ class FieldActions:
     def _show_field_slice(self):
         if self.doc is None or self.doc.volume is None:return
         from .field_slice_dialog import FieldSliceDialog
-        FieldSliceDialog(self.doc.volume,self).exec()
+        return self._show_analysis_window(FieldSliceDialog(self.doc.volume,self))
+
+    def _field_arithmetic(self):
+        from .field_arithmetic_dialog import FieldArithmeticDialog
+        from .field_arithmetic import append_field_result
+        doc, frame = self.doc, getattr(self,'frame',None)
+        if doc is None or doc.volume is None or frame is None:return
+        timers=[]
+        source_vibration=self._active_vibration
+        for name in ('playback','vibration_timer'):
+            timer=getattr(self,name,None)
+            if timer is not None and timer.isActive():timers.append(timer);timer.stop()
+        dialog=None
+        try:
+            dialog=FieldArithmeticDialog(self.documents,doc,frame,self)
+            if dialog.exec()!=QDialog.DialogCode.Accepted or dialog.result is None:return
+            if self.doc is not doc or self.frame is not frame:
+                raise ValueError('The current document/frame changed. Reopen field arithmetic and calculate again.')
+            append_field_result(doc,dialog.result,expected_active=dialog.expected_active)
+            self.refresh_scene()
+            self.statusBar().showMessage('Added and selected '+dialog.result.label+
+                '. Existing custom layers retain their dataset selections.',10000)
+        except ValueError as exc:
+            QMessageBox.warning(self,'Could not add field result',str(exc))
+        finally:
+            if dialog is not None:dialog.deleteLater()
+            if (not getattr(self,'_closing',False) and self.doc is doc and self.frame is frame
+                    and self._active_vibration==source_vibration):
+                for timer in timers:timer.start()
 
     def _export_active_field(self):
         if self.doc is None or self.doc.volume is None:return
@@ -160,10 +269,12 @@ class FieldActions:
                 (self.surface_smooth,'setChecked',opts.volume_smooth_normals))
         for widget,method,value in states:
             with QSignalBlocker(widget):getattr(widget,method)(value)
-        for button,color in ((self.positive_color,opts.volume_positive_color),(self.negative_color,opts.volume_negative_color)):
-            button.setText(color);button.setStyleSheet('border: 3px solid '+color+'; padding: 3px;')
+        for button,color,label in ((self.positive_color,opts.volume_positive_color,'Positive color'),
+                                   (self.negative_color,opts.volume_negative_color,'Negative color')):
+            set_color_swatch(button, color, label)
         for widget in (self.negative_independent,self.negative_opacity_independent,self.surface_style,
-                       self.positive_color,self.negative_color,self.field_signs):widget.setEnabled(not custom)
+                       self.positive_color,self.negative_color):widget.setEnabled(not custom)
+        self.field_signs.setEnabled(True)
         self.negative_iso.setEnabled(not custom and opts.volume_independent_negative)
         self.negative_opacity.setEnabled(not custom and opts.volume_independent_opacity)
         for name in ('iso_spin','opacity_slider','iso_apply_button'):
@@ -171,12 +282,23 @@ class FieldActions:
             if widget is not None:widget.setEnabled(not custom)
         explicit=any(layer.get('dataset',-1)>=0 for layer in opts.volume_surfaces)
         self.layers_note.setText(f'{len(opts.volume_surfaces)} independent layers on '+
-            ('selected source fields.' if explicit else 'the active dataset.')+' Basic +/− controls are overridden.'
+            ('selected source fields.' if explicit else 'the active dataset.')+' Basic +/− controls are overridden; None hides every layer.'
             if custom else 'Basic +/− controls active. Add layers to overlay fields or color a surface by ESP.')
         attached=self.doc is not None and self.doc.volume is not None
         self.slice_button.setEnabled(attached);self.field_export_button.setEnabled(attached and bool(self.doc.frames))
+        self.field_arithmetic_button.setEnabled(attached and bool(self.doc.frames))
         self.field_import_button.setEnabled(self.doc is not None and bool(self.doc.frames) and
             not (self.doc.modified and self.doc.volume is None))
+        renderer=getattr(self,'renderer',None)
+        visible=attached and opts.show_volume and opts.volume_signs!='None'
+        if renderer is not None:visible=visible and bool(renderer.field_actors)
+        # Stay in hide mode after erasing the final piece, so Ctrl+Z can restore it.
+        self.surface_hide_check.setEnabled(visible or self.surface_hide_check.isChecked())
+        regions=getattr(opts,'volume_hidden_regions',[])
+        self.surface_hide_undo.setEnabled(attached and bool(regions))
+        self.surface_hide_restore.setEnabled(attached and bool(regions))
+        if (not attached or not opts.show_volume or opts.volume_signs=='None') and self.surface_hide_check.isChecked():
+            self.surface_hide_check.setChecked(False)
 
     def _refresh_field_controls(self):
         doc = self.doc
@@ -202,9 +324,19 @@ class FieldActions:
             lo, hi = float(volume.data.min()), float(volume.data.max())
             unit = volume.unit or 'source-file units'
             note = f'{volume.data.shape} · {unit}\nRange {lo:.6g} to {hi:.6g}.'
+            provenance=volume.provenance
+            if provenance.get('operation')=='field_arithmetic':
+                note+='\nFormula: '+str(provenance.get('formula',''))
+                self.field_note.setToolTip('\n'.join(
+                    f'{term.get("symbol", "?")} = {term.get("source_path", "")} · '
+                    f'{term.get("dataset_label", "Field")} [{term.get("source_unit", "")}]'
+                    for term in provenance.get('terms',[])))
+            else:self.field_note.setToolTip('')
             from .isosurface_dialog import basic_surface_layers
             layers=self.render_options.volume_surfaces or basic_surface_layers(self.render_options)
-            if not any(layer.get('visible',True) and layer.get('opacity',.65)>0 and
+            if self.render_options.volume_signs=='None':
+                note += '\nIsosurfaces hidden (None); the field remains available for slices.'
+            elif not any(layer.get('visible',True) and layer.get('opacity',.65)>0 and
                        (layer.get('dataset',-1)>=0 or lo <= layer['value'] <= hi) for layer in layers):
                 note += '\nNo visible isovalue lies within this field’s range.'
             self.field_note.setText(note)

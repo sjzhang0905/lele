@@ -92,7 +92,7 @@ def test_gui_size_controls_have_independent_space_filling_scale(gui):
     w.sf_radii_combo.setCurrentText('van der Waals')
     assert w.render_options.space_filling_scale == 1.4
     w.style_combo.setCurrentText('Ball and stick')
-    assert w.atom_slider.value() == 50 and not w.sf_radii_combo.isEnabled()
+    assert w.atom_slider.value() == 45 and not w.sf_radii_combo.isEnabled()
     w.style_combo.setCurrentText('Space filling')
     assert w.atom_slider.value() == 140
 
@@ -107,8 +107,8 @@ def test_gui_model_rebuilds_all_frames_and_keeps_manual_overrides(gui):
     assert all(visible_bonds(f, 1.18) == [(0, 2)] for f in w.doc.frames)
     assert all(f.bond_snapshot is None for f in w.doc.frames)
     w.bond_model_combo.setCurrentText('Chemcraft pair ranges')
-    assert w.cutoff_spin.value() == 1.0
-    assert all(visible_bonds(f) == [(0, 1), (0, 2)] for f in w.doc.frames)
+    assert w.cutoff_spin.value() == 0.88
+    assert all(visible_bonds(f, w.render_options.bond_cutoff) == [(0, 2)] for f in w.doc.frames)
 
 
 def test_reference_controls_restore_independently_between_files(gui, tmp_path):
@@ -125,7 +125,7 @@ def test_reference_controls_restore_independently_between_files(gui, tmp_path):
     w.atom_slider.setValue(150)
     w.change_frame(0, switch_doc=0)
     assert w.bond_model_combo.currentText() == 'Chemcraft pair ranges'
-    assert w.cutoff_spin.value() == 1.0
+    assert w.cutoff_spin.value() == 0.88
     assert w.sf_radii_combo.currentText() == 'Ionic' and w.atom_slider.value() == 120
     w.change_frame(0, switch_doc=1)
     assert w.bond_model_combo.currentText() == 'Covalent radii'

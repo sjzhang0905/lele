@@ -55,7 +55,10 @@ def change_vacuum(frame,gap,axis=None):
         raise ValueError('The slab crosses the cell boundary. Keeping every Cartesian coordinate fixed cannot preserve this slab while changing its vacuum; first choose contiguous periodic representatives explicitly.')
     if result['thickness']+gap<1.e-6:raise ValueError('The requested vacuum would make the cell singular.')
     cell=frame.cell.copy();cell[result['axis']]+=(gap-result['gap'])*result['normal']
+    from .cell_origin import cell_origin,set_cell_origin
+    origin=cell_origin(frame) if 'cell_origin_fractional' in frame.info else None
     frame.cell=cell
+    if origin is not None:set_cell_origin(frame,origin)
     frame.energy_ev=None
     for key in ('optimization_converged','energy_source','qe_total_energy_ry','qe_energy_source_line',
                 'qe_forces_ev_ang','cartesian_max_force_ev_ang','cartesian_rms_force_ev_ang','coordinate_reorientation','plane_alignment'):

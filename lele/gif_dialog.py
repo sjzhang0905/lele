@@ -2,8 +2,8 @@
 from math import ceil
 
 from PySide6.QtCore import QSignalBlocker
-from PySide6.QtWidgets import (QDialog, QVBoxLayout, QFormLayout, QComboBox, QSpinBox,
-                               QDoubleSpinBox, QCheckBox, QLabel, QDialogButtonBox, QWidget)
+from PySide6.QtWidgets import QVBoxLayout, QFormLayout, QComboBox, QSpinBox, QDoubleSpinBox, QCheckBox, QLabel, QDialogButtonBox, QWidget
+from .dialog_policy import QDialog
 
 from .animation_export import GifSettings
 
@@ -17,7 +17,7 @@ class GifExportDialog(QDialog):
         self.total_frames = total_frames
         self.aspect = max(1, view_size[1]) / max(1, view_size[0])
         layout = QVBoxLayout(self)
-        note = QLabel('Save the 3D view using the current camera, colours and labels.')
+        note = QLabel('Save the 3D view using the current camera, colors and labels.')
         note.setWordWrap(True)
         layout.addWidget(note)
         form = QFormLayout()
@@ -78,7 +78,7 @@ class GifExportDialog(QDialog):
         self.loop_check.setChecked(True)
         layout.addWidget(self.loop_check)
         self.quality_check=QCheckBox('High quality: 2× supersampling + Lanczos');self.quality_check.setChecked(True);layout.addWidget(self.quality_check)
-        self.dither_check=QCheckBox('Dither GIF colours (shared animation palette)');self.dither_check.setChecked(True);layout.addWidget(self.dither_check)
+        self.dither_check=QCheckBox('Dither GIF colors (shared animation palette)');self.dither_check.setChecked(True);layout.addWidget(self.dither_check)
         self.details_label = QLabel()
         self.details_label.setWordWrap(True)
         layout.addWidget(self.details_label)

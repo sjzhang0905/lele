@@ -1,7 +1,7 @@
 """Read-only planar scalar-field inspection; never changes source grids."""
 import numpy as np
-from PySide6.QtWidgets import (QDialog,QVBoxLayout,QHBoxLayout,QComboBox,QDoubleSpinBox,
-    QCheckBox,QLabel,QPushButton,QFileDialog,QMessageBox,QLineEdit)
+from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QComboBox, QDoubleSpinBox, QCheckBox, QLabel, QPushButton, QLineEdit
+from .dialog_policy import QDialog, QFileDialog, QMessageBox
 from .field_slice import grid_plane_slice, export_slice_csv, display_slice_samples
 from .operations import run_data_task
 from .output_text import LoadCancelled
@@ -13,7 +13,8 @@ class FieldSliceDialog(QDialog):
         self.volume=volume;self.section=None
         self.setWindowTitle('Scalar field slice — '+(volume.label or 'Field'));self.resize(920,760)
         from matplotlib.figure import Figure
-        from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg,NavigationToolbar2QT
+        from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
+        from .figure_export import FigureExportToolbar as NavigationToolbar2QT
         layout=QVBoxLayout(self);row=QHBoxLayout();layout.addLayout(row)
         self.axis=QComboBox();self.axis.addItems(['Grid plane 2–3 (fixed index 1)',
             'Grid plane 1–3 (fixed index 2)','Grid plane 1–2 (fixed index 3)']);self.axis.setCurrentIndex(2)

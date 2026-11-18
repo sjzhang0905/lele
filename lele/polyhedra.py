@@ -35,7 +35,7 @@ def validate_polyhedra(options):
         raise ValueError('Choose a valid coordination search method.')
     if not 0 <= options.polyhedra_opacity <= 1:
         raise ValueError('Polyhedron opacity must be between 0 and 1.')
-    if not re.fullmatch(r'#[0-9a-fA-F]{6}', options.polyhedra_edge_color):raise ValueError('Choose a valid edge colour.')
+    if not re.fullmatch(r'#[0-9a-fA-F]{6}', options.polyhedra_edge_color):raise ValueError('Choose a valid edge color.')
 
 
 @dataclass

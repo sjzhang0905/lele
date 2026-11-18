@@ -20,6 +20,7 @@ def legend_samples(owner):
             seen.add(species)
             size=(max(.09,radius(species)*owner.options.atom_scale)
                   if owner.options.style=='Wireframe' else owner._atom_radius(species))
+            size *= appearance(frame,i).size_scale
             color=appearance(frame,i).color or owner._display_color(species)
             samples.append(dict(symbol=species,source_index=i,color=color,
                                 opacity=appearance(frame,i).opacity,radius=size))

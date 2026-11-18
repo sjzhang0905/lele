@@ -1,6 +1,6 @@
 """Calculation overview with separate job records and explicit missing values."""
-from PySide6.QtWidgets import (QDialog,QVBoxLayout,QLabel,QTableWidget,QTableWidgetItem,
-    QPlainTextEdit,QAbstractItemView)
+from PySide6.QtWidgets import QVBoxLayout, QLabel, QTableWidget, QTableWidgetItem, QPlainTextEdit, QAbstractItemView
+from .dialog_policy import QDialog
 
 
 class CalculationOverview(QDialog):
@@ -22,6 +22,8 @@ class CalculationOverview(QDialog):
         self.table.setHorizontalHeaderLabels(['Job','Task','Method','Basis','Charge','Multiplicity','Energy (eV)','Termination','Last SCF cycles','Imaginary modes'])
         if self.results is not None and self.results.program == 'VASP':
             self.table.horizontalHeaderItem(6).setText('E0 (eV)')
+        if self.results is not None and self.results.program == 'CP2K':
+            self.table.horizontalHeaderItem(8).setText('Last inner SCF cycles')
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         layout.addWidget(self.table,1)
@@ -57,10 +59,18 @@ class CalculationOverview(QDialog):
                'Solvent: '+(job.solvent or 'Not printed'),
                f'Geometry frames: {frames}',f'Printed frequency count: {job.frequency_count}',
                'Printed <S²>: '+('Not printed' if job.spin_squared is None else str(job.spin_squared))]
+        if self.results.program=='CP2K':
+            from .cp2k_results import summary_lines
+            lines=[f'Job {job.index+1} · source line {job.start_line}']
+            if job.charge is not None:lines.append(f'Charge: {job.charge}')
+            if job.multiplicity is not None:lines.append(f'Multiplicity: {job.multiplicity}')
+            lines.extend(summary_lines(self.results,job.index))
+            lines.append(f'Geometry frames: {frames}')
+            lines.append(self.document.note)
         last=next((s for s in reversed(steps) if s.convergence),None)
         if last:
             lines.append('Last printed geometry convergence:')
-            lines += [f'  {key}: {value:g}'+(' / threshold '+f'{threshold:g}' if threshold is not None else ' (threshold not printed)')
+            lines += [f'  {key}: '+('Not printed' if value is None else f'{value:g}')+(' / threshold '+f'{threshold:g}' if threshold is not None else ' (threshold not printed)')
                       for key,(value,threshold) in last.convergence.items()]
         if self.results.program == 'VASP':
             from .vasp_results import energy_lines

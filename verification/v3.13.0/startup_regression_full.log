@@ -1,0 +1,16 @@
+.....................................                                    [100%]
+=============================== warnings summary ===============================
+tests/test_welcome_v092.py::WelcomeTests::test_command_line_file_opens_directly_and_failure_preserves_welcome
+tests/test_welcome_v092.py::WelcomeTests::test_command_line_file_opens_directly_and_failure_preserves_welcome
+tests/test_welcome_v092.py::WelcomeTests::test_ctrl_o_works_from_welcome_focus
+tests/test_welcome_v092.py::WelcomeTests::test_drop_from_welcome_loads_file
+tests/test_welcome_v092.py::WelcomeTests::test_empty_startup_keeps_white_welcome_with_prepared_native_canvas
+tests/test_welcome_v092.py::WelcomeTests::test_file_requested_while_loading_opens_automatically_when_ready
+tests/test_welcome_v092.py::WelcomeTests::test_open_menu_loads_file_and_stops_welcome_animation
+tests/test_welcome_v092.py::WelcomeTests::test_preload_failure_keeps_welcome_and_file_open_can_retry
+tests/test_welcome_v092.py::WelcomeTests::test_style_edits_before_first_file_are_kept_and_backend_is_reused
+  /workspace/scratch/20b20befcaeb/work/LELE/lele/surface_rendering.py:103: DeprecationWarning: Call to deprecated class vtkTransformPolyDataFilter. (Replaced by vtkTransformFilter.) -- Deprecated since version 9.7.0.
+    transformed=vtkTransformPolyDataFilter();transformed.SetInputConnection(contour.GetOutputPort())
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+37 passed, 9 warnings in 17.50s

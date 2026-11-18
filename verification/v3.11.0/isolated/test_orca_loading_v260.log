@@ -1,0 +1,8 @@
+...........                                                              [100%]
+11 passed in 3.76s
+Fatal Python error: none_dealloc: deallocating None: bug likely caused by a refcount error in a C extension
+Python runtime state: finalizing (tstate=0x0000555e39fd2b50)
+
+Current thread 0x00007f1e344b3740 (most recent call first):
+  Garbage-collecting
+  <no Python frame>

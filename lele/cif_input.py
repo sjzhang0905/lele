@@ -1,8 +1,28 @@
 """CIF probabilities merged after symmetry expansion, including PBC aliases."""
+import re
 import numpy as np
 from ase.io.cif import parse_cif
 from ase.spacegroup.spacegroup import parse_sitesym
 from scipy.spatial import cKDTree
+
+
+_HM_NAME_TAGS = ('_space_group_name_h-m_alt', '_symmetry_space_group_name_h-m',
+                 '_space_group.patterson_name_h-m')
+_SCREW_AXIS = re.compile(r'([2346])(?:\(([1-5])\)|_([1-5]))')
+
+
+def normalize_hm_symbol(symbol):
+    """Translate screw-axis typography, without changing axes or cell setting.
+
+    CIF writers commonly spell 21 as 2(1) or 2_1. ASE's space-group
+    database expects plain digits. Only valid n_m axes (0 < m < n) are
+    normalized; unknown symbols still go through the normal database error.
+    """
+    if not isinstance(symbol, str):return symbol
+    def replace(match):
+        order=match[1];shift=match[2] or match[3]
+        return order+shift if int(shift)<int(order) else match[0]
+    return _SCREW_AXIS.sub(replace,symbol)
 
 
 def unit_fractions(values):
@@ -15,7 +35,12 @@ def unit_fractions(values):
 def read_cif_atoms(path):
     blocks=[block for block in parse_cif(str(path)) if block.has_structure()]
     if not blocks:raise ValueError('No CIF structure block found.')
-    block=blocks[-1];sitesym=block._get_sitesym()
+    block=blocks[-1]
+    # Normalize only the in-memory name tags. Explicit operations, coordinate
+    # values, origin/setting declarations and the original file stay intact.
+    for tag in _HM_NAME_TAGS:
+        if tag in block._tags:block._tags[tag]=normalize_hm_symbol(block._tags[tag])
+    sitesym=block._get_sitesym()
     if (sitesym and block._get_spacegroup_number() is None and block._get_spacegroup_name() is None):
         rotations,translations=parse_sitesym(sitesym)
         if (np.allclose(rotations,np.eye(3),atol=1.e-12,rtol=0)

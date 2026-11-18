@@ -1,5 +1,6 @@
 """CIF site probabilities: one position per site, without integerization."""
 from collections import Counter
+from copy import deepcopy
 from decimal import Decimal, InvalidOperation
 from fractions import Fraction
 import numpy as np
@@ -95,7 +96,7 @@ def compact_species(frame,index):
 
 
 def occupied_elements(frame):
-    """Include minority components when choosing an element's display colour."""
+    """Include minority components when choosing an element's display color."""
     return sorted({symbol for i in range(len(frame.symbols))
                    for symbol,value in site_species(frame,i).items() if value>0})
 
@@ -150,8 +151,13 @@ def from_ase(atoms):
 def subset_info(info,indices):
     indices=list(map(int,indices))
     out=dict(info)
-    for key in ('site_occupancies','atom_source_order','vasp_fixed_axes','poscar_block_ids'):
-        if key in info:out[key]=[info[key][i] for i in indices]
+    for key in ('site_occupancies','atom_source_order','vasp_fixed_axes','fixed_axes','poscar_block_ids','qe_masses_amu'):
+        if key in info:out[key]=[deepcopy(info[key][i]) for i in indices]
+    if 'qe_forces_ev_ang' in info:
+        out['qe_forces_ev_ang']=np.asarray(info['qe_forces_ev_ang'])[indices].copy()
+    if 'saved_fragments' in info:
+        from .saved_fragments import subset_fragments
+        out['saved_fragments']=subset_fragments(info['saved_fragments'],indices)
     if 'cif_row_order' in info:
         rows=info['cif_row_order']
         if indices==sorted(set(indices)):

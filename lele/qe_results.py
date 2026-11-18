@@ -45,9 +45,10 @@ class QeResults(CalculationResults):
 
 def read_qe_input(path):
     from io import StringIO
-    from ase.io.espresso import read_espresso_in,read_fortran_namelist
+    from ase.io.espresso import read_fortran_namelist
     text='\n'.join(read_output_lines(path))
-    settings,cards=read_fortran_namelist(StringIO(text));atoms=read_espresso_in(StringIO(text))
+    settings,cards=read_fortran_namelist(StringIO(text))
+    atoms=_qe_input_atoms(settings,cards)
     from collections.abc import Mapping
     def plain(value):
         if isinstance(value,Mapping):return {key:plain(item) for key,item in value.items()}
@@ -58,6 +59,7 @@ def read_qe_input(path):
     info=dict(source_kind='qe_in',qe_settings=dict(settings),qe_input_cards=list(cards),qe_masses_amu=atoms.get_masses().tolist())
     if 'celldm(1)' in system:info['qe_alat_ang']=float(system['celldm(1)'])*Bohr
     elif 'a' in system:info['qe_alat_ang']=float(system['a'])
+    else:info['qe_alat_ang']=float(np.linalg.norm(atoms.cell.array[0]))
     if 'tot_charge' in system:info['converter_charge']=float(system['tot_charge'])
     if 'nspin' in system or 'noncolin' in system:info['spin_polarized']=system.get('nspin',1)==2 or bool(system.get('noncolin',False))
     frame=Frame(atoms.get_chemical_symbols(),atoms.positions,atoms.cell.array,tuple(atoms.pbc),info=info)
@@ -65,6 +67,66 @@ def read_qe_input(path):
     job=CalculationJob(0,1,route=str(control.get('calculation','scf')),termination='Input file')
     job.tasks.add('input');result.jobs.append(job);result.steps.append(CalculationStep(0,1,frame))
     return result
+
+
+def _qe_input_atoms(settings,cards):
+    """Read legal ibrav=0 A/celldm and implicit alat forms in memory.
+
+    ASE 3.29 checks uppercase ``A`` in a lowercased namelist and does not
+    propagate the first-vector norm to implicit alat atomic coordinates.
+    Keep the original settings/cards for display and update only the parser's
+    numerical inputs. No source text or calculation keyword is rewritten.
+    """
+    from ase import Atoms
+    from ase.io.espresso import (get_cell_parameters,get_atomic_positions,
+                                 get_atomic_species,label_to_symbol,
+                                 convert_constraint_flags,ibrav_error_message)
+    system={str(key).lower():value for key,value in settings.get('system',{}).items()}
+    if 'ibrav' not in system:raise KeyError('ibrav is required in &SYSTEM')
+    if system['ibrav']!=0:raise ValueError(ibrav_error_message)
+    if 'celldm(1)' in system and 'a' in system:
+        raise ValueError('QE specifies both celldm(1) and A; choose one lattice-parameter representation.')
+    alat=(float(system['celldm(1)'])*Bohr if 'celldm(1)' in system else
+          float(system['a']) if 'a' in system else None)
+    if alat is not None and (not np.isfinite(alat) or alat<=0):
+        raise ValueError('QE lattice parameter must be positive and finite.')
+    # Geometry card comments are immaterial to parsing. Retain the unmodified
+    # cards in frame.info; this working copy also avoids treating a trailing
+    # comment as three selective-dynamics flags.
+    clean=[]
+    for line in cards:
+        quote=None;end=len(line)
+        for index,char in enumerate(line):
+            if char in "\"'":
+                if quote==char:quote=None
+                elif quote is None:quote=char
+            elif char in '#!' and quote is None:end=index;break
+        line=line[:end].strip()
+        if line:
+            line=re.sub(r'^(CELL_PARAMETERS|ATOMIC_POSITIONS|ATOMIC_SPECIES)\b',
+                        lambda match:match[0].upper(),line,flags=re.I)
+            clean.append(line)
+    headers=[line for line in clean if re.match(r'^CELL_PARAMETERS\b',line,re.I)]
+    if len(headers)!=1:raise ValueError('Exactly one CELL_PARAMETERS card is required for ibrav=0.')
+    physical=bool(re.search(r'\b(?:bohr|angstrom)\b',headers[0],re.I))
+    if physical and alat is not None:
+        raise ValueError('QE lattice parameter is specified twice: A/celldm(1) and physical-unit CELL_PARAMETERS.')
+    cell,_=get_cell_parameters(clean,alat=None if physical else alat)
+    if cell is None or not np.isfinite(cell).all() or abs(np.linalg.det(cell))<1.e-12:
+        raise ValueError('QE CELL_PARAMETERS must describe a finite, nondegenerate cell.')
+    if alat is None:alat=float(np.linalg.norm(cell[0]))
+    species=get_atomic_species(clean,n_species=int(system['ntyp']))
+    magmoms={label:system.get(f'starting_magnetization({i+1})',0.)
+             for i,(label,_,_) in enumerate(species)}
+    positions=get_atomic_positions(clean,n_atoms=int(system['nat']),cell=cell,alat=alat)
+    if positions is None:raise ValueError('No ATOMIC_POSITIONS card found.')
+    if any(row[0] not in magmoms for row in positions):
+        raise ValueError('QE coordinates reference an undefined ATOMIC_SPECIES label.')
+    atoms=Atoms(symbols=[label_to_symbol(row[0]) for row in positions],
+                positions=[row[1] for row in positions],cell=cell,pbc=True,
+                magmoms=[magmoms[row[0]] for row in positions])
+    atoms.set_constraint(convert_constraint_flags([row[2] for row in positions]))
+    return atoms
 
 
 def same_geometry(first,second):
@@ -129,6 +191,9 @@ def read_qe_output(path):
             if rows is None or len(rows)!=nat:raise ValueError('Incomplete QE ATOMIC_POSITIONS')
             geometry=Frame([label_to_symbol(r[0]) for r in rows],np.asarray([r[1] for r in rows]),cell.copy(),(True,)*3,
                            info={'qe_alat_ang':alat,'source_kind':'qe_out'})
+            from .atom_constraints import qe_position_constraints
+            try:geometry.info.update(qe_position_constraints(lines[i+1:i+nat+1]))
+            except ValueError as exc:geometry.info['constraint_notes']=[str(exc)]
             success=success and same_geometry(current.geometry,geometry)
             current=CalculationStep(job.index,i+1,geometry,converged=success)
             result.steps.append(current);i+=nat+1;continue

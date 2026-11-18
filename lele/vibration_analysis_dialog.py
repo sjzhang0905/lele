@@ -3,9 +3,8 @@ import csv
 from .operations import gui_operation,run_data_task
 from .output_text import progress_items
 from PySide6.QtCore import Qt, QSignalBlocker
-from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
-    QComboBox, QCheckBox, QDoubleSpinBox, QPushButton, QTableWidget,
-    QTableWidgetItem, QAbstractItemView, QHeaderView, QFileDialog)
+from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QCheckBox, QDoubleSpinBox, QPushButton, QTableWidget, QTableWidgetItem, QAbstractItemView, QHeaderView
+from .dialog_policy import QDialog, QFileDialog
 
 from .trajectory_analysis import displacement_share
 

@@ -2,6 +2,7 @@
 from PySide6.QtCore import QEvent, Qt
 from PySide6.QtWidgets import (
     QAbstractSpinBox, QComboBox, QFormLayout, QLineEdit, QSlider, QToolTip,
+    QLayout, QPushButton, QSizePolicy,
 )
 
 
@@ -67,3 +68,12 @@ def compact_panel_editors(panel):
         # Native spin/combo editors manage their own arrow/clear-button space.
         if not isinstance(editor.parentWidget(), (QAbstractSpinBox, QComboBox)):
             editor.setFixedWidth(SCIENTIFIC_NUMBER_WIDTH)
+    # Spanning form rows and ordinary box-layout rows otherwise expand buttons
+    # even when the numeric fields above them have bounded widths.
+    layouts = panel.findChildren(QLayout)
+    for button in panel.findChildren(QPushButton):
+        if button.property('leleColor') is None:
+            button.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
+            button.setMaximumWidth(SLIDER_MAX_WIDTH)
+        for layout in layouts:
+            layout.setAlignment(button, Qt.AlignmentFlag.AlignLeft)

@@ -18,9 +18,9 @@ from .output_text import load_progress,check_load_cancelled,progress_items
 FORMAT = 'LELE_PROJECT'
 SCHEMA = 1
 MODULES = ('core', 'render_options', 'atom_appearance', 'calculation_results',
-    'vasp_results', 'orca_neb', 'orca_goat', 'orca_soc', 'gaussian_properties',
+    'vasp_results', 'orca_scan', 'orca_neb', 'orca_goat', 'orca_soc', 'gaussian_properties',
     'trajectory_analysis', 'selection_geometry', 'periodic_geometry','cp2k_results','qe_results','qe_phonons',
-    'siesta_results', 'gaussian_basis', 'binary_wavefunctions','nmr')
+    'siesta_results', 'gaussian_basis', 'binary_wavefunctions','nmr','annotations')
 
 
 def data_types():
@@ -115,6 +115,9 @@ class Decoder:
             if cls.__name__ == 'RenderOptions' and 'bond_model' not in attributes:
                 # Projects saved before 2.9 retain their original connectivity.
                 result.bond_model = 'Covalent radii'
+            if cls.__name__ == 'RenderOptions' and 'boundary_preserve_origin' not in attributes:
+                # Keep the wrapped display of projects saved before v3.14.
+                result.boundary_preserve_origin = False
             for key in extra_fields(cls):object.__setattr__(result, key, self.decode(attributes[key]) if key in attributes else [])
             self.objects.append(result)
         elif kind == 'dict':
@@ -164,9 +167,11 @@ def load_project(path):
             decoder = Decoder(manifest['nodes'], archive);state = decoder.decode(manifest['root'])
             decoder.validate_objects()
         from .vasp_results import normalize_document_e0
+        from .orca_scan import refresh_scan_display_labels
         for entry in state.get('documents', []):
             normalize_document_e0(entry['document'], entry.get('vibration_references', {}).values())
             document = entry['document']
+            refresh_scan_display_labels(document.calculation_results, document.frames)
             frames = list(document.frames) + [a.reference for a in document.vibrations]
             frames += list(entry.get('vibration_references', {}).values())
             for frame in frames:frame.info.setdefault('bond_model', entry['options'].bond_model)
@@ -192,11 +197,21 @@ def validate_state(state):
         for frame in document.frames:
             if not isinstance(frame.info, dict) or len(frame.pbc) != 3 or any(not isinstance(s, str) for s in frame.symbols):
                 raise ValueError('Invalid structure metadata in project.')
+        from .annotations import TextAnnotation
+        if not isinstance(document.annotations, list) or any(not isinstance(a, TextAnnotation) for a in document.annotations):
+            raise ValueError('Invalid project text annotations.')
+        for annotation in document.annotations:annotation.__post_init__()
         if document.source_preview is not None and not isinstance(document.source_preview, str):
             raise ValueError('Invalid project source preview.')
         if not isinstance(options, RenderOptions):raise ValueError('Invalid project display settings.')
         validate_preset(snapshot(options));validate_planes(options.lattice_planes);validate_polyhedra(options)
         validate_rules(options.element_pair_rules)
+        from .surface_erase import validate_hidden_regions
+        from .plane_field import validate_plane_style
+        validate_hidden_regions(options.volume_hidden_regions)
+        validate_plane_style(options.fitted_plane_style)
+        if options.volume_signs not in ('None', 'Both', 'Positive', 'Negative'):
+            raise ValueError('Invalid isosurface signs.')
         if options.bond_model not in ('Chemcraft pair ranges', 'Covalent radii'):
             raise ValueError('Invalid bond search model.')
         if not math.isfinite(options.bond_cutoff) or not .1 <= options.bond_cutoff <= 5.:

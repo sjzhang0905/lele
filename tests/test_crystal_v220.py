@@ -23,7 +23,7 @@ def octahedron():
 
 
 def plane(**values):
-    return {**default_plane(), **values}
+    return {**default_plane(), 'mode':'Keep below', **values}
 
 
 def draw(frame=None):
@@ -92,7 +92,8 @@ def test_plane_box_polygon_and_alignment_transform():
 
 
 def test_periodic_octahedron_has_six_images_eight_faces_and_twelve_edges():
-    f = octahedron();before = f.clone();polys = coordination_polyhedra(f, RenderOptions())
+    # The 2 Å Ti–O test shell uses the original unscaled covalent cutoff.
+    f = octahedron();before = f.clone();polys = coordination_polyhedra(f, RenderOptions(bond_cutoff=1.0))
     assert len(polys) == 1
     p = polys[0]
     assert p.center == 0 and len(p.ligand_indices) == 6
@@ -167,7 +168,7 @@ def test_nonperiodic_tetrahedron_and_hidden_center():
 
 
 def test_boundary_repeats_complete_polyhedra_and_keeps_source_ids():
-    f = octahedron();view = draw();view.options.style = 'Polyhedral'
+    f = octahedron();view = draw();view.options.style = 'Polyhedral';view.options.bond_cutoff = 1.0
     view.options.boundary_enabled = True;view.options.boundary_bounds = ((0, 2), (0, 1), (0, 1))
     view.set_scene(f)
     assert len(view.polyhedra) == 12 and len(view.polyhedron_actors) == 12
@@ -178,7 +179,7 @@ def test_boundary_repeats_complete_polyhedra_and_keeps_source_ids():
 
 
 def test_polyhedral_atoms_can_be_hidden_and_clipping_applies_to_faces():
-    view = draw();view.options.style = 'Polyhedral';view.options.polyhedra_show_atoms = False
+    view = draw();view.options.style = 'Polyhedral';view.options.bond_cutoff = 1.0;view.options.polyhedra_show_atoms = False
     view.options.lattice_planes = [plane(hkl=(1, 0, 0), offset=0., show=False)]
     view.set_scene(octahedron())
     assert view.displayed_atoms() == []
@@ -190,7 +191,7 @@ def test_polyhedral_style_keeps_frozen_long_bonds_and_manual_removals():
     f = Frame(['Ti']+['O']*6, [[0, 0, 0], [2, 0, 0], [-2, 0, 0],
         [0, 2, 0], [0, -2, 0], [0, 0, 2], [0, 0, -2]])
     freeze_bonds(f);f.positions[1] = [8, 0, 0];f.bond_removed.add((0, 2))
-    view = draw();view.options.style = 'Polyhedral';view.options.unit_cell = False;view.options.polyhedra_edges = False
+    view = draw();view.options.style = 'Polyhedral';view.options.bond_cutoff = 1.0;view.options.unit_cell = False;view.options.polyhedra_edges = False
     view.set_scene(f)
     assert len(view.polyhedra[0]['source'].ligand_indices) == 5
     assert (0, 1) in visible_bonds(f) and (0, 2) not in visible_bonds(f)
@@ -215,7 +216,7 @@ def test_alignment_rotates_planes_and_polyhedra_without_modifying_source():
     rotation = np.array([[0, -1, 0], [1, 0, 0], [0, 0, 1.]])
     reference = source.clone();reference.positions = source.positions @ rotation+[4, 3, 2]
     reference.cell = source.cell @ rotation
-    view = draw();view.options.style = 'Polyhedral';view.alignment = DisplayAlignment(reference, (0, 1, 2, 3))
+    view = draw();view.options.style = 'Polyhedral';view.options.bond_cutoff = 1.0;view.alignment = DisplayAlignment(reference, (0, 1, 2, 3))
     view.options.lattice_planes = [plane(hkl=(1, 0, 0))];view.set_scene(source)
     expected = miller_plane(source.cell, (1, 0, 0), .5)
     actual = view.lattice_plane_data[0][1]
@@ -254,7 +255,8 @@ def attach(gui, frame=None):
 def test_crystal_panel_apply_planes_normal_view_and_clear(gui):
     w = attach(gui);panel = w.crystal_panel.planes
     assert panel.isEnabled() and w.lattice_planes_action.isEnabled()
-    panel.add.click();panel.hkl[0].setValue(1);panel.hkl[2].setValue(0);panel.center.click()
+    panel.add.click();assert panel.mode.currentText() == 'Show only'
+    panel.mode.setCurrentText('Keep below');panel.hkl[0].setValue(1);panel.hkl[2].setValue(0);panel.center.click()
     assert panel.offset.value() == .5
     panel.apply.click();assert w.render_options.lattice_planes[0]['hkl'] == (1, 0, 0)
     assert len(w.renderer.crystal_cuts) == 1

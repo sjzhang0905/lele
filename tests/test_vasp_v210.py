@@ -270,7 +270,7 @@ def test_energy_only_ui_curve_csv_and_overview(gui, tmp_path):
     assert all(x['frame'] is None for x in curve.points())
     assert not hasattr(curve, 'energy_kind')
     out = tmp_path/'energies.csv'
-    with patch('PySide6.QtWidgets.QFileDialog.getSaveFileName', return_value=(str(out), 'CSV')):
+    with patch('lele.convergence_dialog.QFileDialog.getSaveFileName', return_value=(str(out), 'CSV')):
         curve.export_data()
     records = list(csv.DictReader(out.open(encoding='utf-8-sig')))
     assert len(records) == 2 and records[0]['geometry_frame'] == ''

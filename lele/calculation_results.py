@@ -74,6 +74,8 @@ class CalculationJob:
     imaginary_modes: int = 0
     frequency_count: int = 0
     wavefunction: str = ''
+    xtb_fixed_atoms: list | None = field(default=None, kw_only=True)
+    atom_count: int | None = field(default=None, kw_only=True)
 
 
 @dataclass
@@ -87,6 +89,7 @@ class CalculationStep:
     frame_index: int | None = None
     stage_index: int | None = None
     cycle: int | None = None
+    optimizer_gradient_norm: float | None = field(default=None, kw_only=True)
 
 
 @dataclass
@@ -124,6 +127,7 @@ class CalculationResults:
     stages: list = field(default_factory=list)
     hessians: list = field(default_factory=list)
     note: str = ''
+    scans: list = field(default_factory=list)
 
     def frames(self, max_frames=None):
         frames = []
@@ -143,6 +147,7 @@ class CalculationResults:
                 previous = frames[-1]
                 duplicate = (previous.symbols == current.symbols
                     and previous.info.get('stage_index') == current.info.get('stage_index')
+                    and previous.info.get('trajectory_frame') == current.info.get('trajectory_frame')
                     and np.allclose(previous.positions, current.positions, atol=1.e-7, rtol=0)
                     and all(previous.info.get(k)==current.info.get(k) for k in ('converter_charge','converter_mult'))
                     and (current.energy_ev is None or (previous.energy_ev is not None
@@ -156,6 +161,9 @@ class CalculationResults:
         for orbitals in self.orbitals:
             if orbitals.step_index is not None:
                 orbitals.frame_index = self.steps[orbitals.step_index].frame_index
+        if self.scans:
+            from .orca_scan import link_scan_frames
+            link_scan_frames(self, frames)
         progress(len(self.steps))
         return frames
 

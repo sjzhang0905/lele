@@ -1,0 +1,265 @@
+[
+  {
+    "file": "scan1.log",
+    "sha256": "59b71a12a69ad8070589933eb0bfbd7c30fe269bf8ec2a2664bd4e0264561738",
+    "frames": 72,
+    "raw_angstrom_blocks": 72,
+    "printed_steps": 10,
+    "planned_steps": 20,
+    "converged_points": 9,
+    "simultaneous": false,
+    "coordinates": [
+      "Bond (59, 17) [ORCA index]"
+    ],
+    "points": [
+      {
+        "step": 1,
+        "values": [
+          1.55
+        ],
+        "energy_hartree": -4926.71299009949,
+        "converged": true,
+        "endpoint_frame": 2,
+        "geometry_target_max_error_angstrom": 1.071483834991227e-08
+      },
+      {
+        "step": 2,
+        "values": [
+          1.55526316
+        ],
+        "energy_hartree": -4926.712985768861,
+        "converged": true,
+        "endpoint_frame": 8,
+        "geometry_target_max_error_angstrom": 2.8967003573576733e-07
+      },
+      {
+        "step": 3,
+        "values": [
+          1.56052632
+        ],
+        "energy_hartree": -4926.71297777217,
+        "converged": true,
+        "endpoint_frame": 16,
+        "geometry_target_max_error_angstrom": 2.732423687312746e-07
+      },
+      {
+        "step": 4,
+        "values": [
+          1.56578947
+        ],
+        "energy_hartree": -4926.712984520334,
+        "converged": true,
+        "endpoint_frame": 32,
+        "geometry_target_max_error_angstrom": 9.564223413249806e-09
+      },
+      {
+        "step": 5,
+        "values": [
+          1.57105263
+        ],
+        "energy_hartree": -4926.712969744949,
+        "converged": true,
+        "endpoint_frame": 39,
+        "geometry_target_max_error_angstrom": 2.6657699803145363e-07
+      },
+      {
+        "step": 6,
+        "values": [
+          1.57631579
+        ],
+        "energy_hartree": -4926.712957058201,
+        "converged": true,
+        "endpoint_frame": 47,
+        "geometry_target_max_error_angstrom": 6.593379868746752e-07
+      },
+      {
+        "step": 7,
+        "values": [
+          1.58157895
+        ],
+        "energy_hartree": -4926.712943389268,
+        "converged": true,
+        "endpoint_frame": 58,
+        "geometry_target_max_error_angstrom": 4.660448078563917e-07
+      },
+      {
+        "step": 8,
+        "values": [
+          1.58684211
+        ],
+        "energy_hartree": -4926.712917387105,
+        "converged": true,
+        "endpoint_frame": 61,
+        "geometry_target_max_error_angstrom": 1.650383851803383e-07
+      },
+      {
+        "step": 9,
+        "values": [
+          1.59210526
+        ],
+        "energy_hartree": -4926.712904337016,
+        "converged": true,
+        "endpoint_frame": 68,
+        "geometry_target_max_error_angstrom": 3.306099798372486e-07
+      },
+      {
+        "step": 10,
+        "values": [
+          1.59736842
+        ],
+        "energy_hartree": -4926.712876743658,
+        "converged": false,
+        "endpoint_frame": 72,
+        "geometry_target_max_error_angstrom": 5.105145239880926e-07
+      }
+    ]
+  },
+  {
+    "file": "scan2.log",
+    "sha256": "d78cb6d3056d3137b848c829f75336bf0a0e58c2103cfb06071bc658a44f17ab",
+    "frames": 178,
+    "raw_angstrom_blocks": 178,
+    "printed_steps": 12,
+    "planned_steps": 40,
+    "converged_points": 11,
+    "simultaneous": true,
+    "coordinates": [
+      "Bond (59, 17) [ORCA index]",
+      "Bond (130, 107) [ORCA index]"
+    ],
+    "points": [
+      {
+        "step": 1,
+        "values": [
+          3.858,
+          1.91525
+        ],
+        "energy_hartree": -4926.750883164482,
+        "converged": true,
+        "endpoint_frame": 2,
+        "geometry_target_max_error_angstrom": 4.741364989513386e-07
+      },
+      {
+        "step": 2,
+        "values": [
+          3.79574359,
+          1.89101282
+        ],
+        "energy_hartree": -4926.750868027296,
+        "converged": true,
+        "endpoint_frame": 20,
+        "geometry_target_max_error_angstrom": 9.493549457673112e-07
+      },
+      {
+        "step": 3,
+        "values": [
+          3.73348718,
+          1.86677564
+        ],
+        "energy_hartree": -4926.750760774817,
+        "converged": true,
+        "endpoint_frame": 30,
+        "geometry_target_max_error_angstrom": 3.2029406193956333e-07
+      },
+      {
+        "step": 4,
+        "values": [
+          3.67123077,
+          1.84253846
+        ],
+        "energy_hartree": -4926.750620624765,
+        "converged": true,
+        "endpoint_frame": 49,
+        "geometry_target_max_error_angstrom": 6.950288178320108e-07
+      },
+      {
+        "step": 5,
+        "values": [
+          3.60897436,
+          1.81830128
+        ],
+        "energy_hartree": -4926.750390999676,
+        "converged": true,
+        "endpoint_frame": 59,
+        "geometry_target_max_error_angstrom": 1.466169416985963e-07
+      },
+      {
+        "step": 6,
+        "values": [
+          3.54671795,
+          1.7940641
+        ],
+        "energy_hartree": -4926.750106442993,
+        "converged": true,
+        "endpoint_frame": 82,
+        "geometry_target_max_error_angstrom": 5.095238599928109e-07
+      },
+      {
+        "step": 7,
+        "values": [
+          3.48446154,
+          1.76982692
+        ],
+        "energy_hartree": -4926.749745759325,
+        "converged": true,
+        "endpoint_frame": 110,
+        "geometry_target_max_error_angstrom": 3.4010380911553284e-07
+      },
+      {
+        "step": 8,
+        "values": [
+          3.42220513,
+          1.74558974
+        ],
+        "energy_hartree": -4926.749239183559,
+        "converged": true,
+        "endpoint_frame": 122,
+        "geometry_target_max_error_angstrom": 1.285652271310056e-07
+      },
+      {
+        "step": 9,
+        "values": [
+          3.35994872,
+          1.72135256
+        ],
+        "energy_hartree": -4926.7486568499,
+        "converged": true,
+        "endpoint_frame": 139,
+        "geometry_target_max_error_angstrom": 8.799138142556728e-07
+      },
+      {
+        "step": 10,
+        "values": [
+          3.29769231,
+          1.69711538
+        ],
+        "energy_hartree": -4926.748038043767,
+        "converged": true,
+        "endpoint_frame": 170,
+        "geometry_target_max_error_angstrom": 5.712563488913247e-07
+      },
+      {
+        "step": 11,
+        "values": [
+          3.2354359,
+          1.67287821
+        ],
+        "energy_hartree": -4926.747342287867,
+        "converged": true,
+        "endpoint_frame": 177,
+        "geometry_target_max_error_angstrom": 2.982951436969472e-07
+      },
+      {
+        "step": 12,
+        "values": [
+          3.17317949,
+          1.64864103
+        ],
+        "energy_hartree": -4926.746473146858,
+        "converged": false,
+        "endpoint_frame": 178,
+        "geometry_target_max_error_angstrom": 4.913696356467767e-07
+      }
+    ]
+  }
+]

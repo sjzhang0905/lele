@@ -1,0 +1,152 @@
+..............................ssss...................................... [  3%]
+........................................................................ [  6%]
+........................................................................ [ 10%]
+........................................................................ [ 13%]
+...................s.................................................... [ 16%]
+......................s...........................s..................... [ 20%]
+..............................ss.................................. [ 23%]
+........................................................................ [ 26%]
+........................................................................ [ 30%]
+........................................................................ [ 33%]
+..................................sss................................... [ 37%]
+........................................................................ [ 40%]
+........................................................................ [ 43%]
+........................................................................ [ 47%]
+................F....................................................... [ 50%]
+........................................................................ [ 54%]
+.....................................................................s.. [ 57%]
+........................................................................ [ 60%]
+........................................................................ [ 64%]
+........................................................................ [ 67%]
+........................................................................ [ 71%]
+...............................................................ss....... [ 74%]
+........................................................................ [ 77%]
+..................................................................... [ 81%]
+..................................................................... [ 84%]
+.............................................................................. [ 88%]
+........................................................................ [ 91%]
+........................................................................ [ 94%]
+........................................................................ [ 98%]
+....................................                                     [100%]
+=================================== FAILURES ===================================
+_ test_opening_and_file_headers_choose_last_structure_but_child_steps_still_work _
+
+gui = <fragment_ui_harness.SelectionWorkflowTests testMethod=test_invert_complements_selection_and_updates_coordinate_table>
+tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-55/test_opening_and_file_headers_0')
+
+    def test_opening_and_file_headers_choose_last_structure_but_child_steps_still_work(gui, tmp_path):
+        document = outcar(tmp_path)
+        window = attach_new(gui, document)
+        assert window.frame_index == 2 and window.frame_spin.value() == 3
+        assert window.files_tree.currentItem() is window._frame_tree_items[0, 2]
+        np.testing.assert_array_equal(window.frame.positions, document.frames[-1].positions)
+        window.files_tree.setCurrentItem(window._frame_tree_items[0, 0])
+        assert window.frame_index == 0
+        window.files_tree.setCurrentItem(window.files_tree.topLevelItem(0))
+>       assert window.frame_index == 2
+E       assert 0 == 2
+E        +  where 0 = <lele.app.LELEWindow(0x196b4970) at 0x7fc4f858c480>.frame_index
+
+tests/test_frame_defaults_v301.py:58: AssertionError
+=============================== warnings summary ===============================
+tests/test_acceptance_extended_v2121.py: 11 warnings
+tests/test_acceptance_v2121.py: 4 warnings
+tests/test_analysis_v180.py: 1 warning
+tests/test_annotation_ui_v380.py: 2 warnings
+tests/test_atom_constraints_v360.py: 7 warnings
+tests/test_atom_species_v303.py: 4 warnings
+tests/test_batch_export_v3120.py: 6 warnings
+tests/test_component_rows_v310.py: 2 warnings
+tests/test_coordinate_reorientation_v2110.py: 2 warnings
+tests/test_coordinate_templates_molecular_v360.py: 4 warnings
+tests/test_coordinate_update_ui_v360.py: 12 warnings
+tests/test_coordinate_update_v360.py: 9 warnings
+tests/test_crystal_v220.py: 1 warning
+tests/test_delta_acceptance_v2131.py: 4 warnings
+tests/test_delta_extended_v2131.py: 30 warnings
+tests/test_display_and_order_v2130.py: 15 warnings
+tests/test_formats.py: 1 warning
+tests/test_large_files_v250.py: 1003 warnings
+tests/test_long_operations_v270.py: 6024 warnings
+tests/test_mixed_export_v304.py: 16 warnings
+tests/test_poscar_export_ui_v391.py: 4 warnings
+tests/test_poscar_export_v391.py: 17 warnings
+tests/test_pqr_cube_v2132.py: 30 warnings
+tests/test_release_workflows_v380.py: 12 warnings
+tests/test_selection_ui_v090.py: 1 warning
+tests/test_structure_edits_v2120.py: 2 warnings
+tests/test_supercell_v160.py: 2 warnings
+  /workspace/scratch/20b20befcaeb/.venv312/lib/python3.12/site-packages/ase/atoms.py:432: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    a.shape = (-1,) + shape
+
+tests/test_acceptance_regressions_v340.py: 7 warnings
+tests/test_boundary_surface_v354.py: 20 warnings
+tests/test_crystal_v220.py: 2 warnings
+tests/test_feature_integration_v370.py: 6 warnings
+tests/test_field_mapping_v340.py: 24 warnings
+tests/test_fragment_preview_v380.py: 1 warning
+tests/test_isosurface_integration_v330.py: 10 warnings
+tests/test_isosurface_render_v330.py: 6 warnings
+tests/test_periodic_fragment_ui_v171.py: 8 warnings
+tests/test_renderer.py: 4 warnings
+tests/test_selection_ui_v090.py: 4 warnings
+tests/test_surface_erase_v370.py: 12 warnings
+tests/test_volumetric_view_v320.py: 3 warnings
+  /workspace/scratch/20b20befcaeb/work/LELE/lele/surface_rendering.py:103: DeprecationWarning: Call to deprecated class vtkTransformPolyDataFilter. (Replaced by vtkTransformFilter.) -- Deprecated since version 9.7.0.
+    transformed=vtkTransformPolyDataFilter();transformed.SetInputConnection(contour.GetOutputPort())
+
+tests/test_acceptance_regressions_v340.py: 2 warnings
+tests/test_boundary_surface_v354.py: 22 warnings
+tests/test_field_mapping_v340.py: 5 warnings
+tests/test_surface_erase_v370.py: 3 warnings
+  /workspace/scratch/20b20befcaeb/work/LELE/lele/surface_rendering.py:142: DeprecationWarning: Call to deprecated class vtkTransformPolyDataFilter. (Replaced by vtkTransformFilter.) -- Deprecated since version 9.7.0.
+    tile_filter=vtkTransformPolyDataFilter();tile_filter.SetInputData(poly)
+
+tests/test_atom_constraints_v360.py::test_gaussian_zmatrix_keeps_original_semantics
+  /workspace/scratch/20b20befcaeb/.venv312/lib/python3.12/site-packages/ase/geometry/geometry.py:403: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    D.shape = (-1, len(p2), 3)
+
+tests/test_atom_constraints_v360.py::test_gaussian_zmatrix_keeps_original_semantics
+  /workspace/scratch/20b20befcaeb/.venv312/lib/python3.12/site-packages/ase/geometry/geometry.py:404: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    D_len.shape = (-1, len(p2))
+
+tests/test_atom_constraints_v360.py::test_gaussian_zmatrix_keeps_original_semantics
+  /workspace/scratch/20b20befcaeb/.venv312/lib/python3.12/site-packages/ase/atoms.py:1551: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    D_len.shape = (-1,)
+
+tests/test_cp2k_v240.py: 24 warnings
+tests/test_orca_atom_indices_v3110.py: 8 warnings
+tests/test_orca_workflows_ui_v1100.py: 56 warnings
+tests/test_rules_analysis_v230.py: 16 warnings
+tests/test_scan_window_v3110.py: 8 warnings
+tests/test_selection_analysis_v200.py: 16 warnings
+tests/test_ui_v190.py: 8 warnings
+tests/test_ui_v350.py: 16 warnings
+tests/test_vasp_e0_v231.py: 8 warnings
+tests/test_vasp_v210.py: 8 warnings
+tests/test_workflows_v180.py: 24 warnings
+tests/test_xtb_ui_v1110.py: 16 warnings
+  /workspace/scratch/20b20befcaeb/.venv312/lib/python3.12/site-packages/matplotlib/backends/backend_qt.py:726: DeprecationWarning: Enum value 'Qt::ApplicationAttribute.AA_UseHighDpiPixmaps' is marked as deprecated, please check the documentation for more information.
+    use_high_dpi_pixmaps = app.testAttribute(QtCore.Qt.AA_UseHighDpiPixmaps)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+SKIPPED [1] tests/test_independent_orbitals_v320.py:10: could not import 'pyscf': No module named 'pyscf'
+SKIPPED [1] tests/test_acceptance_extended_v2121.py:240: Set LELE_CHEMCRAFT_CIF_EXAMPLE to the private 22.cif; it is not redistributed.
+SKIPPED [3] tests/test_acceptance_extended_v2121.py:248: Set LELE_ROTATION_EXAMPLE_DIR to the private POSCAR1/POSCAR2 directory.
+SKIPPED [1] tests/test_boundary_surface_v354.py:166: Set LELE_CHGCAR_EXAMPLE to test the supplied CHGCAR
+SKIPPED [1] tests/test_chgcar_gui_v352.py:48: Set LELE_CHGCAR_EXAMPLE to the supplied CHGCAR; not redistributed.
+SKIPPED [1] tests/test_cif_spacegroup_v357.py:97: Set LELE_DPA_CIF_EXAMPLE to the supplied private DPA CIF.
+SKIPPED [1] tests/test_coordinate_reorientation_v2110.py:172: Set LELE_ROTATION_EXAMPLE_DIR to the supplied private POSCAR1/POSCAR2.
+SKIPPED [1] tests/test_coordinate_reorientation_v2110.py:190: Set LELE_ROTATION_SCRIPT to the supplied v13 rotation script.
+SKIPPED [1] tests/test_delta_acceptance_v2131.py:115: Set QA_SIBYL_TCL to the original Sibyl.tcl
+SKIPPED [2] tests/test_delta_acceptance_v2131.py:142: Set LELE_ROTATION_EXAMPLE_DIR to the original POSCAR1 folder
+SKIPPED [1] tests/test_molden_and_legend_v280.py:125: Set LELE_CP2K_MOLDEN_EXAMPLE to the supplied private example; it is not redistributed.
+SKIPPED [1] tests/test_qe_v2100.py:246: Set LELE_QE_EXAMPLE_DIR; private QE examples are not redistributed
+SKIPPED [1] tests/test_real_wavecar_reference_v321.py:14: No external standard WAVECAR fixture supplied
+FAILED tests/test_frame_defaults_v301.py::test_opening_and_file_headers_choose_last_structure_but_child_steps_still_work
+1 failed, 2102 passed, 16 skipped, 7576 warnings, 78 subtests passed in 113.89s (0:01:53)

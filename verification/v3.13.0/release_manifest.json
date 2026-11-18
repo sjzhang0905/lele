@@ -1,0 +1,359 @@
+{
+  "version": "3.13.0",
+  "date": "2026-11-13",
+  "base_zip": "LELE_v3.12.0_20261112.zip",
+  "base_sha256": "b997898ddccc2c3c4ccddd457a44dc2c508e33c0078d2303b8a9ed1ff6b336c1",
+  "tests": {
+    "passed": 2169,
+    "skipped": 16,
+    "subtests_passed": 78,
+    "seconds": 185.28
+  },
+  "wheel": {
+    "filename": "lele_explorer-3.13.0-py3-none-any.whl",
+    "sha256": "ef016e890234277bf74a984f8a2787db862d8ecb5ccc1833a958c2d93795e9f7",
+    "matching_python_modules": 176
+  },
+  "changed_files": [
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "127ab0899d34485a11e8d33de435518b9ae4bf90c66c50a76f1e81b6175414cb"
+    },
+    {
+      "path": "README.md",
+      "sha256": "b96ecae44214a68372aee7e7bad387e585d9cc1faf48b8cc1c99ae90058a24bb"
+    },
+    {
+      "path": "README_CN.md",
+      "sha256": "9e692035fe08b7a346a452dcf2b3c1f056971e054707c87198e60d5b763f42cc"
+    },
+    {
+      "path": "dist/lele_explorer-3.13.0-py3-none-any.whl",
+      "sha256": "ef016e890234277bf74a984f8a2787db862d8ecb5ccc1833a958c2d93795e9f7"
+    },
+    {
+      "path": "docs/FEATURES_v3.13.0_CN.md",
+      "sha256": "29558b28780de8c3d8bfe9685663cf3e39eb9436cb2826067815595312e4f8ad"
+    },
+    {
+      "path": "docs/VALIDATION_v3.13.0_CN.md",
+      "sha256": "6ee634b18f812276e6dfe5264e67e53f89799af4a9324be189a3fb34ff37c4c5"
+    },
+    {
+      "path": "lele/__init__.py",
+      "sha256": "45759ff8a28fe8d31fc7b97be77c392f544fee3834f81c96ff0dda0e7ab2c456"
+    },
+    {
+      "path": "lele/annotation_actions.py",
+      "sha256": "07309da69b7add9e7da350edcc60cc9d8ecf64df71d96223e5d2ecf0aa80f823"
+    },
+    {
+      "path": "lele/annotation_dialog.py",
+      "sha256": "f4e029e98f6d640dafb483b8e0320e5396eb23268c8e7db5ec266b5b7728107c"
+    },
+    {
+      "path": "lele/app.py",
+      "sha256": "b897a006a9a7af53523e4b0a146706c4b85d7b21f8fadf1cccff88316f0eb4f2"
+    },
+    {
+      "path": "lele/atom_legend_dialog.py",
+      "sha256": "c602949e613e2b933ce2e7ac1916377e96dfb953a4c06acba9f1305410313343"
+    },
+    {
+      "path": "lele/atom_panel.py",
+      "sha256": "cafee9eb5792854ea1c94a69a387eb60551c4720d56075c8661a0b42e807587c"
+    },
+    {
+      "path": "lele/atoms_selection_panel.py",
+      "sha256": "d141ac7cf521b080ba365d8e90addcd316ad8591b0f3ece6ab11ede39fd03f78"
+    },
+    {
+      "path": "lele/backend_loader.py",
+      "sha256": "a4870b5470a1eec956e1e94cf349224d8ab77110f8b21452fa13c495280f44de"
+    },
+    {
+      "path": "lele/batch_export.py",
+      "sha256": "01466b4bfad0eb4166c5fa4f808cd11fe52f7e794be24bcc6d42d39ae3fdaca7"
+    },
+    {
+      "path": "lele/convergence_dialog.py",
+      "sha256": "c0d96c7237fffc61ed8ba7b002e788060cdc221c276c6a2067052445060d4178"
+    },
+    {
+      "path": "lele/coordinate_update_actions.py",
+      "sha256": "fca0e5233a25e06bd8e45e1f388e44748a8f1c775e60d8ba26d9188efb9d8d13"
+    },
+    {
+      "path": "lele/crystal_actions.py",
+      "sha256": "68066d4b469abaf88f97a19794244e29e22f6c09245928f0f9bb571804b7aca0"
+    },
+    {
+      "path": "lele/crystal_panel.py",
+      "sha256": "36ecd530252f5f2629ffd7d6f4f22bd62cc87f6fac3b1e900c2b504421fc027f"
+    },
+    {
+      "path": "lele/dialog_policy.py",
+      "sha256": "791376d8b5fc2b8ff6b94a95f1dffc03ddfffeef0c0eed7b738a13c8d3aead04"
+    },
+    {
+      "path": "lele/element_rule_actions.py",
+      "sha256": "d545f8fa712706e59b2dc5eea9838ad23f790aef7a3d7acaadc7388ba0f34a4a"
+    },
+    {
+      "path": "lele/field_actions.py",
+      "sha256": "575f6e7e4364b14d126dfb550d10bf6b5f4d0800d334754ad1efecef49c58777"
+    },
+    {
+      "path": "lele/field_arithmetic_dialog.py",
+      "sha256": "2a7e16d3bf61a243c7f340530b7153a781ed7c9b67c18abc64282e96b85f70d3"
+    },
+    {
+      "path": "lele/field_export.py",
+      "sha256": "036144fe56d4e04c38766656ccc44ed47d80bc30634bcb75651a4f9db6ae18a7"
+    },
+    {
+      "path": "lele/field_mapping_dialog.py",
+      "sha256": "2a3f3ae86636bb3005edd15bafabe4ca28fda7fa081c205e20526fd9763a6268"
+    },
+    {
+      "path": "lele/field_slice_dialog.py",
+      "sha256": "de0d33dad1c85b77a57c7b5a6d998c1956ce7940682d3adf69b9c599141cae92"
+    },
+    {
+      "path": "lele/figure_export.py",
+      "sha256": "5e04868d3683716808b8ad1c7109ef4ac04f191ee109ef441a4134f8bbedd9fe"
+    },
+    {
+      "path": "lele/file_loading.py",
+      "sha256": "b1b839d7ec3d40c6a9c6d122fce60ac218ab587697178e599529bd5270154d12"
+    },
+    {
+      "path": "lele/geometry_curve_dialog.py",
+      "sha256": "3f524987a90845b551c7df8a043ed6c60f44a29e04c53908996d8b29ee1701c6"
+    },
+    {
+      "path": "lele/gif_dialog.py",
+      "sha256": "7f3d0e8080260ed09329cc8f9cba8e4109d86b04c93209c852000f77b20fa5db"
+    },
+    {
+      "path": "lele/isosurface_dialog.py",
+      "sha256": "353ed36c174d7015dd7c0062c72d8361eaf7627a4df8cf7e9f1abb6406dd92be"
+    },
+    {
+      "path": "lele/nmr_dialog.py",
+      "sha256": "aec75357292b90b583fa558ac82e3f2a59d3da28a6bed56a35e0df1411540d26"
+    },
+    {
+      "path": "lele/orbital_dialog.py",
+      "sha256": "9844dab40810aa2b3d5234dc9a07630d9bb0722afdfa2bad47f5654f70dbe7fd"
+    },
+    {
+      "path": "lele/orca_analysis_dialogs.py",
+      "sha256": "4f3a36db6f8b2b5083aba8b41fc6bb3b97a6ca8c2b8702bcfe0be09b0134468e"
+    },
+    {
+      "path": "lele/orca_scan_dialog.py",
+      "sha256": "8f720f6e749d31b99913f03f104d433f25ad4958ca3eb9bde10f61a8df4c5966"
+    },
+    {
+      "path": "lele/png_dialog.py",
+      "sha256": "ee340991a2a78d7190232428d34f567cd67624980529017e19c4549901aa4aa1"
+    },
+    {
+      "path": "lele/polyhedron_dialog.py",
+      "sha256": "92ab0d41fd90c69feb79de7d622b69032e5aecd4fec9e1cc5bfe8343c998adab"
+    },
+    {
+      "path": "lele/progress_dialog.py",
+      "sha256": "b420a75c41d25fc841d20b1e7f4055b325bc1a10fa1cae424797075d1a100799"
+    },
+    {
+      "path": "lele/project_actions.py",
+      "sha256": "2d5e4d7c706e250ee3630932684bbe4ed0182d343da526b6041b8f4d25497d23"
+    },
+    {
+      "path": "lele/qe_reference_dialog.py",
+      "sha256": "08872418d64a726fec5e80f0c0393420058bb629ac8a1275657d1b7604fb3194"
+    },
+    {
+      "path": "lele/reorientation_dialog.py",
+      "sha256": "68f25da8ab1231c5bbef222bd5babfe016a7a02652a33b198a4dcef9665f9990"
+    },
+    {
+      "path": "lele/restored_actions.py",
+      "sha256": "2192e7a36debd3d218cbf75ea89b5fc14484650775ee65f7672a1a3b37711275"
+    },
+    {
+      "path": "lele/results_dialog.py",
+      "sha256": "48cb00a57360196d832698f70cd871ed76cd18d8e280df03252025b4e325f450"
+    },
+    {
+      "path": "lele/rotation_dialog.py",
+      "sha256": "2c6fbeac1c732d69ebb45e2a6383ac386ca6ef06d919f0ced7fd637173cb3947"
+    },
+    {
+      "path": "lele/selection_actions.py",
+      "sha256": "dfef624e3628123dbf7d5609913408662ce8679790378ba3088c9c57503a0fcc"
+    },
+    {
+      "path": "lele/selection_expression.py",
+      "sha256": "5ff852a0e53994f5ab28f928077dc3b126f3076b7246e3a8b270d66926f24d2b"
+    },
+    {
+      "path": "lele/selection_panel.py",
+      "sha256": "725ddcd01d883fa95d845d89802d529baff8c053187234f1420c9b3a9be1386f"
+    },
+    {
+      "path": "lele/short_contacts_dialog.py",
+      "sha256": "1e90171e062d4a02dabaac4852cee9a6616a994ce14aff57764fb40a22c93958"
+    },
+    {
+      "path": "lele/spectrum_dialog.py",
+      "sha256": "bfe911dc3442ee23141dd5090e1d7ce37c4b094d08f0e4b5d40511dbe9fe2d5f"
+    },
+    {
+      "path": "lele/stm_dialog.py",
+      "sha256": "bce57872ece45508ddd6b44e2b04ac4e0faee635c297a443ea84c6aff6f8712f"
+    },
+    {
+      "path": "lele/structure_edit_dialogs.py",
+      "sha256": "4602abc59400d515614e3dd6c10d287a5c307d5b380328f7eb451cd518faab77"
+    },
+    {
+      "path": "lele/supercell_dialog.py",
+      "sha256": "f3caefa2552f0ea5c398188c739c84449fbb90b41cb7665b01941eda05bcc763"
+    },
+    {
+      "path": "lele/trajectory_actions.py",
+      "sha256": "418c83116d1f20a81de2c2faa33518c5884434548f7260e81447d45df491ace8"
+    },
+    {
+      "path": "lele/transition_dialog.py",
+      "sha256": "f020a8dbf10fda2581107951d296c069962f8038c7d73402e0f350b1f8139382"
+    },
+    {
+      "path": "lele/vasp_neb_dialog.py",
+      "sha256": "12978e23f995a1127bd6716fcbd85a6a6ff53be62d6f739bd5cdedb5c01dd5a8"
+    },
+    {
+      "path": "lele/vibration_analysis_dialog.py",
+      "sha256": "589c772f7f82338a96b6a26f8bcadff4d0454ad95759bd9db934ea0825815a1e"
+    },
+    {
+      "path": "lele/xrd_dialog.py",
+      "sha256": "e66ae2e0209a904a53da4d32b4d39aba9bb3558552045c5624391e872ec1ea6c"
+    },
+    {
+      "path": "tests/test_coordinate_copy_v3110.py",
+      "sha256": "aabbda9f00c39809188fc626f185efcc2e4e81311e1618d73520558b5596cfbe"
+    },
+    {
+      "path": "tests/test_dialog_app_v3130.py",
+      "sha256": "957aa3b4df5acfdee1157a1d502a9e39abb3905c529bb3d8e6750e26ea93f41e"
+    },
+    {
+      "path": "tests/test_dialog_policy_v3130.py",
+      "sha256": "da1bff1b873d8a7395042bfa04410cc09641830d953a6f6b96ff8154a6775de9"
+    },
+    {
+      "path": "tests/test_field_arithmetic_v390.py",
+      "sha256": "6373ca50850d4a9a2849836095dfb40291211726ed434c5ff95d873e0c3f43a5"
+    },
+    {
+      "path": "tests/test_field_mapping_v340.py",
+      "sha256": "0317d39acd7e103c6f638c54b066f3f7d50e74924dba1c5a8831924acb7eaf55"
+    },
+    {
+      "path": "tests/test_field_slice_v330.py",
+      "sha256": "1d08d9c22ea008989fddbd2ebb38e3f7d0a29140630657895a901b1602248229"
+    },
+    {
+      "path": "tests/test_isosurface_controls_v330.py",
+      "sha256": "367e523cfc13c8c12120bf5b3df688db10e9157b08bb7cb6aaadaa6c0a14245e"
+    },
+    {
+      "path": "tests/test_mixed_export_v304.py",
+      "sha256": "9b7665ebff7b11e61cc2ce3fb10d0a10cce49c170ec73c360d98a34f6b0451fb"
+    },
+    {
+      "path": "tests/test_selection_expression_v3130.py",
+      "sha256": "008e90c10197693380a91fc4389ad65b7e349ecfdc94ec48eaf0d026b6bcbc11"
+    },
+    {
+      "path": "tests/test_selection_text_v3100.py",
+      "sha256": "cf8c28e3ac0fd93eb1a2f58faba5245d08b8ada65b15d75aa48a99117e3167e4"
+    },
+    {
+      "path": "tests/test_startup.py",
+      "sha256": "f364d892e476d224a548db4ae010224daff7c999849dafd8d65cc1e971da6bd9"
+    },
+    {
+      "path": "tests/test_vasp_v210.py",
+      "sha256": "e1ec18ab8958696c6710d980639fdf5dd29ef93471ce4d9aeca45435d1e56146"
+    },
+    {
+      "path": "tests/test_welcome_v092.py",
+      "sha256": "6373666da6fdc9af10318428aebec0fe7f9433c9f9c53a8a4b6cbb1c82fa902a"
+    },
+    {
+      "path": "tools/performance/_first_structure_probe.py",
+      "sha256": "efcdb438d7da16740e30dce09cbdfcafc7e28de8a30d988239b9950ede75cf3e"
+    },
+    {
+      "path": "tools/performance/benchmark_first_structure.py",
+      "sha256": "f5537cf2d12f42a72d3e240ead1dce81343398ec236357829719ac8f2b9d89bc"
+    },
+    {
+      "path": "verification/v3.13.0/STARTUP_FIRST_STRUCTURE_CN.md",
+      "sha256": "8eb24502f6f8de1bb69f34e5e226099b9f506e7b26e5c01341e44303897bbbc2"
+    },
+    {
+      "path": "verification/v3.13.0/build_wheel.log",
+      "sha256": "7a49852d144463d1cb7d3b94f7d712e0547ee7af234b5b187b7c14b21bc42153"
+    },
+    {
+      "path": "verification/v3.13.0/full_suite.log",
+      "sha256": "2c08f93d1e16a83444dec955c18df3e8bdb236cd252c7d4bb1923e9059955fc0"
+    },
+    {
+      "path": "verification/v3.13.0/full_suite_interrupted.log",
+      "sha256": "5bdcc7489cef4056a727c46b342ef05f2ed2841afffd8f7786572f10e530c2e6"
+    },
+    {
+      "path": "verification/v3.13.0/root_integration.log",
+      "sha256": "dfe7ed93aba29d41073a0fd23524b698539b4dd941dd43736cdf72043ef5b046"
+    },
+    {
+      "path": "verification/v3.13.0/runtime_versions.txt",
+      "sha256": "f6941df6254a8980ed31e02ecbc1f1b0df7213b3aa3b9de0eb67a706b2657004"
+    },
+    {
+      "path": "verification/v3.13.0/selection_expression.txt",
+      "sha256": "9f4f1464411c54823c2b45340fb8f618fdd70b8f3ff2ab3d020d1e3fb10d29e1"
+    },
+    {
+      "path": "verification/v3.13.0/selection_expression_panel.png",
+      "sha256": "0eaefbed37fbf87e2b2ac62d2c7d03ba6c6d79fcf1e79ab89410c32b7c3ef4ac"
+    },
+    {
+      "path": "verification/v3.13.0/startup_benchmark.log",
+      "sha256": "9486aace0c08d345f38313d2fd4359fddaa53bb2d1c6752c4c672e785cb59742"
+    },
+    {
+      "path": "verification/v3.13.0/startup_first_structure.json",
+      "sha256": "5af7aa4b39b5fd28785dc1445b3bd44f7e36a9dde7c390bdee3c5daebb1d7dc3"
+    },
+    {
+      "path": "verification/v3.13.0/startup_firstfile_import_guard.log",
+      "sha256": "7a7fe7fa25ebca495e0ec1fc2eb399e2101aed2949cd5b4250d3c9c572c8e758"
+    },
+    {
+      "path": "verification/v3.13.0/startup_regression.log",
+      "sha256": "4bd6d89669c67785a38152a3b7889e410e16b3eeac774392ba0f76d1510b256b"
+    },
+    {
+      "path": "verification/v3.13.0/startup_regression_full.log",
+      "sha256": "9af1f8ee9153afbd9627695aa51caf3cc25b29f2d2127a5698286bc818754a5c"
+    }
+  ]
+}

@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from PySide6.QtCore import QRectF, QSize, Qt, QTimer
-from PySide6.QtGui import QColor, QPainter, QPalette, QPixmap, QTransform
+from PySide6.QtGui import QColor, QGuiApplication, QPainter, QPalette, QPixmap, QTransform
 from PySide6.QtWidgets import (QGridLayout, QLabel,
                                QScrollArea, QSizePolicy, QVBoxLayout, QWidget)
 
@@ -37,6 +37,9 @@ SHORTCUT_GROUPS = (
         ('Ctrl+I', 'Invert atom selection'),
         ('Delete', 'Delete selected atoms'),
         ('Ctrl+G', 'Select connected fragments'),
+        ('1–9', 'Select numbered fragment (canvas)'),
+        ('Ctrl+1–9', 'Save / replace numbered fragment (canvas)'),
+        ('Shift+1–9', 'Add selected atoms to fragment (canvas)'),
         ('Ctrl+B', 'Toggle selected bonds'),
         ('Ctrl+H', 'Toggle selected hydrogen bond (dashed)'),
         ('Ctrl+Shift+B', 'Toggle box selection (Esc to exit)'),
@@ -63,6 +66,25 @@ def _white(widget):
     widget.setAutoFillBackground(True)
 
 
+def _parrot_poses():
+    """Share immutable Qt pixmaps across welcome and transient progress UI.
+
+    The cache belongs to the current GUI application, so quick operations do
+    not repeatedly read, crop and mirror the artwork or retain it across Qt
+    application lifetimes. Both callers construct widgets on the GUI thread.
+    """
+    app = QGuiApplication.instance()
+    poses = getattr(app, '_lele_parrot_poses', None)
+    if poses is None:
+        source = QPixmap(str(ARTWORK_PATH))
+        if source.isNull():
+            raise RuntimeError(f'Could not load LELE welcome artwork: {ARTWORK_PATH}')
+        mirror = QTransform().scale(-1, 1)
+        poses = tuple(source.copy(*rect).transformed(mirror) for rect in POSE_RECTS)
+        app._lele_parrot_poses = poses
+    return poses
+
+
 class ParrotWalk(QWidget):
     """Hold each pose and position for 800 ms, then jump to the next step."""
 
@@ -72,12 +94,8 @@ class ParrotWalk(QWidget):
         self.setFixedHeight(192)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         _white(self)
-        source = QPixmap(str(ARTWORK_PATH))
-        if source.isNull():
-            raise RuntimeError(f'Could not load LELE welcome artwork: {ARTWORK_PATH}')
-        # The original bird faces left. Mirror each pose to face its travel.
-        mirror = QTransform().scale(-1, 1)
-        self.poses = [source.copy(*rect).transformed(mirror) for rect in POSE_RECTS]
+        # The original bird faces left; cached poses face right for travel.
+        self.poses = _parrot_poses()
         self.step_index = 0
         self.setToolTip("乐乐 (Lè Lè) · LELE's little explorer")
         self.setAccessibleName('Parrot 乐乐 walking from left to right')

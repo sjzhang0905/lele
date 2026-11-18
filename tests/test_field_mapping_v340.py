@@ -137,7 +137,7 @@ def test_attachment_matches_transformed_geometry_and_is_atomic():
 
 
 def test_import_button_and_project_have_no_external_dependency(gui,tmp_path,monkeypatch):
-    from PySide6.QtWidgets import QFileDialog
+    from lele.dialog_policy import QFileDialog
     from lele.project_file import save_project,load_project
     doc=analytic_pair();color_doc=Document(Path('esp.cube'),'CUBE',[doc.frames[0].clone()],doc.volumes.pop())
     path=tmp_path/'esp.cube';export_active_cube(path,color_doc,color_doc.frames[0])
@@ -156,7 +156,8 @@ def test_import_button_and_project_have_no_external_dependency(gui,tmp_path,monk
 
 
 def test_mapping_dialog_preserves_scale_and_cancel(monkeypatch):
-    from PySide6.QtWidgets import QApplication,QMessageBox
+    from PySide6.QtWidgets import QApplication
+    from lele.dialog_policy import QMessageBox
     from lele.field_mapping_dialog import FieldMappingDialog
     from lele.isosurface_dialog import IsosurfaceLayersDialog
     app=QApplication.instance() or QApplication([]);doc=analytic_pair();opts=options();before=deepcopy(opts)
@@ -177,7 +178,9 @@ def test_mapped_surface_png_gif_and_colorbar(tmp_path):
     from lele.animation_export import export_animation_gif,GifSettings
     draw,doc=draw_pair();scene=draw.renderer
     window=vtkRenderWindow();window.SetOffScreenRendering(1);window.SetSize(400,300);window.AddRenderer(scene)
-    camera=scene.GetActiveCamera();camera.SetPosition(0,-6,0);camera.SetFocalPoint(0,0,0);camera.SetViewUp(0,0,1)
+    # Look perpendicular to the analytic potential gradient [.2,-.1,.3],
+    # so both signs occupy a visible hemisphere under directional lighting.
+    camera=scene.GetActiveCamera();camera.SetPosition(0,-6,-2);camera.SetFocalPoint(0,0,0);camera.SetViewUp(0,0,1)
     scene.ResetCamera();window.Render()
     target=tmp_path/'esp.png';export_png(target,window,PngSettings(800,600,1),mesh_items=draw._keepalive)
     def check_image(im):
@@ -188,7 +191,8 @@ def test_mapped_surface_png_gif_and_colorbar(tmp_path):
         assert np.count_nonzero((p[...,2]>p[...,0]+40)&(p[...,2]>p[...,1]+20))>100
     with Image.open(target) as im:check_image(im);assert im.size==(800,600)
     window.Finalize();doc.frames.append(doc.frames[0].clone())
-    export_animation_gif(tmp_path/'esp.gif',doc,GifSettings(width=400,height=300,last_frame=2,supersample=1),draw.options)
+    # The GUI exports the current camera, not an unrelated default +Z view.
+    export_animation_gif(tmp_path/'esp.gif',doc,GifSettings(width=400,height=300,last_frame=2,supersample=1),draw.options,camera=camera)
     with Image.open(tmp_path/'esp.gif') as im:
         assert im.n_frames==2;check_image(im)
 

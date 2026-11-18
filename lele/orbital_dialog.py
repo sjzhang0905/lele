@@ -2,8 +2,8 @@
 from ase.units import Hartree
 from .operations import gui_operation
 from .output_text import progress_items
-from PySide6.QtWidgets import (QDialog,QVBoxLayout,QHBoxLayout,QComboBox,QLabel,
-    QTableWidget,QTableWidgetItem,QAbstractItemView)
+from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QComboBox, QLabel, QTableWidget, QTableWidgetItem, QAbstractItemView
+from .dialog_policy import QDialog
 
 
 class OrbitalDialog(QDialog):

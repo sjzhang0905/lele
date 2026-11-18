@@ -183,6 +183,14 @@ class FragmentGestureNativeTests(NativeInteractionTests):
             ('roll', 30.0, 30.0), ('roll', 20.0, 0.0), ('roll',)])
         self.assertEqual(view.calls, [])
 
+    def test_fine_alt_roll_includes_the_first_pixel_and_release_displacement(self):
+        view = self.interaction.InteractiveVTKView()
+        view.mousePressEvent(_Event(2, 30, 30, 8))
+        view.mouseMoveEvent(_Event(2, 31, 30, 8))
+        view.mouseReleaseEvent(_Event(2, 34, 30, 8))
+        self.assertEqual(view.emissions, [
+            ('roll', 30.0, 30.0), ('roll', 1.0, 0.0), ('roll', 3.0, 0.0), ('roll',)])
+
     def test_alt_middle_pan_and_ordinary_right_click(self):
         view = self.interaction.InteractiveVTKView()
         view.mousePressEvent(_Event(4, 10, 10, 8))

@@ -57,17 +57,18 @@ def test_glossy_sibyl_defaults_reach_real_vtk_atoms_and_element_bonds():
     draw=MoleculeRenderer(vtkRenderer());frame=Frame(['C','O'],[[0,0,0],[1.2,0,0]])
     assert draw.options.surface_finish=='Glossy' and draw.options.atom_palette=='Default'
     draw.set_scene(frame)
-    assert draw.atom_color(frame,0)=='#9E9E9E'
-    assert draw.atom_color(frame,1,for_bond=True)=='#E92525'
+    assert draw.atom_color(frame,0)=='#ADADAD'
+    assert draw.atom_color(frame,1,for_bond=True)=='#EC4646'
     actors=[a for a in draw.dynamic if a.IsA('vtkActor')]
     assert actors
     assert all(a.GetProperty().GetSpecular()==pytest.approx(.78) and a.GetProperty().GetSpecularPower()==60 for a in actors)
     frame.atom_appearance[1]=AtomAppearance(color='#123456')
     assert draw.atom_color(frame,1)==draw.atom_color(frame,1,for_bond=True)=='#123456'
-    assert element_palette_color(draw.options,'D')=='#D3D3D3'
+    assert element_palette_color(draw.options,'D')=='#DADADA'
     og=colour('Og')
     expected='#'+''.join(f'{round(int(og[i:i+2],16)*.9+25.5):02X}' for i in (1,3,5))
     expected='#'+''.join(f'{round(int(expected[i:i+2],16)*.95+12.75):02X}' for i in (1,3,5))
+    expected='#'+''.join(f'{round(int(expected[i:i+2],16)*.85+38.25):02X}' for i in (1,3,5))
     assert element_palette_color(draw.options,'Og')==expected
 
 
@@ -75,7 +76,7 @@ def test_old_palette_remains_explicitly_selectable():
     opts=RenderOptions(atom_palette='GaussView style (Chemcraft)',surface_finish='Balanced')
     assert element_palette_color(opts,'O')==colour('O')=='#FF4040'
     opts.atom_palette='Sibyl'
-    assert element_palette_color(opts,'O')=='#E92525'
+    assert element_palette_color(opts,'O')=='#EC4646'
     assert RenderOptions(atom_palette='Sibyl').atom_palette=='Default'
 
 
@@ -104,7 +105,7 @@ def test_gui_default_controls_and_auto_axes_survive_file_switching(gui,tmp_path)
     w=gui.window
     gui.attach(Frame(['C'],[[0,0,0]]));w._sync_corner_axes=lambda:None
     assert w.finish_combo.currentText()=='Glossy' and w.atom_palette_combo.currentText()=='Default'
-    assert w.atom_slider.value()==50 and w.bond_slider.value()==7
+    assert w.atom_slider.value()==45 and w.bond_slider.value()==5
     assert w.axes_basis_combo.currentData()=='Auto'
     path=tmp_path/'slab.POSCAR';export_frame(crystal(),path,'poscar-cartesian');w._open_path_now(path)
     assert w.axes_basis_combo.currentData()=='Auto'
@@ -173,7 +174,10 @@ def test_explicit_reindex_is_the_current_export_order_instead_of_automatic_sourc
 
 
 def test_gui_export_path_keeps_order_after_multiple_pastes(gui,tmp_path):
+    from PySide6.QtWidgets import QMessageBox
     gui.attach(appended_frame());w=gui.window;out=tmp_path/'gui.POSCAR'
-    with patch('lele.app.QInputDialog.getItem',return_value=('POSCAR Cartesian (POSCAR)',True)),patch('lele.app.QFileDialog.getSaveFileName',return_value=(str(out),'')):
+    with patch('lele.app.QInputDialog.getItem',return_value=('POSCAR Cartesian (POSCAR)',True)),patch('lele.app.QFileDialog.getSaveFileName',return_value=(str(out),'')), \
+         patch('lele.app.QMessageBox.question',return_value=QMessageBox.StandardButton.No):
         w.export_dialog()
+    out=tmp_path/'POSCARgui.POSCAR'
     assert read(out,format='vasp').get_chemical_symbols()==w.frame.symbols

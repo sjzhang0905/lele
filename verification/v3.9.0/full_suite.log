@@ -1,0 +1,87 @@
+..............................ssss...................................... [  3%]
+........................................................................ [  7%]
+........................................................................ [ 11%]
+..............................................s......................... [ 14%]
+.....................................s...........................s...... [ 18%]
+...........................................ss..................... [ 21%]
+........................................................................ [ 25%]
+........................................................................ [ 29%]
+........................................................................ [ 32%]
+...............................................sss...................... [ 36%]
+........................................................................ [ 40%]
+........................................................................ [ 43%]
+........................................................................ [ 47%]
+........................................................................ [ 51%]
+........................................................................ [ 54%]
+.......................................................s................ [ 58%]
+........................................................................ [ 62%]
+........................................................................ [ 65%]
+........................................................................ [ 69%]
+.............................................................ss......... [ 73%]
+........................................................................ [ 76%]
+..................................................................... [ 80%]
+.....................................F............................... [ 83%]
+.............................................................................. [ 87%]
+........................................................................ [ 91%]
+........................................................................ [ 95%]
+........................................................................ [ 98%]
+........................                                                 [100%]
+=================================== FAILURES ===================================
+_ StartupTests.test_first_paint_precedes_automatic_preload_and_gui_keeps_responding _
+tests/test_startup.py:21: in test_first_paint_precedes_automatic_preload_and_gui_keeps_responding
+    self.run_child('''
+tests/test_startup.py:18: in run_child
+    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+E   AssertionError: 1 != 0 : Traceback (most recent call last):
+E     File "<string>", line 64, in <module>
+E     File "/workspace/scratch/c771f19f02ac/LELE/lele/app.py", line 81, in __init__
+E       self._build_ui()
+E     File "/workspace/scratch/c771f19f02ac/LELE/lele/app.py", line 441, in _build_ui
+E       self.atoms_selection_panel = AtomsSelectionPanel()
+E                                    ^^^^^^^^^^^^^^^^^^^^^
+E     File "/workspace/scratch/c771f19f02ac/LELE/lele/atoms_selection_panel.py", line 86, in __init__
+E       self.set_frame(None)
+E     File "/workspace/scratch/c771f19f02ac/LELE/lele/atoms_selection_panel.py", line 121, in set_frame
+E       from .core import colour
+E     File "/workspace/scratch/c771f19f02ac/LELE/lele/core.py", line 13, in <module>
+E       import numpy as np
+E     File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+E     File "<frozen importlib._bootstrap>", line 1322, in _find_and_load_unlocked
+E     File "<frozen importlib._bootstrap>", line 1262, in _find_spec
+E     File "<string>", line 13, in find_spec
+E   AssertionError: Premature import: numpy
+=============================== warnings summary ===============================
+../../../../opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+  /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+tests/test_acceptance_regressions_v340.py: 7 warnings
+tests/test_boundary_surface_v354.py: 20 warnings
+tests/test_crystal_v220.py: 2 warnings
+tests/test_feature_integration_v370.py: 6 warnings
+tests/test_field_mapping_v340.py: 24 warnings
+tests/test_fragment_preview_v380.py: 1 warning
+tests/test_isosurface_integration_v330.py: 10 warnings
+tests/test_isosurface_render_v330.py: 6 warnings
+tests/test_periodic_fragment_ui_v171.py: 8 warnings
+tests/test_renderer.py: 4 warnings
+tests/test_selection_ui_v090.py: 4 warnings
+tests/test_surface_erase_v370.py: 12 warnings
+tests/test_volumetric_view_v320.py: 3 warnings
+  /workspace/scratch/c771f19f02ac/LELE/lele/surface_rendering.py:103: DeprecationWarning: Call to deprecated class vtkTransformPolyDataFilter. (Replaced by vtkTransformFilter.) -- Deprecated since version 9.7.0.
+    transformed=vtkTransformPolyDataFilter();transformed.SetInputConnection(contour.GetOutputPort())
+
+tests/test_acceptance_regressions_v340.py: 2 warnings
+tests/test_boundary_surface_v354.py: 22 warnings
+tests/test_field_mapping_v340.py: 5 warnings
+tests/test_surface_erase_v370.py: 3 warnings
+  /workspace/scratch/c771f19f02ac/LELE/lele/surface_rendering.py:142: DeprecationWarning: Call to deprecated class vtkTransformPolyDataFilter. (Replaced by vtkTransformFilter.) -- Deprecated since version 9.7.0.
+    tile_filter=vtkTransformPolyDataFilter();tile_filter.SetInputData(poly)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_startup.py::StartupTests::test_first_paint_precedes_automatic_preload_and_gui_keeps_responding
+1 failed, 1946 passed, 16 skipped, 140 warnings, 78 subtests passed in 108.48s (0:01:48)

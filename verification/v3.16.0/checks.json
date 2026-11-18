@@ -1,0 +1,208 @@
+{
+  "version": "3.16.0",
+  "structures": [
+    {
+      "filename": "01_NH2-Sn.xsf",
+      "sha256": "36681737b08c3abfecdb2697aa48b02d179e2370b21a547b51a4431c80620174",
+      "atoms": 124,
+      "composition": {
+        "C": 15,
+        "H": 46,
+        "I": 32,
+        "N": 17,
+        "Sn": 12,
+        "Br": 1,
+        "O": 1
+      },
+      "pbc": [
+        true,
+        true,
+        true
+      ],
+      "field_count": 0,
+      "original_coordinates_and_order_exact": true,
+      "original_lattice_exact": true
+    },
+    {
+      "filename": "02_CO-Sn.xsf",
+      "sha256": "9dda9c61e830fadae93be0a985a3744de841b09227d05fb78174ffe5d5754fb1",
+      "atoms": 124,
+      "composition": {
+        "C": 15,
+        "H": 46,
+        "I": 32,
+        "N": 17,
+        "Sn": 12,
+        "Br": 1,
+        "O": 1
+      },
+      "pbc": [
+        true,
+        true,
+        true
+      ],
+      "field_count": 0,
+      "original_coordinates_and_order_exact": true,
+      "original_lattice_exact": true
+    }
+  ],
+  "slider_settings_handle_and_track_center_px": {
+    "atom_size": [
+      0.45,
+      96,
+      96
+    ],
+    "bond_thickness": [
+      0.05,
+      96,
+      96
+    ],
+    "bond_cutoff": [
+      0.88,
+      67,
+      67
+    ]
+  },
+  "included_xsf_example": {
+    "dimensions": [
+      19,
+      17,
+      15
+    ],
+    "isovalues": [
+      -0.035,
+      0.035
+    ],
+    "triangle_counts": [
+      512,
+      488
+    ],
+    "units": "source units"
+  },
+  "test_suite": {
+    "passed": 2316,
+    "skipped": 14,
+    "subtests_passed": 78,
+    "duration_seconds": 147.45,
+    "skip_reasons": [
+      {
+        "test": "test_supplied_chemcraft_cif_without_spacegroup_metadata",
+        "reason": "Set LELE_CHEMCRAFT_CIF_EXAMPLE to the private 22.cif; it is not redistributed."
+      },
+      {
+        "test": "test_supplied_poscar1_preserves_all_selective_flags_and_rows[unchanged]",
+        "reason": "Set LELE_ROTATION_EXAMPLE_DIR to the private POSCAR1/POSCAR2 directory."
+      },
+      {
+        "test": "test_supplied_poscar1_preserves_all_selective_flags_and_rows[vacuum]",
+        "reason": "Set LELE_ROTATION_EXAMPLE_DIR to the private POSCAR1/POSCAR2 directory."
+      },
+      {
+        "test": "test_supplied_poscar1_preserves_all_selective_flags_and_rows[reindex]",
+        "reason": "Set LELE_ROTATION_EXAMPLE_DIR to the private POSCAR1/POSCAR2 directory."
+      },
+      {
+        "test": "test_actual_chgcar_periodic_meshes_keep_boundary_repetition",
+        "reason": "Set LELE_CHGCAR_EXAMPLE to test the supplied CHGCAR"
+      },
+      {
+        "test": "test_supplied_chgcar_renamed_exact_original_grid",
+        "reason": "Set LELE_CHGCAR_EXAMPLE to the supplied CHGCAR; not redistributed."
+      },
+      {
+        "test": "test_supplied_dpa_cif_matches_explicit_operations",
+        "reason": "Set LELE_DPA_CIF_EXAMPLE to the supplied private DPA CIF."
+      },
+      {
+        "test": "test_actual_poscar_pair_is_a_rigid_reorientation",
+        "reason": "Set LELE_ROTATION_EXAMPLE_DIR to the supplied private POSCAR1/POSCAR2."
+      },
+      {
+        "test": "test_local_axes_match_supplied_rotation_script_without_pymatgen",
+        "reason": "Set LELE_ROTATION_SCRIPT to the supplied v13 rotation script."
+      },
+      {
+        "test": "test_user_poscar_vacuum_append_and_export[poscar-direct]",
+        "reason": "Set LELE_ROTATION_EXAMPLE_DIR to the original POSCAR1 folder"
+      },
+      {
+        "test": "test_user_poscar_vacuum_append_and_export[poscar-cartesian]",
+        "reason": "Set LELE_ROTATION_EXAMPLE_DIR to the original POSCAR1 folder"
+      },
+      {
+        "test": "test_actual_124_atom_example_all_frequencies_and_frozen_rows",
+        "reason": "Set LELE_CP2K_MOLDEN_EXAMPLE to the supplied private example; it is not redistributed."
+      },
+      {
+        "test": "test_real_supplied_qe_files",
+        "reason": "Set LELE_QE_EXAMPLE_DIR; private QE examples are not redistributed"
+      },
+      {
+        "test": "test_real_wavecar_independent_direct_sum",
+        "reason": "No external standard WAVECAR fixture supplied"
+      }
+    ]
+  },
+  "rotation_benchmark": {
+    "structure": "01_NH2-Sn.xsf",
+    "atoms": 124,
+    "fragment_atoms": 16,
+    "selected_atom_number": 109,
+    "synthetic_signed_grid_shape": [
+      48,
+      48,
+      72
+    ],
+    "isovalues": [
+      -0.035,
+      0.035
+    ],
+    "viewport_px": [
+      740,
+      520
+    ],
+    "repeats": 3,
+    "events_per_repeat": 25,
+    "first_event_excluded_from_continuous_median": true,
+    "one_event_loop_and_real_render_per_move": true,
+    "baseline": {
+      "version": "3.15.0",
+      "n": 72,
+      "median_ms": 49.74,
+      "p90_ms": 55.54,
+      "median_first_ms": 49.01,
+      "renderer": "vtkEGLRenderWindow",
+      "graphics": [
+        "OpenGL renderer string:  llvmpipe (LLVM 19.1.7, 256 bits)"
+      ]
+    },
+    "updated": {
+      "version": "3.16.0",
+      "n": 72,
+      "median_ms": 17.03,
+      "p90_ms": 18.71,
+      "median_first_ms": 17.87,
+      "renderer": "vtkEGLRenderWindow",
+      "graphics": [
+        "OpenGL renderer string:  llvmpipe (LLVM 19.1.7, 256 bits)"
+      ]
+    }
+  },
+  "environment": {
+    "python": "3.12.14",
+    "pyside": "6.12.0",
+    "vtk": "9.7.2",
+    "numpy": "2.5.5",
+    "ase": "3.29.0",
+    "scipy": "1.18.1",
+    "pyscf": "2.15.1",
+    "pytest": "9.2.0"
+  },
+  "wheel": {
+    "filename": "lele_explorer-3.16.0-py3-none-any.whl",
+    "checked_python_modules": 183,
+    "checked_assets": 3,
+    "sha256": "c5161bae1cf989ecbdf89fb604aa8e600e877f86c2ad86e5bd607e8554dea5ae",
+    "fresh_target_import_and_startup": true
+  }
+}

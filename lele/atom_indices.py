@@ -1,5 +1,6 @@
 """Real atom-order changes; every index-bearing frame property follows atoms."""
 import numpy as np
+from operator import index as integer_index
 from .site_occupancy import subset_info
 
 
@@ -43,8 +44,6 @@ def reorder_atoms(frame,order):
     source_order=frame.info.get('atom_source_order',list(range(n)))
     info['atom_source_order']=[source_order[i] for i in order]
     info['atom_order_edited']=True
-    for key in ('qe_forces_ev_ang',):
-        if key in info:info[key]=np.asarray(info[key])[order].copy()
     for key in ('plane_alignment','coordinate_reorientation'):info.pop(key,None)
     symbols=[frame.symbols[i] for i in order]
     if 'poscar_groups' in info:
@@ -68,3 +67,23 @@ def index_order(count,atom,target,*,swap=None):
         order[atom],order[swap]=order[swap],order[atom]
     else:order.insert(target,order.pop(atom))
     return order
+
+
+def fragment_order(count,indices,destination):
+    """Move a selected group as a stable block; all other atoms keep order.
+
+    Fragment members follow their current structure order, not mouse-click
+    order. The returned list maps each new row to its former atom index.
+    """
+    if destination not in ('front','back'):
+        raise ValueError('Fragment destination must be front or back.')
+    try:
+        count=integer_index(count)
+        members={integer_index(i) for i in indices}
+    except TypeError:
+        raise ValueError('Fragment atom indices must be integers.') from None
+    if count<0 or any(i<0 or i>=count for i in members):
+        raise ValueError('Fragment atom index is outside 1…N.')
+    selected=sorted(members)
+    others=[i for i in range(count) if i not in members]
+    return selected+others if destination=='front' else others+selected

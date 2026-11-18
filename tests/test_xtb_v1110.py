@@ -123,7 +123,7 @@ def test_finished_stdout_without_stderr_normal_termination_keeps_its_printed_sta
 def test_complete_records_survive_truncated_standalone_trajectory(tmp_path):
     p=tmp_path/'partial.log';p.write_text(TRAJ.read_text()+'3\nenergy: -11 xtb: 6.7\nO 0 0 0\n')
     d=load_document(p)
-    assert len(d.frames)==3 and 'Incomplete or invalid' in d.note
+    assert len(d.frames)==3 and 'Incomplete trailing XYZ record' in d.note
 
 
 def test_scf_done_xtbopt_xyz_energy_and_turbomole_final_coordinate_units(tmp_path):

@@ -11,8 +11,8 @@ from lele.renderer import MoleculeRenderer, volume_surface_specs
 def test_legacy_default_surfaces():
     opts=RenderOptions();specs=volume_surface_specs(opts)
     assert [x['value'] for x in specs]==[-.035,.035]
-    assert [x['color'] for x in specs]==['#556EE6','#EC6B46']
-    assert [x['opacity'] for x in specs]==[.65,.65]
+    assert [x['color'] for x in specs]==['#00C2FF','#80E666']
+    assert [x['opacity'] for x in specs]==[.90,.90]
 
 
 def test_independent_signs_opacity_and_styles():

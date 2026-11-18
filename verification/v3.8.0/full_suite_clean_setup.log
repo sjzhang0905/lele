@@ -1,0 +1,325 @@
+............................This plugin does not support propagateSizeHints()
+..ssss...................................... [  3%]
+..........................................This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+............................. [  7%]
+..................This plugin does not support propagateSizeHints()
+.................................................This plugin does not support propagateSizeHints()
+..... [ 11%]
+......................s................................................. [ 15%]
+.............s...........................sThis plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+.........................uuuu [ 18%]
+uu.......................ss............................................. [ 22%]
+........................................................................ [ 26%]
+........................................................................ [ 30%]
+.................This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+...................................................... [ 33%]
+.......................sss.............................................. [ 37%]
+..............This plugin does not support propagateSizeHints()
+This plugin does not support raise()
+This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+.....This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+............................................ [ 41%]
+....................................................This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+...This plugin does not support propagateSizeHints()
+................ [ 45%]
+........................................................................ [ 49%]
+...This plugin does not support propagateSizeHints()
+...This plugin does not support propagateSizeHints()
+......This plugin does not support propagateSizeHints()
+...................This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+....This plugin does not support propagateSizeHints()
+..................................This plugin does not support propagateSizeHints()
+... [ 52%]
+...........................................................sThis plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+........... [ 56%]
+................................This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+ORCA pre-measurement deferred cleanup: 122 81 0.022324123000089457
+..................This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+...This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+................ [ 60%]
+.........................This plugin does not support propagateSizeHints()
+............................................... [ 64%]
+........................................................................ [ 68%]
+.................................................................ss..... [ 71%]
+..................................................This plugin does not support propagateSizeHints()
+.......This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+............... [ 75%]
+..........This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+.................This plugin does not support propagateSizeHints()
+..This plugin does not support propagateSizeHints()
+....uuu.................This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+..This plugin does not support propagateSizeHints()
+........This plugin does not support propagateSizeHints()
+Error calling Python override of QAbstractTableModel::data(): Traceback (most recent call last):
+  File "/workspace/scratch/c771f19f02ac/LELE/lele/selection_panel.py", line 138, in data
+    return f'{self.frame.positions[atom, axis]:.8f}'
+              ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+IndexError: index 2 is out of bounds for axis 0 with size 2
+..2026-11-11 09:52:16.066 (  77.912s) [    7FE61441F740]vtkOpenGLRenderWindow.c:958   WARN| vtkEGLRenderWindow (0x20cc8580): Failed to initialize OpenGL functions!
+2026-11-11 09:52:16.066 (  77.912s) [    7FE61441F740]     vtkOpenGLState.cxx:1825  WARN| Hardware does not support the number of textures defined.
+2026-11-11 09:52:16.066 (  77.912s) [    7FE61441F740]     vtkOpenGLState.cxx:1825  WARN| Hardware does not support the number of textures defined.
+2026-11-11 09:52:16.066 (  77.912s) [    7FE61441F740]     vtkOpenGLState.cxx:1825  WARN| Hardware does not support the number of textures defined.
+2026-11-11 09:52:16.066 (  77.912s) [    7FE61441F740]     vtkOpenGLState.cxx:1825  WARN| Hardware does not support the number of textures defined.
+2026-11-11 09:52:16.066 (  77.912s) [    7FE61441F740]     vtkOpenGLState.cxx:1825  WARN| Hardware does not support the number of textures defined.
+2026-11-11 09:52:16.066 (  77.912s) [    7FE61441F740]     vtkOpenGLState.cxx:1825  WARN| Hardware does not support the number of textures defined.
+2026-11-11 09:52:16.066 (  77.912s) [    7FE61441F740]     vtkOpenGLState.cxx:1825  WARN| Hardware does not support the number of textures defined.
+2026-11-11 09:52:16.066 (  77.912s) [    7FE61441F740]     vtkOpenGLState.cxx:1825  WARN| Hardware does not support the number of textures defined.
+2026-11-11 09:52:16.066 (  77.912s) [    7FE61441F740]   vtkShaderProgram.cxx:1282   ERR| vtkShaderProgram (0x23bc6d00): 1: #version 150
+2: #ifndef GL_ES
+3: #define highp
+4: #define mediump
+5: #define lowp
+6: #define texelFetchBuffer texelFetch
+7: #endif // GL_ES
+8: #define attribute in
+9: #define varying out
+10: 
+11: in vec4 ndCoordIn;
+12: in vec2 texCoordIn;
+13: out vec2 texCoord;
+14: void main()
+15: {
+16:   gl_Position = ndCoordIn;
+17:   texCoord = texCoordIn;
+18:   //VTK::TCoord::Flip
+19: }
+
+2026-11-11 09:52:16.066 (  77.912s) [    7FE61441F740]   vtkShaderProgram.cxx:1283   ERR| vtkShaderProgram (0x23bc6d00): Could not create shader object.
+2026-11-11 09:52:16.066 (  77.912s) [    7FE61441F740]vtkOpenGLVertexArrayObj:255    ERR| vtkOpenGLVertexArrayObject (0x2572c630): attempt to add attribute without a program for attribute ndCoordIn
+2026-11-11 09:52:16.066 (  77.912s) [    7FE61441F740]vtkOpenGLQuadHelper.cxx:60    WARN| Error binding ndCoords to VAO.
+2026-11-11 09:52:16.066 (  77.912s) [    7FE61441F740]vtkOpenGLRenderWindow.c:1584   ERR| vtkEGLRenderWindow (0x20cc8580): Couldn't build the shader program for depth blits
+2026-11-11 09:52:16.066 (  77.912s) [    7FE61441F740]vtkOpenGLRenderWindow.c:958   WARN| vtkEGLRenderWindow (0x20cc8580): Failed to initialize OpenGL functions!
+2026-11-11 09:52:16.066 (  77.912s) [    7FE61441F740]   vtkShaderProgram.cxx:1282   ERR| vtkShaderProgram (0x24460820): 1: #version 150
+2: #ifndef GL_ES
+3: #define highp
+4: #define mediump
+5: #define lowp
+6: #define texelFetchBuffer texelFetch
+7: #endif // GL_ES
+8: #define attribute in
+9: #define varying out
+10: 
+11: 
+12: // SPDX-FileCopyrightText: Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+13: // SPDX-License-Identifier: BSD-3-Clause
+14: 
+15: // all variables that represent positions or directions have a suffix
+16: // indicating the coordinate system they are in. The possible values are
+17: // MC - Model Coordinates
+18: // WC - WC world coordinates
+19: // VC - View Coordinates
+20: // DC - Display Coordinates
+21: 
+22: in vec4 vertexWC;
+23: 
+24: // Custom uniforms
+25: 
+26: 
+27: // material property values
+28: //VTK::Color::Dec
+29: 
+30: // Texture coordinates
+31: //VTK::TCoord::Dec
+32: 
+33: // Apple Bug
+34: //VTK::PrimID::Dec
+35: 
+36: // PointSize on GLES 3.0
+37: //VTK::PointSizeGLES30::Dec
+38: 
+39: // LineWidth on GLES 3.0
+40: //VTK::LineWidthGLES30::Dec
+41: 
+42: uniform mat4 WCVCMatrix;  // World to view matrix
+43: 
+44: void main()
+45: {
+46:   //VTK::PointSizeGLES30::Impl
+47: 
+48:   // Apple Bug
+49:   //VTK::PrimID::Impl
+50: 
+51:   gl_Position = WCVCMatrix*vertexWC;
+52:   //VTK::LineWidthGLES30::Impl
+53:   //VTK::TCoord::Impl
+54:   //VTK::Color::Impl
+55: }
+
+2026-11-11 09:52:16.066 (  77.912s) [    7FE61441F740]   vtkShaderProgram.cxx:1283   ERR| vtkShaderProgram (0x24460820): Could not create shader object.
+2026-11-11 09:52:16.066 (  77.912s) [    7FE61441F740]   vtkShaderProgram.cxx:1282   ERR| vtkShaderProgram (0x24460820): 1: #version 150
+2: #ifndef GL_ES
+3: #define highp
+4: #define mediump
+5: #define lowp
+6: #define texelFetchBuffer texelFetch
+7: #endif // GL_ES
+8: #define attribute in
+9: #define varying out
+10: 
+11: 
+12: // SPDX-FileCopyrightText: Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+13: // SPDX-License-Identifier: BSD-3-Clause
+14: 
+15: // all variables that represent positions or directions have a suffix
+16: // indicating the coordinate system they are in. The possible values are
+17: // MC - Model Coordinates
+18: // WC - WC world coordinates
+19: // VC - View Coordinates
+20: // DC - Display Coordinates
+21: 
+22: in vec4 vertexWC;
+23: 
+24: // Custom uniforms
+25: 
+26: 
+27: // material property values
+28: //VTK::Color::Dec
+29: 
+30: // Texture coordinates
+31: //VTK::TCoord::Dec
+32: 
+33: // Apple Bug
+34: //VTK::PrimID::Dec
+35: 
+36: // PointSize on GLES 3.0
+37: //VTK::PointSizeGLES30::Dec
+38: 
+39: // LineWidth on GLES 3.0
+40: //VTK::LineWidthGLES30::Dec
+41: 
+42: uniform mat4 WCVCMatrix;  // World to view matrix
+43: 
+44: void main()
+45: {
+46:   //VTK::PointSizeGLES30::Impl
+47: 
+48:   // Apple Bug
+49:   //VTK::PrimID::Impl
+50: 
+51:   gl_Position = WCVCMatrix*vertexWC;
+52:   //VTK::LineWidthGLES30::Impl
+53:   //VTK::TCoord::Impl
+54:   //VTK::Color::Impl
+55: }
+
+2026-11-11 09:52:16.066 (  77.912s) [    7FE61441F740]   vtkShaderProgram.cxx:1283   ERR| vtkShaderProgram (0x24460820): Could not create shader object.
+2026-11-11 09:52:16.067 (  77.913s) [    7FE61441F740]vtkOpenGLRenderWindow.c:958   WARN| vtkEGLRenderWindow (0x20cc8580): Failed to initialize OpenGL functions!
+.This plugin does not support propagateSizeHints()
+.. [ 79%]
+This plugin does not support propagateSizeHints()
+.........uuu.This plugin does not support propagateSizeHints()
+..This plugin does not support propagateSizeHints()
+......................................................... [ 83%]
+............This plugin does not support propagateSizeHints()
+..uuuu...uuuuuuuuuu.uuuuuuuuuu.uuuuuuuuuu....uuuu.uuuuuuuuuu [ 84%]
+..uuuuuuuuuu..uu....uuuuuu......................................This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+....This plugin does not support propagateSizeHints()
+This plugin does not support raise()
+This plugin does not support raise()
+This plugin does not support propagateSizeHints()
+This plugin does not support raise()
+This plugin does not support raise()
+.This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+. [ 87%]
+................This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+....................................................... [ 90%]
+..................................................This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+..................... [ 94%]
+.............................This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+..This plugin does not support propagateSizeHints()
+..This plugin does not support propagateSizeHints()
+............[INFO] Selected Python: 3.12.14, 64-bit
+[3/3] Starting LELE...
+......This plugin does not support propagateSizeHints()
+...This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+........ [ 98%]
+.This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+.This plugin does not support propagateSizeHints()
+.....................                                              [100%]
+=============================== warnings summary ===============================
+../../../../opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+  /opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+tests/test_acceptance_regressions_v340.py: 7 warnings
+tests/test_boundary_surface_v354.py: 20 warnings
+tests/test_crystal_v220.py: 2 warnings
+tests/test_feature_integration_v370.py: 6 warnings
+tests/test_field_mapping_v340.py: 24 warnings
+tests/test_fragment_preview_v380.py: 1 warning
+tests/test_isosurface_integration_v330.py: 10 warnings
+tests/test_isosurface_render_v330.py: 6 warnings
+tests/test_periodic_fragment_ui_v171.py: 8 warnings
+tests/test_renderer.py: 4 warnings
+tests/test_selection_ui_v090.py: 4 warnings
+tests/test_surface_erase_v370.py: 12 warnings
+tests/test_volumetric_view_v320.py: 3 warnings
+  /workspace/scratch/c771f19f02ac/LELE/lele/surface_rendering.py:103: DeprecationWarning: Call to deprecated class vtkTransformPolyDataFilter. (Replaced by vtkTransformFilter.) -- Deprecated since version 9.7.0.
+    transformed=vtkTransformPolyDataFilter();transformed.SetInputConnection(contour.GetOutputPort())
+
+tests/test_acceptance_regressions_v340.py: 2 warnings
+tests/test_boundary_surface_v354.py: 22 warnings
+tests/test_field_mapping_v340.py: 5 warnings
+tests/test_surface_erase_v370.py: 3 warnings
+  /workspace/scratch/c771f19f02ac/LELE/lele/surface_rendering.py:142: DeprecationWarning: Call to deprecated class vtkTransformPolyDataFilter. (Replaced by vtkTransformFilter.) -- Deprecated since version 9.7.0.
+    tile_filter=vtkTransformPolyDataFilter();tile_filter.SetInputData(poly)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+1878 passed, 16 skipped, 140 warnings, 78 subtests passed in 101.70s (0:01:41)

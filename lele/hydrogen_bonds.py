@@ -59,6 +59,7 @@ def repeat_hydrogen_bonds(frame, result, tiles, *, repeats=None, wrap=True, imag
         return
     _, floors = normalized_positions(frame)
     tile_index = {tuple(tile): k for k, tile in enumerate(tiles)}
+    lower = np.min(tiles, axis=0)
     n = len(frame.symbols)
     source_images = {}
     if image_map is not None:
@@ -79,8 +80,8 @@ def repeat_hydrogen_bonds(frame, result, tiles, *, repeats=None, wrap=True, imag
             if repeats is not None:
                 for axis, periodic in enumerate(frame.pbc):
                     if periodic:
-                        outer[axis] = destination[axis] // repeats[axis]
-                        destination[axis] %= repeats[axis]
+                        outer[axis] = (destination[axis]-lower[axis]) // repeats[axis]
+                        destination[axis] = lower[axis] + (destination[axis]-lower[axis]) % repeats[axis]
             other = (image_map.get((b, tuple(destination))) if image_map is not None else
                      tile_index.get(tuple(destination)))
             if other is None:

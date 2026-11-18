@@ -1,0 +1,114 @@
+xyz 1/3 baseline: welcome 0.618s; ready 1.346s; first 1.247s; second 0.202s
+xyz 1/3 current: welcome 0.483s; ready 2.020s; first 0.221s; second 0.051s
+xyz 2/3 baseline: welcome 0.417s; ready 0.968s; first 0.912s; second 0.063s
+xyz 2/3 current: welcome 0.490s; ready 1.832s; first 0.218s; second 0.052s
+xyz 3/3 baseline: welcome 0.441s; ready 0.866s; first 1.009s; second 0.072s
+xyz 3/3 current: welcome 0.454s; ready 1.717s; first 0.205s; second 0.055s
+poscar 1/3 baseline: welcome 0.458s; ready 0.898s; first 0.859s; second 0.058s
+poscar 1/3 current: welcome 0.421s; ready 1.826s; first 0.112s; second 0.187s
+poscar 2/3 baseline: welcome 0.583s; ready 1.059s; first 0.918s; second 0.074s
+poscar 2/3 current: welcome 0.558s; ready 1.894s; first 0.139s; second 0.063s
+poscar 3/3 baseline: welcome 0.458s; ready 0.899s; first 0.925s; second 0.065s
+poscar 3/3 current: welcome 0.511s; ready 1.849s; first 0.121s; second 0.058s
+orca 1/3 baseline: welcome 0.455s; ready 0.908s; first 0.746s; second 0.062s
+orca 1/3 current: welcome 0.551s; ready 2.124s; first 0.238s; second 0.060s
+orca 2/3 baseline: welcome 0.508s; ready 0.954s; first 0.616s; second 0.060s
+orca 2/3 current: welcome 0.477s; ready 2.131s; first 0.194s; second 0.068s
+orca 3/3 baseline: welcome 0.572s; ready 1.041s; first 0.680s; second 0.075s
+orca 3/3 current: welcome 0.452s; ready 1.767s; first 0.212s; second 0.061s
+pdb 1/3 baseline: welcome 0.427s; ready 0.882s; first 0.982s; second 0.051s
+pdb 1/3 current: welcome 0.647s; ready 2.140s; first 0.148s; second 0.051s
+pdb 2/3 baseline: welcome 0.453s; ready 0.910s; first 1.275s; second 0.101s
+pdb 2/3 current: welcome 0.940s; ready 2.541s; first 0.326s; second 0.088s
+pdb 3/3 baseline: welcome 0.551s; ready 1.200s; first 1.168s; second 0.074s
+pdb 3/3 current: welcome 0.697s; ready 2.598s; first 0.309s; second 0.116s
+{
+  "xyz": {
+    "baseline": {
+      "imports_s": 0.15289178500097478,
+      "constructed_s": 0.4135746209994977,
+      "first_paint_s": 0.4388287809997564,
+      "welcome_paint_s": 0.4408941189994948,
+      "ready_s": 0.9684376810000686,
+      "first_file_s": 1.008695833999809,
+      "second_file_s": 0.07225714400010474,
+      "ready_plus_first_file_s": 1.8805979160006245
+    },
+    "current": {
+      "imports_s": 0.1591601410000294,
+      "constructed_s": 0.454939645000195,
+      "first_paint_s": 0.48008137800024997,
+      "welcome_paint_s": 0.48278447500160837,
+      "ready_s": 1.8324556980005582,
+      "first_file_s": 0.21798495599978196,
+      "second_file_s": 0.05239299200002279,
+      "ready_plus_first_file_s": 2.05044065400034
+    }
+  },
+  "poscar": {
+    "baseline": {
+      "imports_s": 0.1508974099997431,
+      "constructed_s": 0.43391402599991125,
+      "first_paint_s": 0.45677069499834033,
+      "welcome_paint_s": 0.45825626800069585,
+      "ready_s": 0.8985209750007925,
+      "first_file_s": 0.9175311979997787,
+      "second_file_s": 0.0653973810003663,
+      "ready_plus_first_file_s": 1.8233163500008231
+    },
+    "current": {
+      "imports_s": 0.17214287199931277,
+      "constructed_s": 0.4855916119995527,
+      "first_paint_s": 0.5088858330000221,
+      "welcome_paint_s": 0.5106522349997249,
+      "ready_s": 1.8486451489989122,
+      "first_file_s": 0.12141834599970025,
+      "second_file_s": 0.06276494200028537,
+      "ready_plus_first_file_s": 1.9700634949986124
+    }
+  },
+  "orca": {
+    "baseline": {
+      "imports_s": 0.1642539049989864,
+      "constructed_s": 0.4823111030000291,
+      "first_paint_s": 0.5061820030005038,
+      "welcome_paint_s": 0.5083148600006098,
+      "ready_s": 0.9536724650006363,
+      "first_file_s": 0.6797296149998147,
+      "second_file_s": 0.06155897700045898,
+      "ready_plus_first_file_s": 1.6542982579994714
+    },
+    "current": {
+      "imports_s": 0.17885620000015479,
+      "constructed_s": 0.4510457240012329,
+      "first_paint_s": 0.4748210680008924,
+      "welcome_paint_s": 0.47718747799990524,
+      "ready_s": 2.1243807039991225,
+      "first_file_s": 0.21175632500126085,
+      "second_file_s": 0.06114805699871795,
+      "ready_plus_first_file_s": 2.32495523200123
+    }
+  },
+  "pdb": {
+    "baseline": {
+      "imports_s": 0.14957357599996612,
+      "constructed_s": 0.43020767200141563,
+      "first_paint_s": 0.4521733020010288,
+      "welcome_paint_s": 0.45342032500047935,
+      "ready_s": 0.9097002650014474,
+      "first_file_s": 1.167840244999752,
+      "second_file_s": 0.07373012800053402,
+      "ready_plus_first_file_s": 2.1842041610016167
+    },
+    "current": {
+      "imports_s": 0.22164785700078937,
+      "constructed_s": 0.6518135919995984,
+      "first_paint_s": 0.6940267479985778,
+      "welcome_paint_s": 0.6969585649985675,
+      "ready_s": 2.5406821010001295,
+      "first_file_s": 0.30862583500129404,
+      "second_file_s": 0.0878347109992319,
+      "ready_plus_first_file_s": 2.866874302000724
+    }
+  }
+}

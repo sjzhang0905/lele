@@ -1,0 +1,66 @@
+[
+  {
+    "test": "::tests.test_independent_orbitals_v320",
+    "reason": "collection skipped ('/workspace/scratch/a8264c16b7e5/source/LELE/tests/test_independent_orbitals_v320.py', 10, \"Skipped: could not import 'pyscf': No module named 'pyscf'\")"
+  },
+  {
+    "test": "tests.test_acceptance_extended_v2121::test_supplied_chemcraft_cif_without_spacegroup_metadata",
+    "reason": "Set LELE_CHEMCRAFT_CIF_EXAMPLE to the private 22.cif; it is not redistributed. /workspace/scratch/a8264c16b7e5/source/LELE/tests/test_acceptance_extended_v2121.py:240: Set LELE_CHEMCRAFT_CIF_EXAMPLE to the private 22.cif; it is not redistributed."
+  },
+  {
+    "test": "tests.test_acceptance_extended_v2121::test_supplied_poscar1_preserves_all_selective_flags_and_rows[unchanged]",
+    "reason": "Set LELE_ROTATION_EXAMPLE_DIR to the private POSCAR1/POSCAR2 directory. /workspace/scratch/a8264c16b7e5/source/LELE/tests/test_acceptance_extended_v2121.py:248: Set LELE_ROTATION_EXAMPLE_DIR to the private POSCAR1/POSCAR2 directory."
+  },
+  {
+    "test": "tests.test_acceptance_extended_v2121::test_supplied_poscar1_preserves_all_selective_flags_and_rows[vacuum]",
+    "reason": "Set LELE_ROTATION_EXAMPLE_DIR to the private POSCAR1/POSCAR2 directory. /workspace/scratch/a8264c16b7e5/source/LELE/tests/test_acceptance_extended_v2121.py:248: Set LELE_ROTATION_EXAMPLE_DIR to the private POSCAR1/POSCAR2 directory."
+  },
+  {
+    "test": "tests.test_acceptance_extended_v2121::test_supplied_poscar1_preserves_all_selective_flags_and_rows[reindex]",
+    "reason": "Set LELE_ROTATION_EXAMPLE_DIR to the private POSCAR1/POSCAR2 directory. /workspace/scratch/a8264c16b7e5/source/LELE/tests/test_acceptance_extended_v2121.py:248: Set LELE_ROTATION_EXAMPLE_DIR to the private POSCAR1/POSCAR2 directory."
+  },
+  {
+    "test": "tests.test_boundary_surface_v354::test_actual_chgcar_periodic_meshes_keep_boundary_repetition",
+    "reason": "Set LELE_CHGCAR_EXAMPLE to test the supplied CHGCAR /workspace/scratch/a8264c16b7e5/source/LELE/tests/test_boundary_surface_v354.py:169: Set LELE_CHGCAR_EXAMPLE to test the supplied CHGCAR"
+  },
+  {
+    "test": "tests.test_chgcar_gui_v352::test_supplied_chgcar_renamed_exact_original_grid",
+    "reason": "Set LELE_CHGCAR_EXAMPLE to the supplied CHGCAR; not redistributed. /workspace/scratch/a8264c16b7e5/source/LELE/tests/test_chgcar_gui_v352.py:48: Set LELE_CHGCAR_EXAMPLE to the supplied CHGCAR; not redistributed."
+  },
+  {
+    "test": "tests.test_cif_spacegroup_v357::test_supplied_dpa_cif_matches_explicit_operations",
+    "reason": "Set LELE_DPA_CIF_EXAMPLE to the supplied private DPA CIF. /workspace/scratch/a8264c16b7e5/source/LELE/tests/test_cif_spacegroup_v357.py:97: Set LELE_DPA_CIF_EXAMPLE to the supplied private DPA CIF."
+  },
+  {
+    "test": "tests.test_coordinate_reorientation_v2110::test_actual_poscar_pair_is_a_rigid_reorientation",
+    "reason": "Set LELE_ROTATION_EXAMPLE_DIR to the supplied private POSCAR1/POSCAR2. /workspace/scratch/a8264c16b7e5/source/LELE/tests/test_coordinate_reorientation_v2110.py:172: Set LELE_ROTATION_EXAMPLE_DIR to the supplied private POSCAR1/POSCAR2."
+  },
+  {
+    "test": "tests.test_coordinate_reorientation_v2110::test_local_axes_match_supplied_rotation_script_without_pymatgen",
+    "reason": "Set LELE_ROTATION_SCRIPT to the supplied v13 rotation script. /workspace/scratch/a8264c16b7e5/source/LELE/tests/test_coordinate_reorientation_v2110.py:190: Set LELE_ROTATION_SCRIPT to the supplied v13 rotation script."
+  },
+  {
+    "test": "tests.test_delta_acceptance_v2131::test_palette_against_original_tcl",
+    "reason": "Set QA_SIBYL_TCL to the original Sibyl.tcl /workspace/scratch/a8264c16b7e5/source/LELE/tests/test_delta_acceptance_v2131.py:115: Set QA_SIBYL_TCL to the original Sibyl.tcl"
+  },
+  {
+    "test": "tests.test_delta_acceptance_v2131::test_user_poscar_vacuum_append_and_export[poscar-direct]",
+    "reason": "Set LELE_ROTATION_EXAMPLE_DIR to the original POSCAR1 folder /workspace/scratch/a8264c16b7e5/source/LELE/tests/test_delta_acceptance_v2131.py:142: Set LELE_ROTATION_EXAMPLE_DIR to the original POSCAR1 folder"
+  },
+  {
+    "test": "tests.test_delta_acceptance_v2131::test_user_poscar_vacuum_append_and_export[poscar-cartesian]",
+    "reason": "Set LELE_ROTATION_EXAMPLE_DIR to the original POSCAR1 folder /workspace/scratch/a8264c16b7e5/source/LELE/tests/test_delta_acceptance_v2131.py:142: Set LELE_ROTATION_EXAMPLE_DIR to the original POSCAR1 folder"
+  },
+  {
+    "test": "tests.test_molden_and_legend_v280::test_actual_124_atom_example_all_frequencies_and_frozen_rows",
+    "reason": "Set LELE_CP2K_MOLDEN_EXAMPLE to the supplied private example; it is not redistributed. /workspace/scratch/a8264c16b7e5/source/LELE/tests/test_molden_and_legend_v280.py:125: Set LELE_CP2K_MOLDEN_EXAMPLE to the supplied private example; it is not redistributed."
+  },
+  {
+    "test": "tests.test_qe_v2100::test_real_supplied_qe_files",
+    "reason": "Set LELE_QE_EXAMPLE_DIR; private QE examples are not redistributed /workspace/scratch/a8264c16b7e5/source/LELE/tests/test_qe_v2100.py:246: Set LELE_QE_EXAMPLE_DIR; private QE examples are not redistributed"
+  },
+  {
+    "test": "tests.test_real_wavecar_reference_v321::test_real_wavecar_independent_direct_sum",
+    "reason": "No external standard WAVECAR fixture supplied /workspace/scratch/a8264c16b7e5/source/LELE/tests/test_real_wavecar_reference_v321.py:14: No external standard WAVECAR fixture supplied"
+  }
+]

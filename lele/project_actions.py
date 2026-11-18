@@ -2,7 +2,7 @@
 from copy import deepcopy
 from pathlib import Path
 from PySide6.QtCore import QSignalBlocker
-from PySide6.QtWidgets import QFileDialog, QMessageBox
+from .dialog_policy import QFileDialog, QMessageBox
 from .operations import run_data_task,gui_operation
 from .output_text import LoadCancelled
 
@@ -54,14 +54,11 @@ class ProjectActions:
         self._remember_document_view()
         entries = []
         for index, document in enumerate(self.documents):
-            if document.source_preview is None:
-                self._update_source_view(index)
-                if document.source_preview is None:
-                    document.source_preview = '[Source text unavailable. Loaded structures and calculation results are retained in this project.]'
             if document.project_original_path is None:document.project_original_path = str(document.path)
             view = self._document_views.get(id(document))
             options = self.render_options if view is None else view.options
             entries.append(dict(document=document, options=options,
+                display_name=self._document_labels.get(id(document), ''),
                 custom_style=snapshot(options) if view is None else view.custom_style,
                 preset=CUSTOM_KEY if view is None else view.preset,
                 camera=camera_data(None if view is None else view.camera),
@@ -70,7 +67,6 @@ class ProjectActions:
                 alignment_enabled=id(document) in self._aligned_documents,
                 geometry_parameters=self._geometry_parameters.get(id(document), []),
                 vibration_references={ai:frame for (di, ai), frame in self._vibration_references.items() if di == index}))
-        self._update_source_view()
         controls = self.vibration_controls
         return dict(documents=entries, current_document=self.current_doc, selection=list(self.selection),
             active_vibration=self._active_vibration, energy_only_context=self._energy_only_context,
@@ -110,6 +106,9 @@ class ProjectActions:
             view = DocumentView(document, entry['options'], entry.get('custom_style', {}), preset,
                 camera_from_data(entry.get('camera')), entry.get('frame_index', 0))
             self._document_views[id(document)] = view
+            display_name = entry.get('display_name', '')
+            if isinstance(display_name, str) and display_name.strip():
+                self._document_labels[id(document)] = display_name.strip()
             self.documents.append(document);self._add_document_tree(offset+i, document)
             alignment = entry.get('alignment')
             if alignment is not None:self._trajectory_alignments[id(document)] = alignment
@@ -139,7 +138,7 @@ class ProjectActions:
             # saved view after the final source/mode and selection are active.
             self._pending_view_camera = camera_from_data(state['documents'][self.current_doc-offset].get('camera'))
             self._sync_selection_to_table();self.refresh_scene()
-        self._update_source_view();self._refresh_info()
+        self._refresh_info()
         self._project_path = Path(path) if offset == 0 else None
         self.statusBar().showMessage(f'Opened project: {len(state["documents"])} document(s) added; stored structures, results and views restored.', 8000)
         return True

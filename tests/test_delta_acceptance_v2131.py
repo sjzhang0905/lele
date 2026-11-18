@@ -111,8 +111,7 @@ def test_palette_against_original_tcl():
     from vtkmodules.vtkRenderingCore import vtkRenderer
     from lele.renderer import MoleculeRenderer
     from lele.atom_legend import legend_samples
-    path=os.environ.get('QA_SIBYL_TCL')
-    if not path:pytest.skip('Set QA_SIBYL_TCL to the original Sibyl.tcl')
+    path = os.environ.get('QA_SIBYL_TCL') or Path(__file__).resolve().parents[1] / 'docs/reference_data/Sibyl.tcl'
     source=Path(path).read_text()
     colors={int(i):tuple(map(float,(r,g,b))) for i,r,g,b in
             re.findall(r'^color change rgb (\d+) ([\d.]+) ([\d.]+) ([\d.]+)$',source,re.M)}
@@ -125,6 +124,12 @@ def test_palette_against_original_tcl():
     # v2.13.5 adds another 5% white to the already softened colors.
     expected={s:'#'+''.join(f'{round(int(c[j:j+2],16)*.95+12.75):02X}' for j in (1,3,5))
               for s,c in expected.items()}
+    # v3.8.0 adds another 15% white, retaining 8-bit rounding at every step.
+    expected={s:'#'+''.join(f'{round(int(c[j:j+2],16)*.85+38.25):02X}' for j in (1,3,5))
+              for s,c in expected.items()}
+    # The contrast overrides in 3.16 are already final display RGBs.
+    expected.update(Na='#167FA0', K='#7946A4', Ti='#769FC3', V='#A98B32', Cr='#257052',
+                    Mn='#BD4086', Fe='#A34E21', Co='#345DA7', Ni='#36AD80', Zn='#D9BA7D', Sn='#425867')
     draw=MoleculeRenderer(vtkRenderer());symbols=list(expected)
     f=Frame(symbols,[[n*5,0,0] for n in range(len(symbols))])
     draw.set_scene(f)

@@ -1,6 +1,6 @@
 """Atom index and slab vacuum editors with explicit current-geometry previews."""
-from PySide6.QtWidgets import (QDialog,QWidget,QTabWidget,QVBoxLayout,QFormLayout,QLabel,QSpinBox,QDoubleSpinBox,
-                              QComboBox,QDialogButtonBox,QPushButton,QMessageBox)
+from PySide6.QtWidgets import QWidget, QTabWidget, QVBoxLayout, QFormLayout, QLabel, QSpinBox, QDoubleSpinBox, QComboBox, QDialogButtonBox, QPushButton
+from .dialog_policy import QDialog, QMessageBox
 from .site_occupancy import description
 from .vacuum import slab_vacuum
 
@@ -16,7 +16,8 @@ def confirm_maximum_occupancy_export(parent):
     cancel=message.addButton('Cancel',QMessageBox.ButtonRole.RejectRole)
     message.setDefaultButton(cancel);message.setEscapeButton(cancel)
     message.exec()
-    return message.clickedButton() is use
+    return (not getattr(message,'_lele_context_rejection',None)
+            and not getattr(message,'_lele_wait_aborted',False) and message.clickedButton() is use)
 
 
 class AtomIndexDialog(QDialog):
@@ -86,6 +87,8 @@ class VacuumDialog(QDialog):
         return self._detected_gap if self.gap.value()==self._displayed_gap else self.gap.value()
 
     def _refresh(self,*_):
+        from .dialog_policy import ensure_source_current
+        if not ensure_source_current(self):return
         try:
             data=slab_vacuum(self.frame,self.selected_axis());self.gap.setValue(data['gap'])
             self._detected_gap=data['gap'];self._displayed_gap=self.gap.value()

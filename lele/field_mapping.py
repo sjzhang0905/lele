@@ -4,10 +4,57 @@ Mapping samples the actual isosurface vertices (zero normal offset). It never
 computes ESP or guesses the physical meaning / units of an imported CUBE.
 """
 import numpy as np
+from copy import deepcopy
 from .core import Volume
 from .output_text import check_load_cancelled, load_progress
 
-PALETTES = ('Red-white-blue', 'Blue-white-red', 'Viridis')
+PALETTES = ('VMD RWB', 'VMD BWR', 'Red-white-blue', 'Blue-white-red', 'Viridis')
+DEFAULT_PALETTE = 'VMD RWB'
+
+
+def field_data_limits(values):
+    """Finite scalar range, expanded only for a constant field."""
+    data = np.asarray(values)
+    finite = data[np.isfinite(data)]
+    if not finite.size:
+        raise ValueError('The field contains no finite scalar values.')
+    low, high = float(finite.min()), float(finite.max())
+    if low == high:
+        delta = max(abs(low)*1e-6, 1e-12)
+        return low-delta, high+delta
+    return low, high
+
+
+def suggested_isovalue(values, requested):
+    """Keep a useful level when changing source, including positive-only grids.
+
+    A signed orbital level is kept if it lies strictly inside the new range.
+    For a density field, try its positive magnitude before choosing an interior
+    level. Never alter the underlying density or silently normalize it.
+    """
+    data = np.asarray(values)
+    finite = data[np.isfinite(data)]
+    if not finite.size:
+        return float(requested)
+    low, high = float(finite.min()), float(finite.max())
+    requested = float(requested)
+    if low < requested < high or low == high:
+        return requested
+    magnitude = abs(requested)
+    if low >= 0 and low < magnitude < high:
+        return magnitude
+    if high <= 0 and low < -magnitude < high:
+        return -magnitude
+    if low >= 0:
+        value = low + .1*(high-low)
+    elif high <= 0:
+        value = high - .1*(high-low)
+    else:
+        value = .1*high if requested >= 0 else .1*low
+    # Imported volume storage is float32; avoid presenting its roundoff digits
+    # as an apparently significant user-selected level.
+    rounded = float(f'{value:.6g}')
+    return rounded if low < rounded < high else value
 
 
 def field_transform(active):
@@ -22,7 +69,8 @@ def transformed_fields(fields, active, rotation=None, translation=None):
     rotation = np.eye(3) if rotation is None else np.asarray(rotation)
     translation = np.zeros(3) if translation is None else np.asarray(translation)
     return [Volume(v.data, (v.reference_origin @ transform + shift) @ rotation + translation,
-                   v.reference_voxel_vectors @ transform @ rotation, v.label, v.unit, v.periodic)
+                   v.reference_voxel_vectors @ transform @ rotation, v.label, v.unit, v.periodic,
+                   provenance=v.provenance)
             for v in fields]
 
 
@@ -73,18 +121,22 @@ def sample_field(volume, points, *, chunk_size=65536, progress=None):
     return result
 
 
-def mapping_limits(spec, samples):
+def mapping_limits(spec, samples, color_values=None):
     finite = np.asarray(samples)[np.isfinite(samples)]
     if not len(finite):
         raise ValueError('The color field does not cover any surface vertices.')
     limits = spec.get('map_range')
     if limits is None:
+        if spec.get('map_palette', DEFAULT_PALETTE).startswith('VMD '):
+            # VMD scales the selected volume's data range, not just the values
+            # touched by this particular isosurface. White is the range midpoint.
+            return field_data_limits(finite if color_values is None else color_values)
         bound = max(float(np.max(np.abs(finite))), 1e-12)
         return -bound, bound
     limits=np.asarray(limits,float)
     if limits.shape != (2,) or not np.isfinite(limits).all() or limits[0]>=limits[1]:
         raise ValueError('Color limits must be finite with Min < Max.')
-    if spec.get('map_palette','Red-white-blue') != 'Viridis' and not limits[0]<0<limits[1]:
+    if spec.get('map_palette',DEFAULT_PALETTE) in ('Red-white-blue','Blue-white-red') and not limits[0]<0<limits[1]:
         raise ValueError('Red/white/blue color limits must straddle zero (white).')
     return tuple(map(float, limits))
 
@@ -97,7 +149,7 @@ def prepare_field_attachment(target, frame, incoming):
     This operation embeds grid bytes in projects; no source-file dependency.
     """
     if frame is None or not incoming.frames or not incoming.volumes:
-        raise ValueError('Choose a CUBE or VASP file containing structure and complete scalar grids.')
+        raise ValueError('Choose an XSF, CUBE or VASP file containing structure and complete scalar grids.')
     if target.modified and target.volume is None:
         raise ValueError('Fields were detached by a structure edit. Undo or reopen the source before importing fields.')
     source = incoming.frames[0]
@@ -122,7 +174,7 @@ def prepare_field_attachment(target, frame, incoming):
             raise ValueError('Imported field must have finite data and independent grid vectors.')
         copy=Volume(volume.data.copy(), volume.origin@transform+shift, basis@transform,
                     f'{incoming.path.name} · {volume.label or "Field"}', volume.unit, volume.periodic,
-                    volume.origin.copy(),basis.copy())
+                    volume.origin.copy(),basis.copy(),deepcopy(volume.provenance))
         added.append(copy)
     return added
 
@@ -140,7 +192,7 @@ def validate_layer_mapping(spec):
         index=spec.get(name,-1)
         if isinstance(index,bool) or not isinstance(index,(int,np.integer)) or index < -1:
             raise ValueError('Surface field selections must be valid dataset indices.')
-    if spec.get('map_palette','Red-white-blue') not in PALETTES:
+    if spec.get('map_palette',DEFAULT_PALETTE) not in PALETTES:
         raise ValueError('Unknown surface color palette.')
     if spec.get('map_range') is not None:
         mapping_limits(spec,[0.])

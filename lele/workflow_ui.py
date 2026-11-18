@@ -119,9 +119,14 @@ def frame_tree_label(frame, frame_index, format_name, *, title=None, series_step
     from .energy_units import display_energy
     info = frame.info
     if title is None:
-        title = (info['structure_label'] if info.get('structure_label') else
+        title = ('Final optimized geometry' if info.get('scan_endpoint') and info.get('scan_converged') else
+                 f'Latest evaluated geometry · cycle {info.get("optimization_cycle", "?")}' if info.get('scan_endpoint') else
+                 info['structure_label'] if info.get('structure_label') else
                  f'Conformer {info["goat_conformer"]}' if 'goat_conformer' in info else
                  f'Image {info["neb_image"]}' if 'neb_image' in info else
+                 f'Optimization cycle {info["optimization_cycle"]}' if 'scan_step' in info and info.get('optimization_cycle') is not None else
+                 f'MD step {info["linked_step"]}' if 'linked_step' in info and 'cp2k_md_step' in info else
+                 f'Step {info["linked_step"]}' if 'linked_step' in info else
                  f'Step {info["optimization_cycle"]}' if info.get('optimization_cycle') is not None else
                  f'Step {series_step}' if series_step is not None else
                  f'Frame {frame_index + 1}')
@@ -197,25 +202,50 @@ def populate_tree(window,index,doc,head):
     if not hasattr(window,'_series_tree_items'):window._series_tree_items={}
     window._series_tree_items={k:v for k,v in window._series_tree_items.items() if k[0]!=index}
     window._vibration_tree_items={k:v for k,v in window._vibration_tree_items.items() if k[0]!=index}
-    if not (len(stages)>1 or doc.neb_runs or doc.conformer_ensembles):return False
+    scans = [] if results is None else getattr(results, 'scans', [])
+    if not (len(stages)>1 or scans or doc.neb_runs or doc.conformer_ensembles):return False
     parents={};covered=set()
 
-    def series(parent,label,indices,item_labels=None):
+    def series(parent,label,indices,item_labels=None,*,last=False):
         indices=[i for i in indices if i is not None]
         if not indices:return None
         group=QTreeWidgetItem([label+f' ({len(indices)} structures)']);parent.addChild(group)
         sequence=add_frame_items(window,index,doc,group,indices,label=label,item_labels=item_labels,series=True)
-        group.setData(0,Qt.ItemDataRole.UserRole,(index,'series',sequence.key,0,label))
+        group.setData(0,Qt.ItemDataRole.UserRole,(index,'series',sequence.key,len(sequence)-1 if last else 0,label))
         covered.update(indices)
         return group
 
     state=_sequence_state(window,doc)
+    scan_parents = {}
+    for run in scans:
+        completed = sum(p.converged for p in run.points)
+        planned = f' / {run.expected_points} planned' if run.expected_points is not None else ''
+        kind = 'simultaneous scan path' if run.simultaneous and len(run.coordinates)>1 else 'relaxed scan'
+        root = QTreeWidgetItem([f'ORCA {kind} · {completed} converged{planned}'])
+        head.addChild(root)
+        root.setToolTip(0, '\n'.join(c.label + f' ({c.unit})' for c in run.coordinates))
+        endpoints = [p for p in run.points if p.converged and p.frame_index is not None]
+        def point_label(point):
+            from .orca_scan import scan_point_label
+            return scan_point_label(run.coordinates, point)
+        series(root, 'Scan curve · converged endpoints', [p.frame_index for p in endpoints],
+               [point_label(p) for p in endpoints])
+        pending = [p for p in run.points if not p.converged and p.frame_index is not None]
+        series(root, 'Incomplete scan points · latest evaluated structures', [p.frame_index for p in pending],
+               [point_label(p) + ' · incomplete' for p in pending])
+        history = QTreeWidgetItem(['Optimization history by scan step']);root.addChild(history)
+        for point in run.points:scan_parents[point.stage_index] = history
+        root.setExpanded(True)
     for s in stages:
         ids=state['stages'].get(s.index,())
         if s.kind=='neb':continue
-        parent=series(head,s.name+' · '+s.status,ids)
+        stage_parent=scan_parents.get(s.index,head)
+        # Selecting a scan-step heading displays its completed optimization,
+        # while its children still expose every individual optimization cycle.
+        is_scan = s.index in scan_parents or any('scan_step' in doc.frames[i].info for i in ids)
+        parent=series(stage_parent,s.name+' · '+s.status,ids,last=is_scan)
         if parent is None:
-            parent=QTreeWidgetItem([s.name+' · '+s.status]);head.addChild(parent)
+            parent=QTreeWidgetItem([s.name+' · '+s.status]);stage_parent.addChild(parent)
         parents[s.index]=parent
     for run in doc.neb_runs:
         root=QTreeWidgetItem([f'NEB / NEB-TS · {run.nimages or "?"} images']);root.setData(0,Qt.ItemDataRole.UserRole,(index,'analysis','neb'));head.addChild(root)

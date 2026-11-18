@@ -209,6 +209,7 @@ def _orbitals(lines, start, job, step_index):
 
 def read_orca_results(path):
     lines = read_output_lines(path)
+    from .orca_scan import SCAN_STEP, ScanRun, ScanPoint, coordinate_from_line, finish_scan_records
     ranges=job_ranges(lines)
     progress=load_progress('ORCA: geometry, energies and orbitals',len(lines))
     result = CalculationResults('ORCA', force_unit='Hartree/Bohr', displacement_unit='Bohr')
@@ -223,6 +224,8 @@ def read_orca_results(path):
         hessian_active = False
         hessian = None
         initial_hessian_file=''
+        scan_run = scan_point = None
+        simultaneous_scan = False
 
         def start_stage(name, kind, line):
             nonlocal stage, step, cycle, previous_geometry, hessian_active, hessian
@@ -257,6 +260,41 @@ def read_orca_results(path):
                 if re.search(r'\b(?:FAST-|LOOSE-)?NEB(?:-TS)?\b', job.route, re.I):
                     job.tasks.add('NEB-TS' if 'NEB-TS' in job.route.upper() else 'NEB')
             heading_text = line.strip().strip('*').strip()
+            if 'simul_scan' in lower and re.search(r'\bsimul_scan\s+true\b', lower):
+                simultaneous_scan = True
+                if scan_run is not None:scan_run.simultaneous = True
+            if heading_text.lower() == 'relaxed surface scan':
+                scan_run = ScanRun(len(result.scans), job.index, i+1, simultaneous=simultaneous_scan)
+                result.scans.append(scan_run)
+                scan_point = None
+                job.tasks.add('Scan')
+            scan_match = SCAN_STEP.search(line) if 'SURFACE SCAN STEP' in line.upper() else None
+            if scan_match:
+                if scan_run is None:
+                    scan_run = ScanRun(len(result.scans), job.index, i+1, simultaneous=simultaneous_scan)
+                    result.scans.append(scan_run)
+                scan_stage = start_stage(f'Scan step {scan_match[1]}', 'scan', i)
+                scan_point = ScanPoint(int(scan_match[1]), i+1, scan_stage.index)
+                scan_run.points.append(scan_point)
+                job.tasks.add('Scan')
+            if scan_run is not None:
+                expected = re.search(r'There will be\s+(\d+)\s+constrained geometry optimizations', line, re.I) if 'constrained geometry optimizations' in lower else None
+                if expected:scan_run.expected_points = int(expected[1])
+                coordinate = coordinate_from_line(line) if '(' in line and ':' in line else None
+                if coordinate is not None:
+                    spec, value = coordinate
+                    if value is None and scan_point is None:
+                        scan_run.coordinates.append(spec)
+                    elif value is not None and scan_point is not None and cycle is None:
+                        key = (spec.kind, spec.atoms)
+                        known = [(c.kind,c.atoms) for c in scan_run.coordinates]
+                        if key not in known:scan_run.coordinates.append(spec)
+                        # ORCA prints the target list in the declared coordinate order.
+                        values = list(scan_point.values)
+                        pos = [(c.kind,c.atoms) for c in scan_run.coordinates].index(key)
+                        while len(values) <= pos:values.append(None)
+                        values[pos] = value
+                        scan_point.values = tuple(values)
             if heading_text in NAMED_STAGES:
                 start_stage(*NAMED_STAGES[heading_text], i)
             if heading_text == 'SADDLE POINT (ANGSTROEM)':
@@ -366,6 +404,8 @@ def read_orca_results(path):
             if heading_text in ('THE OPTIMIZATION HAS CONVERGED','THE TS OPTIMIZATION HAS CONVERGED'):
                 if stage is not None and stage.kind!='neb':
                     stage.status='Converged'
+                    if scan_point is not None and stage.index == scan_point.stage_index:
+                        scan_point.convergence_line = i+1
                     if step is not None:step.converged=True
             if 'THE NEB OPTIMIZATION HAS CONVERGED' in line and stage is not None and stage.kind=='neb':
                 stage.status='Converged'
@@ -414,5 +454,6 @@ def read_orca_results(path):
                 if job.charge is not None:event.reference.info['converter_charge']=job.charge
                 if job.multiplicity is not None:event.reference.info['converter_mult']=job.multiplicity
         if stage is not None:stage.end_line=end
+    finish_scan_records(result)
     progress(len(lines))
     return result

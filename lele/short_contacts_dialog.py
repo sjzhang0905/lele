@@ -1,7 +1,7 @@
 """Readable short-contact details for a captured source geometry."""
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import (QDialog, QVBoxLayout, QLabel, QTableWidget,
-    QTableWidgetItem, QHeaderView, QAbstractItemView, QDialogButtonBox)
+from PySide6.QtWidgets import QVBoxLayout, QLabel, QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView, QDialogButtonBox
+from .dialog_policy import QDialog
 
 from .periodic_geometry import short_contact_details, periodic_basis
 

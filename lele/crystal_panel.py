@@ -2,11 +2,10 @@
 from copy import deepcopy
 from PySide6.QtCore import Signal, Qt
 from PySide6.QtGui import QColor
-from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QFormLayout,
-    QLabel, QCheckBox, QSpinBox, QDoubleSpinBox, QComboBox, QLineEdit, QPushButton,
-    QTableWidget, QTableWidgetItem, QAbstractItemView, QHeaderView, QColorDialog,
-    QTabWidget, QScrollArea)
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QFormLayout, QLabel, QCheckBox, QSpinBox, QDoubleSpinBox, QComboBox, QLineEdit, QPushButton, QTableWidget, QTableWidgetItem, QAbstractItemView, QHeaderView, QTabWidget, QScrollArea
+from .dialog_policy import QColorDialog
 from .crystal_settings import PLANE_MODES, POLYHEDRA_KEYS, default_plane
+from .color_controls import set_color_swatch
 
 
 def decimal(value, minimum, maximum, step=.05):
@@ -50,7 +49,13 @@ class LatticePlanePanel(QWidget):
         self.thickness = decimal(.5, .0001, 100000.);form.addRow('Slab thickness', self.thickness)
         self.show = QCheckBox('Show plane surface / edges');form.addRow(self.show)
         self.opacity = decimal(.2, 0., 1.);form.addRow('Plane opacity', self.opacity)
-        self.color = QPushButton('Plane colour…');form.addRow(self.color);layout.addWidget(self.editor)
+        self.opacity.setToolTip('0 = invisible, 1 = opaque. Applies to the plane and its scalar-field slice.')
+        self.color = QPushButton();set_color_swatch(self.color, '#36A8D8', 'Plane color')
+        form.addRow('Plane color', self.color)
+        from .plane_field_controls import PlaneFieldControls
+        self.field_controls = PlaneFieldControls();form.addRow(self.field_controls)
+        self.field_controls.valuesChanged.connect(self._field_edited)
+        layout.addWidget(self.editor)
         self.center = QPushButton('Center plane in shown cells');layout.addWidget(self.center)
         self.view_normal = QPushButton('View normal to (hkl)');layout.addWidget(self.view_normal)
         self.apply = QPushButton('Apply planes');layout.addWidget(self.apply)
@@ -101,7 +106,8 @@ class LatticePlanePanel(QWidget):
         self.offset.setValue(p['offset']);self.unit.setCurrentText(p['unit']);self.mode.setCurrentText(p['mode'])
         self.enabled.setChecked(p['enabled']);self.show.setChecked(p['show'])
         self.thickness.setValue(p['thickness']);self.opacity.setValue(p['opacity'])
-        self._color = p['color'];self.color.setText('Plane colour… ('+self._color+')')
+        self.field_controls.set_values(p)
+        self._color = p['color'];set_color_swatch(self.color, self._color, 'Plane color')
         self.thickness.setEnabled(p['mode'] == 'Slab');self._loading = False
         self.previewChanged.emit()
 
@@ -113,6 +119,14 @@ class LatticePlanePanel(QWidget):
             offset=self.offset.value(), unit=self.unit.currentText(), mode=self.mode.currentText(),
             thickness=self.thickness.value(), show=self.show.isChecked(), color=self._color, opacity=self.opacity.value())
         self._row(index);self.thickness.setEnabled(self.mode.currentText() == 'Slab');self.previewChanged.emit()
+
+    def _field_edited(self, values):
+        if self._loading:return
+        index = self.table.currentRow()
+        if not 0 <= index < len(self.records):return
+        for key in ('field', 'field_palette', 'field_range', 'field_contours', 'field_legend', 'field_resolution'):
+            self.records[index][key] = values[key]
+        self.previewChanged.emit()
 
     def add_plane(self):
         self.records.append(default_plane());self.table.setRowCount(len(self.records))
@@ -127,8 +141,9 @@ class LatticePlanePanel(QWidget):
         self.set_values([]);self.applyRequested.emit([])
 
     def choose_color(self):
-        value = QColorDialog.getColor(QColor(self._color), self, 'Plane colour')
-        if value.isValid():self._color = value.name();self.color.setText('Plane colour… ('+self._color+')');self._edited()
+        value = QColorDialog.getColor(QColor(self._color), self, 'Plane color')
+        if value.isValid():
+            self._color = value.name();set_color_swatch(self.color, self._color, 'Plane color');self._edited()
 
 
 class PolyhedraPanel(QWidget):
@@ -143,7 +158,8 @@ class PolyhedraPanel(QWidget):
         form.addRow('Min. distance (Å)', self.minimum);form.addRow('Max. distance (Å)', self.maximum)
         self.opacity = decimal(.35, 0., 1.);form.addRow('Face opacity', self.opacity)
         self.edges = QCheckBox('Show polyhedron edges');form.addRow(self.edges)
-        self.edge_color = QPushButton('Edge colour…');form.addRow(self.edge_color)
+        self.edge_color = QPushButton();set_color_swatch(self.edge_color, '#334155', 'Edge color')
+        form.addRow('Edge color', self.edge_color)
         self.atoms = QCheckBox('Show atoms');self.vertices = QCheckBox('Complete ligand atoms across cells')
         form.addRow(self.atoms);form.addRow(self.vertices)
         self.apply = QPushButton('Apply Polyhedral style');layout.addWidget(self.apply)
@@ -153,7 +169,7 @@ class PolyhedraPanel(QWidget):
             'Auto uses common ligand elements and the remaining non-H centers.\n'
             'Covalent radii also uses Style → Bond cutoff; Distance range uses only the distances above.\n'
             'Polyhedra complete periodic ligand shells. Three coplanar ligands form a polygon; collinear shells have no face.\n'
-            'Faces follow center-atom colours. Style → Bonds uses the existing ordinary bonds, including manual edits.')
+            'Faces follow center-atom colors. Style → Bonds uses the existing ordinary bonds, including manual edits.')
         note.setWordWrap(True);layout.addWidget(note);layout.addStretch()
         self._edge_color = '#334155';self.edge_color.clicked.connect(self.choose_edge_color)
         self.apply.clicked.connect(lambda:self.applyRequested.emit(self.values()))
@@ -173,11 +189,12 @@ class PolyhedraPanel(QWidget):
         self.maximum.setValue(options.polyhedra_max_distance);self.opacity.setValue(options.polyhedra_opacity)
         self.edges.setChecked(options.polyhedra_edges);self.atoms.setChecked(options.polyhedra_show_atoms)
         self.vertices.setChecked(options.polyhedra_show_vertices);self._edge_color = options.polyhedra_edge_color
-        self.edge_color.setText('Edge colour… ('+self._edge_color+')')
+        set_color_swatch(self.edge_color, self._edge_color, 'Edge color')
 
     def choose_edge_color(self):
-        value = QColorDialog.getColor(QColor(self._edge_color), self, 'Polyhedron edge colour')
-        if value.isValid():self._edge_color = value.name();self.edge_color.setText('Edge colour… ('+self._edge_color+')')
+        value = QColorDialog.getColor(QColor(self._edge_color), self, 'Polyhedron edge color')
+        if value.isValid():
+            self._edge_color = value.name();set_color_swatch(self.edge_color, self._edge_color, 'Edge color')
 
 
 class CrystalPanel(QWidget):

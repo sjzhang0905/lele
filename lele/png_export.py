@@ -15,6 +15,7 @@ class PngSettings:
     width: int
     height: int
     supersample: int = 2
+    cropped: bool = False
 
     def __post_init__(self):
         if any(isinstance(v, bool) or not isinstance(v, int) or not 1 <= v <= MAX_OUTPUT_SIDE
@@ -22,6 +23,8 @@ class PngSettings:
             raise ValueError('PNG dimensions must be between 1 and 8192 pixels.')
         if self.supersample not in (1, 2):
             raise ValueError('Choose standard or smooth edges.')
+        if not isinstance(self.cropped, bool):
+            raise ValueError('Cropped must be enabled or disabled.')
 
     def capture_scale(self, source_size):
         width, height = source_size
@@ -39,6 +42,60 @@ def _objects(items):
             yield from _objects(item)
         else:
             yield item
+
+
+def crop_background(image, background, *, padding=None, tolerance=3):
+    """Trim only empty margins; preserve labels, color bars, and all visible data.
+
+    Return a new image, including when no crop is possible.  The input remains
+    owned by the caller.  A small border protects antialiased edge pixels.
+    """
+    import numpy as np
+
+    values = np.asarray(image.convert('RGB'), dtype=np.int16)
+    color = np.asarray(background, dtype=np.int16)
+    if color.shape != (3,):
+        raise ValueError('The image background needs three RGB components.')
+    mask = np.any(np.abs(values - color) > tolerance, axis=2)
+    rows = np.flatnonzero(mask.any(axis=1))
+    columns = np.flatnonzero(mask.any(axis=0))
+    if not len(rows) or not len(columns):
+        return image.copy()
+    if padding is None:
+        padding = max(2, round(min(image.size) * .015))
+    width, height = image.size
+    box = (max(0, int(columns[0]) - padding), max(0, int(rows[0]) - padding),
+           min(width, int(columns[-1]) + 1 + padding),
+           min(height, int(rows[-1]) + 1 + padding))
+    return image.crop(box)
+
+
+@contextmanager
+def hidden_coordinate_axes(window, enabled):
+    """Hide only LELE coordinate axes, then restore their exact visibility."""
+    changed = []
+    seen = set()
+
+    def props(collection):
+        for prop in collection:
+            yield prop
+            if prop.IsA('vtkPropAssembly'):
+                yield from props(prop.GetParts())
+
+    try:
+        if enabled:
+            for renderer in window.GetRenderers():
+                for prop in props(renderer.GetViewProps()):
+                    if id(prop) in seen:
+                        continue
+                    seen.add(id(prop))
+                    if prop.GetObjectName() == 'lele-coordinate-axis':
+                        changed.append((prop, prop.GetVisibility()))
+                        prop.VisibilityOff()
+        yield
+    finally:
+        for prop, visible in reversed(changed):
+            prop.SetVisibility(visible)
 
 
 @contextmanager
@@ -131,10 +188,40 @@ def frozen_overlays(window):
 
 
 @contextmanager
+def scaled_world_text(actors, scale):
+    """Refine 3D text rasters without changing their world-space transforms."""
+    from vtkmodules.vtkCommonMath import vtkMatrix4x4
+    saved = []
+    try:
+        for actor in actors:
+            matrix = actor.GetUserMatrix()
+            if matrix is None:
+                continue
+            prop = actor.GetTextProperty()
+            size = prop.GetFontSize()
+            requested = max(1, round(size * scale))
+            factor = requested / size
+            refined = vtkMatrix4x4()
+            refined.DeepCopy(matrix)
+            for row in range(3):
+                for column in range(3):
+                    refined.SetElement(row, column, matrix.GetElement(row, column) / factor)
+            saved.append((actor, matrix, prop, size))
+            prop.SetFontSize(requested)
+            actor.SetUserMatrix(refined)
+        yield
+    finally:
+        for actor, matrix, prop, size in reversed(saved):
+            prop.SetFontSize(size)
+            actor.SetUserMatrix(matrix)
+
+
+@contextmanager
 def scaled_annotations(window, scale):
     """Keep pixel-sized text and lines proportional in the tiled capture."""
     saved = []
     seen = set()
+    world_text = []
 
     def props(collection):
         for prop in collection:
@@ -147,6 +234,8 @@ def scaled_annotations(window, scale):
             if not renderer.GetDraw():
                 continue
             for prop in props(renderer.GetViewProps()):
+                if prop.IsA('vtkTextActor3D'):
+                    world_text.append(prop)
                 # VTK's 2-D text actors already account for the tile scale.
                 # Billboard text in 3-D needs explicit pixel-size scaling.
                 if prop.IsA('vtkBillboardTextActor3D'):
@@ -168,7 +257,8 @@ def scaled_annotations(window, scale):
                             value = getattr(material, 'Get' + name)()
                             saved.append((material, name, value))
                             getattr(material, 'Set' + name)(value * scale)
-        yield
+        with scaled_world_text(world_text, scale):
+            yield
     finally:
         for obj, name, value in reversed(saved):
             getattr(obj, 'Set' + name)(value)
@@ -201,7 +291,9 @@ def export_png(path, window, settings, *, mesh_items=(), progress=None):
     temporary = None
     image = None
     try:
-        with smooth_meshes(mesh_items, settings.supersample > 1), frozen_overlays(window), scaled_annotations(window, scale):
+        with (smooth_meshes(mesh_items, settings.supersample > 1),
+              hidden_coordinate_axes(window, settings.cropped),
+              frozen_overlays(window), scaled_annotations(window, scale)):
             report('Rendering high-resolution PNG')
             capture = vtkWindowToImageFilter()
             capture.SetInput(window)
@@ -224,6 +316,13 @@ def export_png(path, window, settings, *, mesh_items=(), progress=None):
                 resized = image.resize((settings.width, settings.height), Image.Resampling.LANCZOS)
                 image.close()
                 image = resized
+            if settings.cropped:
+                primary = next((r for r in window.GetRenderers() if r.GetLayer() == 0), None)
+                background = ((255, 255, 255) if primary is None else
+                              tuple(round(255 * v) for v in primary.GetBackground()))
+                cropped = crop_background(image, background)
+                image.close()
+                image = cropped
             report('Writing PNG')
             descriptor, name = tempfile.mkstemp(dir=path.parent, prefix='.lele-png-', suffix='.tmp')
             os.close(descriptor)
@@ -238,6 +337,7 @@ def export_png(path, window, settings, *, mesh_items=(), progress=None):
             temporary.unlink(missing_ok=True)
         for camera, saved in cameras:
             camera.DeepCopy(saved)
+            camera.Modified()
         window.SetTileScale(tile_scale)
         window.SetTileViewport(tile_viewport)
         window.Render()

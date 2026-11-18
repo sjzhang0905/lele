@@ -9,6 +9,10 @@ class IncompleteXYZ(ValueError):
     pass
 
 
+class TruncatedXYZ(IncompleteXYZ):
+    """The file ended before the final declared frame was complete."""
+
+
 class NotPlainXYZ(ValueError):
     """The full ASE extended-XYZ reader is needed for this file."""
 
@@ -46,7 +50,7 @@ def coordinate_lines(stream, count):
 
 def _xyz_coordinates(rows, count, source, plain):
     if len(rows) != count:
-        raise IncompleteXYZ(f'Incomplete XYZ coordinates at line {source}')
+        raise TruncatedXYZ(f'Incomplete XYZ coordinates at line {source}')
     # Tiny frames are cheaper through the straightforward reader. The slow
     # path also retains precise legacy errors and Fortran-D support.
     if count >= 24:
@@ -103,7 +107,7 @@ def xyz_blocks(path, *, plain=False):
                 raise IncompleteXYZ(f'Incomplete XYZ frame at line {source}')
             raw = stream.readline()
             if not raw:
-                raise IncompleteXYZ(f'Incomplete XYZ comment at line {source+1}')
+                raise TruncatedXYZ(f'Incomplete XYZ comment at line {source+1}')
             line_number += 1
             comment = raw.rstrip('\r\n')
             if plain and '=' in comment:

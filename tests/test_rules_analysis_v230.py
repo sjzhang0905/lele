@@ -118,7 +118,8 @@ def test_rule_panel_fits_normal_sidebar_width(gui):
 
 
 def test_ideal_octahedron_metrics():
-    shell, data = analyze_polyhedra(octahedron(), RenderOptions())[0]
+    # These analytical metrics assume the complete 2 Å Ti–O octahedron.
+    shell, data = analyze_polyhedra(octahedron(), RenderOptions(bond_cutoff=1.0))[0]
     assert data['coordination'] == 6 and data['shape'] == 'Octahedron'
     assert data['mean_length_A'] == 2 and data['volume_A3'] == pytest.approx(32/3)
     assert data['distortion_index'] == 0 and data['effective_coordination'] == 6
@@ -162,7 +163,7 @@ def test_planar_shell_and_missing_polyhedron_have_explicit_metrics():
 
 
 def test_source_metrics_ignore_boundary_repeats_and_display_cuts():
-    options = RenderOptions(boundary_enabled=True, boundary_bounds=((0, 3),)*3,
+    options = RenderOptions(bond_cutoff=1.0, boundary_enabled=True, boundary_bounds=((0, 3),)*3,
         lattice_planes=[dict(hkl=(1, 1, 1), offset=0.)])
     data = analyze_polyhedra(octahedron(), options)[0][1]
     assert data['coordination'] == 6 and data['volume_A3'] == pytest.approx(32/3)
@@ -173,10 +174,10 @@ def test_trajectory_keeps_zero_coordination_and_atom_sequence_gaps():
     second = first.clone();second.positions[1] = [8, 0, 0]
     third = first.clone();third.symbols = ['O', 'Ti']
     doc = Document(Path('trajectory.xyz'), 'XYZ', [first, second, third])
-    rows = polyhedron_series(doc, RenderOptions(), 0)
+    rows = polyhedron_series(doc, RenderOptions(bond_cutoff=1.0), 0)
     assert [r['coordination'] for r in rows] == [1, 0, None]
     assert rows[2]['status'] == 'Atom sequence differs'
-    rows = polyhedron_series(doc, RenderOptions(polyhedra_centers='O', polyhedra_ligands='Ti'),
+    rows = polyhedron_series(doc, RenderOptions(bond_cutoff=1.0, polyhedra_centers='O', polyhedra_ligands='Ti'),
                              0, reference_symbols=third.symbols)
     assert [r['status'] for r in rows] == ['Atom sequence differs', 'Atom sequence differs', 'OK']
 
@@ -185,12 +186,20 @@ def test_polyhedron_dialog_ligand_csv_and_frame_link(gui, tmp_path):
     from lele.polyhedron_dialog import PolyhedronCurveDialog
     first = octahedron();second = first.clone();second.positions[1, 0] += .1
     gui.attach(first, second_frame=second);w = gui.window
+    w.cutoff_spin.setValue(1.0)  # Keep the complete test octahedron for CSV/frame-link checks.
     dialog = w.show_polyhedron_analysis();gui.addCleanup(lambda:[x.close() for x in list(w._analysis_windows)])
     assert dialog.table.rowCount() == 1 and dialog.ligands.rowCount() == 6
+    assert dialog.table.item(0, 0).text() == '1'
+    assert all('ORCA' not in table.horizontalHeaderItem(column).text()
+               for table in (dialog.table, dialog.ligands)
+               for column in range(table.columnCount()))
     output = tmp_path/'ligands.csv'
     with patch('lele.polyhedron_dialog.QFileDialog.getSaveFileName', return_value=(str(output), 'CSV')):dialog.export_ligands()
     rows = list(csv.DictReader(output.open(encoding='utf-8-sig')))
     assert len(rows) == 6 and len({r['ligand'] for r in rows}) == 3
+    assert list(rows[0]) == ['center', 'center_element', 'ligand', 'ligand_element',
+                             'image_a', 'image_b', 'image_c', 'distance_A']
+    assert {row['center'] for row in rows} == {'1'}
     records = polyhedron_series(w.doc, w.render_options, 0)
     curve = w._show_analysis_window(PolyhedronCurveDialog(w.doc, records, w))
     curve.show();gui.app.processEvents()
@@ -199,4 +208,5 @@ def test_polyhedron_dialog_ligand_csv_and_frame_link(gui, tmp_path):
     assert w.frame_index == 1 and w.selection == [0]
     output = tmp_path/'curve.csv'
     with patch('lele.polyhedron_dialog.QFileDialog.getSaveFileName', return_value=(str(output), 'CSV')):curve.export_data()
-    assert len(list(csv.DictReader(output.open(encoding='utf-8-sig')))) == 2
+    trajectory = list(csv.DictReader(output.open(encoding='utf-8-sig')))
+    assert len(trajectory) == 2 and all('ORCA' not in key for key in trajectory[0])

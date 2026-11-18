@@ -66,7 +66,6 @@ SUPPORTED_SUFFIXES = {
     ".mld",
     ".fchk",
     ".fch",
-    ".gbw",
     ".mol2",
     ".sdf",
     ".xsf",
@@ -161,14 +160,16 @@ def detect_format(path: Path, *, check_volume: bool = True) -> Detection:
     name = path.name
     upper_name = name.upper()
     suffix = path.suffix.lower()
+    if suffix == '.gbw':
+        raise ConversionError('GBW is no longer supported. Open an ORCA output, Molden file or CUBE instead.')
+    if suffix == ".xsf":
+        return Detection("ase_generic", "XCrySDen XSF", "xsf")
     if check_volume:
         from .vasp_volume_detection import is_vasp_volume
         if is_vasp_volume(path):
             return Detection('vasp_volume', 'VASP volumetric data')
     if suffix in ('.fchk', '.fch'):
         return Detection('gaussian_fchk', 'Gaussian formatted checkpoint')
-    if suffix == '.gbw':
-        return Detection('orca_gbw', 'ORCA GBW')
     if re.match(r'^WAVECAR(?:$|[._ -])', upper_name):
         return Detection('vasp_wavecar', 'VASP WAVECAR')
     # .mol is shared by MDL structures and CP2K Molden vibration files.
@@ -191,7 +192,7 @@ def detect_format(path: Path, *, check_volume: bool = True) -> Detection:
         return Detection("vasp_in", f"VASP {upper_name}")
     if suffix == ".ani":
         return Detection("siesta_ani", "SIESTA ANI trajectory")
-    if suffix == ".xyz":
+    if suffix in (".xyz", ".extxyz"):
         probe=read_probe(path)
         if re.search(r'(?m)^\s*i\s*=\s*\d+\s*,',probe):
             return Detection('cp2k_xyz','CP2K XYZ trajectory')
@@ -263,7 +264,9 @@ def detect_format(path: Path, *, check_volume: bool = True) -> Detection:
         return Detection("qe_in", "Quantum ESPRESSO input")
     if "ATOMICCOORDINATESANDATOMICSPECIES" in upper or "%BLOCK CHEMICALSPECIESLABEL" in upper:
         return Detection("siesta_in", "SIESTA input")
-    if re.search(r"(?mi)^\s*\*\s*XYZ(?:FILE)?\b", text) or re.search(r"(?mi)^\s*!\s*\S+", text) and "%PAL" in upper:
+    if (re.search(r"(?mi)^\s*\*\s*XYZ(?:FILE)?\b", text)
+            or re.search(r"(?mi)^\s*%COORDS\b", text)
+            or re.search(r"(?mi)^\s*!\s*\S+", text) and "%PAL" in upper):
         return Detection("orca_in", "ORCA input")
     if re.search(r"(?mi)^\s*GEOMETRY(?:\s+\S+)*\s*$", text) and re.search(r"(?mi)^\s*TASK\s+", text):
         return Detection("nwchem_in", "NWChem input")
@@ -283,7 +286,7 @@ def looks_like_xtb_trajectory(text,name=''):
     lines=text.splitlines()
     if len(lines)<2 or not lines[0].strip().isdigit():return False
     comment=lines[1].lower()
-    return (bool(re.search(r'\bxtb\s*:',comment)) or
+    return (name.lower() == 'xtbopt.log' or bool(re.search(r'\bxtb\s*:',comment)) or
             (name.lower() in ('xtbopt.xyz','xtblast.xyz') and
              bool(re.search(r'\bscf\s+done\b|\benergy\s*:',comment))))
 
@@ -829,9 +832,23 @@ def parse_siesta_output(path: Path) -> Atoms:
 
 
 def parse_orca_input(path: Path) -> Atoms:
-    text = path.read_text(encoding="utf-8", errors="replace")
+    text = path.read_text(encoding="utf-8-sig", errors="replace")
 
-    xyz_match = re.search(r"(?ims)^\s*\*\s*xyz\s+([+-]?\d+)\s+(\d+)\s*$\n(.*?)^\s*\*\s*$", text)
+    # ORCA accepts Bohr input both as a simple keyword and in %coords. The
+    # stored Frame is always Cartesian Angstrom, including coordinate edits.
+    units=[]
+    for line in text.splitlines():
+        if line.lstrip().startswith('!'):
+            units.extend(re.findall(r'\b(Angs|Bohrs)\b',line.split('#',1)[0],re.I))
+    unit_text='\n'.join(line.split('#',1)[0] for line in text.splitlines())
+    for block in re.findall(r'(?ims)^\s*%coords\b(.*?)(?=^\s*coords\s*$|^\s*end\s*$)',unit_text):
+        units.extend(re.findall(r'(?im)^\s*units\s+(\w+)\s*(?:#.*)?$',block))
+    normalized={value.lower() for value in units}
+    if normalized-{'angs','bohrs'} or len(normalized)>1:
+        raise ConversionError('Conflicting or unsupported ORCA coordinate units')
+    length_factor=BOHR_TO_ANG if 'bohrs' in normalized else 1.
+
+    xyz_match = re.search(r"(?ims)^\s*\*\s*xyz\s+([+-]?\d+)\s+(\d+)[ \t]*(?:\#[^\r\n]*)?$\n(.*?)^\s*\*[ \t]*(?:\#[^\r\n]*)?$", text)
     if xyz_match:
         charge = int(xyz_match.group(1))
         mult = int(xyz_match.group(2))
@@ -850,21 +867,23 @@ def parse_orca_input(path: Path) -> Atoms:
             positions.append(xyz)
         if not positions:
             raise ConversionError("ORCA * xyz block contains no Cartesian coordinates")
-        atoms = Atoms(symbols=symbols, positions=positions)
+        atoms = Atoms(symbols=symbols, positions=np.asarray(positions)*length_factor)
         atoms.info["converter_charge"] = charge
         atoms.info["converter_mult"] = mult
         return atoms
 
-    coords_match = re.search(r"(?ims)%coords\b(.*?)^\s*end\s*$", text)
+    coords_match = re.search(r"(?ims)^\s*%coords[ \t]*(?:\#[^\r\n]*)?$\n(.*?)^\s*coords[ \t]*(?:\#[^\r\n]*)?$\n(.*?)^\s*end[ \t]*(?:\#[^\r\n]*)?$\n\s*end[ \t]*(?:\#[^\r\n]*)?$", text)
     if coords_match:
-        body = coords_match.group(1)
+        body = '\n'.join(line.split('#',1)[0] for line in coords_match.group(1).splitlines())
         charge_m = re.search(r"(?mi)^\s*Charge\s+([+-]?\d+)\s*$", body)
         mult_m = re.search(r"(?mi)^\s*Mult\s+(\d+)\s*$", body)
-        coord_m = re.search(r"(?ims)^\s*coords\s*$\n(.*?)^\s*end\s*$", body)
-        if coord_m:
+        ctyp = re.search(r'(?im)^\s*ctyp\s+(\w+)',body)
+        if ctyp and ctyp[1].lower()!='xyz':
+            raise ConversionError('ORCA internal %coords geometry is not supported')
+        if coords_match.group(2):
             symbols = []
             positions = []
-            for line in coord_m.group(1).splitlines():
+            for line in coords_match.group(2).splitlines():
                 parts = line.split()
                 if len(parts) < 4:
                     continue
@@ -875,7 +894,7 @@ def parse_orca_input(path: Path) -> Atoms:
                 symbols.append(normalize_element(parts[0]))
                 positions.append(xyz)
             if positions:
-                atoms = Atoms(symbols=symbols, positions=positions)
+                atoms = Atoms(symbols=symbols, positions=np.asarray(positions)*length_factor)
                 if charge_m:
                     atoms.info["converter_charge"] = int(charge_m.group(1))
                 if mult_m:
@@ -1079,7 +1098,8 @@ def read_structure(path: Path, detection: Optional[Detection] = None) -> tuple[A
         elif kind == "vasp_xdatcar":
             atoms = ase_read(str(path), index=-1, format="vasp-xdatcar")
         elif kind == "gaussian_in":
-            atoms = ase_read(str(path), index=-1, format="gaussian-in")
+            from .atom_constraints import read_gaussian_atoms
+            atoms = read_gaussian_atoms(path)
         elif kind == "gaussian_out":
             atoms = ase_read(str(path), index=-1, format="gaussian-out")
         elif kind == "orca_in":
@@ -1097,7 +1117,13 @@ def read_structure(path: Path, detection: Optional[Detection] = None) -> tuple[A
             if frame is None:raise ConversionError('No complete xTB geometry found')
             atoms=Atoms(frame.symbols,positions=frame.positions,info=dict(frame.info))
         elif kind == "nwchem_in":
-            atoms = ase_read(str(path), index=-1, format="nwchem-in")
+            from .coordinate_templates_molecular import read_nwchem_cartesian
+            try:
+                symbols,positions=read_nwchem_cartesian(path.read_text(encoding='utf-8-sig',errors='strict'))
+            except ValueError:
+                atoms = ase_read(str(path), index=-1, format="nwchem-in")
+            else:
+                atoms=Atoms(symbols=symbols,positions=positions)
         elif kind == "nwchem_out":
             atoms = ase_read(str(path), index=-1, format="nwchem-out")
         elif kind == "cp2k_in":
@@ -1116,6 +1142,9 @@ def read_structure(path: Path, detection: Optional[Detection] = None) -> tuple[A
             atoms = parse_mol2(path)
         elif kind == "pqr":
             atoms = parse_pqr(path)
+        elif detection.ase_format == 'xsf':
+            from .xsf_input import read_xsf_atoms
+            atoms = read_xsf_atoms(path)
         elif detection.ase_format == 'cube':
             from .cube_input import read_cube_file
             atoms=read_cube_file(path,read_data=False)['atoms']
@@ -1296,7 +1325,7 @@ def candidate_files(folder: Path, recursive: bool = True) -> list[Path]:
     for path in iterator:
         if not path.is_file():
             continue
-        if path.name.upper() in {"POSCAR", "CONTCAR", "OUTCAR", "XDATCAR", "VASPRUN.XML", "WAVECAR", "CHGCAR", "CHG", "ELFCAR", "LOCPOT", "PARCHG", "AECCAR0", "AECCAR1", "AECCAR2"} or path.suffix.lower() in SUPPORTED_SUFFIXES:
+        if path.name.upper().startswith('PARCHG') or path.name.upper() in {"POSCAR", "CONTCAR", "OUTCAR", "XDATCAR", "VASPRUN.XML", "WAVECAR", "CHGCAR", "CHG", "ELFCAR", "LOCPOT", "AECCAR0", "AECCAR1", "AECCAR2"} or path.suffix.lower() in SUPPORTED_SUFFIXES:
             result.append(path)
     return sorted(result)
 

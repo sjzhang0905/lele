@@ -62,9 +62,10 @@ def test_mixed_cif_element_order_uses_original_component_rows(gui):
 
 def test_moved_panels_and_menu_windows_work(gui):
     w=gui.window
-    assert [w.bottom_control_tabs.tabText(i) for i in range(w.bottom_control_tabs.count())]==['Axes','Labels','Field','Boundary']
+    assert [w.bottom_control_tabs.tabText(i) for i in range(w.bottom_control_tabs.count())]==['Axes','Labels','Boundary']
     sidebar=[w.sidebar_tabs.tabText(i) for i in range(w.sidebar_tabs.count())]
-    assert not set(sidebar)&{'Axes','Labels','Field','Boundary','Crystal','Dipole'}
+    assert 'Field' in sidebar
+    assert not set(sidebar)&{'Axes','Labels','Boundary','Crystal','Dipole'}
     assert w.lower_splitter.widget(1) is w.tabs
     for action,dialog in ((w.crystal_action,w.crystal_window),(w.dipole_action,w.dipole_window)):
         action.trigger();assert dialog.isVisible()
@@ -94,10 +95,26 @@ def test_nmr_plot_table_reference_exports_sorting_and_atom_link(gui,tmp_path):
     dialog.element.setCurrentText('O');assert dialog.reference.text()==''
     dialog.axis.setCurrentIndex(0)
     assert dialog.table.rowCount()==1 and not dialog.figure.axes[0].xaxis_inverted()
+    from PySide6.QtWidgets import QDialog
+    from lele.png_export import PngSettings
+    from PIL import Image
+    import xml.etree.ElementTree as ET
     for suffix in ('.png','.svg'):
         path=tmp_path/('plot'+suffix)
-        with patch('lele.nmr_dialog.QFileDialog.getSaveFileName',return_value=(str(path),'')):dialog.save_image()
+        with patch('lele.figure_export.QFileDialog.getSaveFileName',return_value=(str(path),'')), \
+             patch('lele.png_dialog.PngExportDialog.exec',return_value=QDialog.DialogCode.Accepted) as quality, \
+             patch('lele.png_dialog.PngExportDialog.settings',return_value=PngSettings(900,350,2)):
+            dialog.save_image()
         assert path.stat().st_size>1000
+        if suffix == '.png':
+            quality.assert_called_once()
+            with Image.open(path) as image:assert image.size == (900,350)
+        else:
+            quality.assert_not_called()
+            svg=ET.parse(path).getroot()
+            ns={'svg':'http://www.w3.org/2000/svg'}
+            assert svg.findall('.//svg:path',ns) and svg.findall('.//svg:text',ns)
+            assert not svg.findall('.//svg:image',ns)
     table=tmp_path/'table.csv'
     with patch('lele.nmr_dialog.QFileDialog.getSaveFileName',return_value=(str(table),'')):dialog.save_table()
     assert len(table.read_text(encoding='utf-8-sig').splitlines())==4

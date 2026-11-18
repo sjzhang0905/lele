@@ -17,6 +17,7 @@ class CrystalRendering:
     def _init_crystal_rendering(self):
         self.crystal_cuts = [];self._vtk_clip_planes = [];self._clipping_suspended = False
         self.lattice_plane_data = [];self.lattice_plane_actors = []
+        self.plane_field_actors = [];self.plane_contour_actors = [];self.plane_field_bars = []
         self.polyhedra = [];self.polyhedron_actors = [];self.polyhedra_extra_atoms = []
         self._polyhedra_cache = None;self._polyhedra_atoms_frame = None
 
@@ -31,8 +32,12 @@ class CrystalRendering:
         return result
 
     def _prepare_crystal_geometry(self):
+        field_data = self.volume.data if self.volume is not None else None
+        if getattr(self, '_plane_field_source', None) is not field_data:
+            self._plane_field_cache = {};self._plane_field_source = field_data
         self.crystal_cuts = [];self._vtk_clip_planes = [];self.lattice_plane_data = []
         self.lattice_plane_actors = [];self.polyhedra = [];self.polyhedron_actors = []
+        self.plane_field_actors = [];self.plane_contour_actors = [];self.plane_field_bars = []
         self.polyhedra_extra_atoms = [];self._polyhedra_atoms_frame = None
         self._clipping_suspended = False
         if self.options.lattice_planes and periodic_basis(self.frame) is not None:
@@ -112,17 +117,43 @@ class CrystalRendering:
     def _render_lattice_planes(self):
         if not self.lattice_plane_data:return
         bounds = self.options.boundary_bounds if self.boundary_display is not None else ((0., 1.),)*3
+        if self.boundary_display is None or self.options.boundary_preserve_origin:
+            bounds=np.asarray(bounds)+np.asarray(self.frame.info.get('cell_origin_fractional',(0.,0.,0.)))[:,None]
         self._clipping_suspended = True
         try:
             for spec, plane, origin in self.lattice_plane_data:
                 polygon = plane_polygon(self.frame.cell, plane.normal, origin, bounds, self.display_translation)
                 polygon = clip_polygon(polygon, self.crystal_cuts)
                 if len(polygon) < 3:continue
-                actor = self._polygon_actor(polygon, [list(range(len(polygon)))], spec['color'], spec['opacity'])
-                actor.GetProperty().LightingOff();self.lattice_plane_actors.append(actor)
-                outline = self._tube_segments([(p, polygon[(i+1) % len(polygon)], spec['color']) for i, p in enumerate(polygon)], .012)
-                outline.PickableOff()
+                actor = self._render_display_plane(polygon, plane.normal, spec,
+                    'HKL ('+' '.join(str(v) for v in spec['hkl'])+')')
+                if actor is not None:self.lattice_plane_actors.append(actor)
         finally:self._clipping_suspended = False
+
+    def _render_display_plane(self, polygon, normal, style, title):
+        from .plane_field import validate_plane_style
+        from .plane_field_rendering import draw_plane_slice
+        style = validate_plane_style(style)
+        if style['opacity'] == 0:return None
+        actor = draw_plane_slice(self, polygon, normal, style, title)
+        if actor is None:
+            actor = self._polygon_actor(polygon, [list(range(len(polygon)))], style['color'], style['opacity'])
+            actor.GetProperty().LightingOff()
+        outline = self._tube_segments([(p, polygon[(i+1) % len(polygon)], style['color'])
+                                       for i,p in enumerate(polygon)], .012)
+        outline.PickableOff();outline.GetProperty().SetOpacity(style['opacity'])
+        return actor
+
+    def _render_fitted_plane(self):
+        from .plane_field import fitted_plane_polygon
+        bounds = self.options.boundary_bounds if self.boundary_display is not None else ((0.,1.),)*3
+        polygon = fitted_plane_polygon(self.frame, self.fitted_plane, volume=self.volume,
+            bounds=bounds, rotation=self.display_rotation, translation=self.display_translation,
+            preserve_cell_origin=self.boundary_display is None or self.options.boundary_preserve_origin)
+        polygon = clip_polygon(polygon, self.crystal_cuts)
+        if len(polygon) < 3:return
+        self._render_display_plane(polygon, self.fitted_plane.normal @ self.display_rotation,
+            getattr(self.options, 'fitted_plane_style', {}), 'Fitted plane')
 
     def _crystal_visible_atoms(self):
         result = self._raw_display_atoms()+self.polyhedra_extra_atoms

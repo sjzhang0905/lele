@@ -149,7 +149,7 @@ def test_cell_outlines_and_atoms_share_rotation_and_translation_with_boundary(bo
     with patch.object(renderer,'_tube_segments') as capture:renderer.set_scene(source)
     rotation,translation=renderer.display_rotation,renderer.display_translation
     if boundary:
-        base=boundary_view(source,renderer.options.boundary_bounds)
+        base=boundary_view(source,renderer.options.boundary_bounds,preserve_origin=True)
         expected_lines=np.asarray(base.cell_lines)@rotation+translation
         np.testing.assert_allclose(renderer.boundary_display.frame.positions,base.frame.positions@rotation+translation,atol=1e-12)
     else:expected_lines=np.asarray(unit_cell_edges(source.cell))@rotation+translation

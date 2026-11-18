@@ -34,7 +34,10 @@ def ordinary_cube(tmp_path, *, skew=False):
     path = tmp_path / 'ordinary.cube'
     path.write_text('\n'.join(rows) + '\n')
     document = load_document(path)
-    assert document.frames[0].pbc == (True, True, True)
+    assert document.frames[0].pbc == (False, False, False)
+    # These tests deliberately attach a finite CUBE field to periodic atoms.
+    # Generic CUBE sampling boxes no longer imply periodic atom geometry.
+    document.frames[0].pbc = (True, True, True)
     assert not document.volume.periodic
     return document
 
@@ -84,7 +87,7 @@ def test_finite_meshes_translate_with_negative_bounds_without_wrap_padding(tmp_p
     original_points = mesh_points(original.field_actors[0])
     bounds = ((-1, 1), (0, 2), (-1, 0))
     repeated = render(document, volume_signs='Positive', boundary_bounds=bounds)
-    shifts = [np.asarray(t) @ document.frames[0].cell for t in product(*[range(*b) for b in bounds])]
+    shifts = [np.asarray(t) @ document.frames[0].cell for t in product((0,-1),(0,1),(-1,))]
     assert len(repeated.field_actors) == len(shifts) == 4
     for actor, shift in zip(repeated.field_actors, shifts):
         np.testing.assert_allclose(mesh_points(actor), original_points + shift, atol=7e-7)
@@ -112,7 +115,7 @@ def test_finite_surface_color_pattern_repeats_in_source_coordinates(tmp_path):
     draw = render(document, boundary_bounds=((-1, 2), (0, 1), (0, 1)), volume_surfaces=[layer])
     assert len(draw.field_actors) == 3
     assert len(draw.field_scalar_bars) == 1
-    shifts = [np.asarray([i, 0, 0]) @ document.frames[0].cell for i in (-1, 0, 1)]
+    shifts = [np.asarray([i, 0, 0]) @ document.frames[0].cell for i in (0, 1, -1)]
     for actor, shift in zip(draw.field_actors, shifts):
         poly = actor.GetMapper().GetInput()
         values = vtk_to_numpy(poly.GetPointData().GetScalars())

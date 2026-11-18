@@ -45,7 +45,12 @@ def xyz_block(lines,start):
         match=re.search(rf'\benergy\s*:\s*({NUMBER})',comment,re.I)
         if match is None:match=re.search(rf'\bSCF\s+done\s+({NUMBER})',comment,re.I)
         energy=None if match is None else number(match[1])*Hartree
-        return Frame(symbols,positions,energy_ev=energy,info={'source_line':start+1,'xtb_comment':comment.strip()}),start+n+2
+        info={'source_line':start+1,'xtb_comment':comment.strip()}
+        norm=re.search(rf'\bgnorm\s*:\s*({NUMBER})',comment,re.I)
+        if norm:info['xtb_trajectory_gnorm']=number(norm[1])
+        step=re.search(r'\b(?:cycle|step)\s*[:=]\s*(\d+)',comment,re.I)
+        if step:info['trajectory_step']=int(step[1])
+        return Frame(symbols,positions,energy_ev=energy,info=info),start+n+2
     except (ValueError,OverflowError):return None,start
 
 
@@ -57,7 +62,9 @@ def read_xtb_xyz(path):
         if not lines[i].strip():i+=1;continue
         frame,end=xyz_block(lines,i)
         if frame is None:
-            note=f'Incomplete or invalid XYZ record at line {i+1}; only earlier complete records are available.';break
+            count=lines[i].strip()
+            status='Incomplete trailing' if count.isdigit() and int(count)>0 and i+2+int(count)>len(lines) else 'Invalid'
+            note=f'{status} XYZ record at line {i+1}; only earlier complete records are available.';break
         frames.append(frame);i=end
     report(len(lines))
     return frames,note
@@ -151,7 +158,7 @@ def _metadata(job,text):
     elif uhf:job.multiplicity=int(uhf[1])+1
 
 
-def read_xtb_results(path,trajectory=False):
+def read_xtb_results(path,trajectory=False,*,allow_companions=True):
     path=Path(path);result=CalculationResults('xTB');notes=[]
     if trajectory:
         frames,note=read_xtb_xyz(path)
@@ -171,17 +178,24 @@ def read_xtb_results(path,trajectory=False):
         _metadata(job,'\n'.join(block));steps=[];snapshots={};phase='initial';current=None;reference=None
         stage=CalculationStage(len(result.stages),ji,'xTB geometry optimization','optimization',start+1,end)
         progress=load_progress('xTB: energies and orbitals',len(block))
-        i=0;final_energy=None;converged=False;matched=None
+        i=0;final_energy=None;converged=False;matched=None;fixed_records=None
         def snapshot(key,line):
             if key not in snapshots:snapshots[key]=OrbitalSet(ji,line,numbering='1-based xTB orbital numbers; printed frontier labels take precedence')
             return snapshots[key]
         while i<len(block):
             check_load_cancelled();progress(i)
             line=block[i];source_line=start+i+1
+            if 'fixed atom positions' in line:
+                from .atom_constraints import xtb_fixed_table
+                fixed_records=xtb_fixed_table(block,i)
             cycle=CYCLE.match(line)
             if cycle:
                 current=CalculationStep(ji,source_line,stage_index=stage.index,cycle=int(cycle[1]))
                 steps.append(current);phase=('cycle',source_line)
+            count=re.match(r'^\s*[:|]?\s*(?:number of atoms|# atoms)\s*:?\s+(\d+)\s*[:|]?\s*$',line,re.I)
+            if count:job.atom_count=int(count[1])
+            norm=re.match(rf'^\s*gradient norm\s*:\s*({NUMBER})\s+Eh/α',line,re.I)
+            if norm and current is not None:current.optimizer_gradient_norm=number(norm[1])
             match=CYCLE_ENERGY.match(line)
             if match and current is not None:current.energy_ev=number(match[1])*Hartree
             match=SUMMARY_ENERGY.match(line)
@@ -210,11 +224,13 @@ def read_xtb_results(path,trajectory=False):
             if re.search(r'^\s*\*\s*finished run on\b',line,re.I) and job.termination!='Normal termination':job.termination='Finished run'
             if re.search(r'normal termination of xtb',line,re.I):job.termination='Normal termination'
             i+=1
-        steps=[s for s in steps if s.energy_ev is not None]
+        job.xtb_fixed_atoms=fixed_records
+        steps=[s for s in steps if s.energy_ev is not None or s.optimizer_gradient_norm is not None]
         if steps:
             job.tasks.add('Optimization');result.stages.append(stage)
             if converged:steps[-1].converged=True
-            matched,more=_associate_trajectory(path,steps,reference);notes.extend(more)
+            if allow_companions:
+                matched,more=_associate_trajectory(path,steps,reference);notes.extend(more)
             if matched:
                 companion,frames=matched
                 for step,frame in zip(steps,frames):
@@ -239,6 +255,9 @@ def read_xtb_results(path,trajectory=False):
             if step.geometry is not None:
                 if job.charge is not None:step.geometry.info['converter_charge']=job.charge
                 if job.multiplicity is not None:step.geometry.info['converter_mult']=job.multiplicity
+                if fixed_records is not None and not re.search(r'--(?:md|metadyn)\b',job.route,re.I):
+                    from .atom_constraints import xtb_fixed_constraints
+                    step.geometry.info.update(xtb_fixed_constraints(fixed_records,step.geometry))
         offset=len(result.steps);result.steps.extend(steps)
         # Source lines uniquely identify cycles in this job. Avoid a full
         # reverse/forward cycle search for every orbital snapshot.

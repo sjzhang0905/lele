@@ -1,0 +1,4 @@
+.........s..                                                             [100%]
+=========================== short test summary info ============================
+SKIPPED [1] tests/test_molden_and_legend_v280.py:125: Set LELE_CP2K_MOLDEN_EXAMPLE to the supplied private example; it is not redistributed.
+11 passed, 1 skipped in 2.24s

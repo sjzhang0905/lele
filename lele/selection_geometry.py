@@ -80,6 +80,8 @@ def align_plane_to_xy(frame: Frame, plane: SelectionPlane, *, place_at_zero=True
         translation[2] = -float((plane.center @ rotation.T)[2])
     frame.positions = frame.positions @ rotation.T + translation
     frame.cell = frame.cell @ rotation.T
+    from .cell_origin import translate_cell_origin
+    translate_cell_origin(frame,translation)
     if volume is not None:
         volume.origin = volume.origin @ rotation.T + translation
         volume.voxel_vectors = volume.voxel_vectors @ rotation.T
@@ -135,4 +137,12 @@ def delete_selected_atoms(frame: Frame, selection) -> int:
     frame.info.pop('energy_source', None)
     frame.info.pop('optimization_converged', None)
     frame.info.pop('plane_alignment', None)
+    frame.info.pop('coordinate_reorientation', None)
+    # The original force calculation and its scalar summaries describe a
+    # different composition. Keep the source result object, not stale values
+    # on the edited structure.
+    for key in tuple(frame.info):
+        if key.startswith(('qe_total_energy_','qe_energy_source_','qe_forces_',
+                           'cartesian_max_force_','cartesian_rms_force_')):
+            frame.info.pop(key)
     return len(removed)

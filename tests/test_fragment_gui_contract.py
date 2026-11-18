@@ -20,6 +20,10 @@ class Camera:
 
 
 class Dummy:
+    def _begin_annotation_gesture(self, *_): return False
+    def _move_annotation_gesture(self, *_): return False
+    def _end_annotation_gesture(self, *_): return False
+
     def _alignment_enabled(self):
         return False
 

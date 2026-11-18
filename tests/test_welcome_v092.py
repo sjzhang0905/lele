@@ -104,14 +104,17 @@ class WelcomeTests(unittest.TestCase):
         self.assertFalse(window.welcome_page.parrot_walk.pose_timer.isActive())
         self.assertEqual(window.vtk.initialize_count, 1)
 
-    def test_empty_startup_is_white_welcome_with_no_fake_document_or_gl_init(self):
+    def test_empty_startup_keeps_white_welcome_with_prepared_native_canvas(self):
         window = self.window()
         page = window.welcome_page
         self.assertIs(window.canvas_stack.currentWidget(), page)
         self.assertEqual(window.files_tree.topLevelItemCount(), 0)
         self.assertIsNone(window.doc)
         self.assertEqual(window._backend_state, 'ready')
-        self.assertEqual(window.vtk.initialize_count, 0)
+        self.assertEqual(window.vtk.initialize_count, 1)
+        self.assertIsNone(window.renderer.frame)
+        self.assertIsNone(window.renderer.source_frame)
+        self.assertEqual(window.scene.GetViewProps().GetNumberOfItems(), 0)
         self.assertEqual(page.title_label.text(), APP_NAME)
         self.assertEqual(page.full_name_label.text(), APP_FULL_NAME)
         self.assertEqual(page.version_label.text(), f'Version {__version__}')
@@ -136,7 +139,7 @@ class WelcomeTests(unittest.TestCase):
         window = self.window()
         with patch('lele.app.QFileDialog.getOpenFileNames', return_value=([str(self.path)], '')):
             window.file_menu.actions()[0].trigger()
-        self.app.processEvents()
+        self.wait_for(lambda: window.doc is not None)
         self.assert_loaded(window)
         window.change_frame(0)
         self.assertEqual(window.vtk.initialize_count, 1)
@@ -148,6 +151,7 @@ class WelcomeTests(unittest.TestCase):
         with patch('lele.app.QFileDialog.getOpenFileNames', return_value=([str(self.path)], '')):
             QTest.keyClick(window.welcome_page, Qt.Key.Key_O,
                            Qt.KeyboardModifier.ControlModifier)
+        self.wait_for(lambda: window.doc is not None)
         self.assert_loaded(window)
 
     def test_drop_from_welcome_loads_file(self):
@@ -158,17 +162,21 @@ class WelcomeTests(unittest.TestCase):
                            Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier)
         window.dropEvent(event)
         self.assertTrue(event.isAccepted())
+        self.assertIsNone(window.doc)
+        self.wait_for(lambda:window.doc is not None)
         self.assert_loaded(window)
 
     def test_command_line_file_opens_directly_and_failure_preserves_welcome(self):
         loaded = self.window([str(self.path)])
+        self.wait_for(lambda: loaded.doc is not None)
         self.assert_loaded(loaded)
-        with patch('lele.app.QMessageBox.warning') as warning:
+        with patch('lele.app.LELEWindow._show_file_load_error') as warning:
             empty = self.window([str(self.path.with_name('missing.xyz'))])
+            self.wait_for(lambda: warning.called)
         warning.assert_called_once()
         self.assertIsNone(empty.doc)
         self.assertIs(empty.canvas_stack.currentWidget(), empty.welcome_page)
-        self.assertEqual(empty.vtk.initialize_count, 0)
+        self.assertEqual(empty.vtk.initialize_count, 1)
 
     def test_style_edits_before_first_file_are_kept_and_backend_is_reused(self):
         loader = ControlledLoader(auto_finish=False)

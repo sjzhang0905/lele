@@ -1,0 +1,27 @@
+Atom selection expressions — verification 2026-11-13
+Runtime: Python 3.12 (.venv313)
+Environment: QT_QPA_PLATFORM=offscreen LIBGL_ALWAYS_SOFTWARE=1
+
+Initial grammar/MIC/UI and original atoms selection regression:
+python -m pytest -q tests/test_selection_expression_v3130.py tests/test_atoms_selection_v390.py
+Result: 59 passed in 2.91s.
+
+After adding stale-source and cancellation guards:
+python -m pytest -q tests/test_selection_expression_v3130.py tests/test_selection_workflow_v360.py tests/test_selection_fragments_v360.py tests/test_orca_atom_indices_v3110.py tests/test_axis_rotation_v3110.py
+Result: 90 passed in 22.86s; 8 existing matplotlib/Qt deprecation warnings.
+
+Coverage includes:
+- Boolean precedence/parentheses, element lists, explicit index and ORCA bases,
+  bounded ranges and comparisons, malformed/injection-like input rejection.
+- One fixed reference selection, nearest-reference semantics, inclusive within
+  and strict inequality boundaries, mixed-site positive occupancy matching.
+- Independent brute-force lattice enumeration in a highly skew unreduced cell,
+  full and partial periodicity; Cartesian fallback only for nonperiodic frames.
+- Periodic pair-vector batches <=8192; repeated predicates reuse computed values.
+- Enter/Apply, inline errors, source-change protection, cancellation and undo.
+- Readonly modeless/topmost syntax-help dialog.
+
+Performance scope:
+Nonperiodic distances use scipy cKDTree. Periodic distances use exact ASE MIC
+in bounded blocks; worst-case time is proportional to candidate/reference pairs,
+but no full N×M pair array is allocated and cancellation is checked per block.

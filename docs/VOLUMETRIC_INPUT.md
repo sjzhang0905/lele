@@ -2,6 +2,11 @@
 
 ## Supported grids
 
+- XCrySDen XSF (`.xsf`) reads one or more 3D DATAGRID scalar fields in
+  first-index-fastest order. Origin and spanning vectors are in Å. Sample
+  spacing is the spanning vector divided by the number of intervals. Named
+  datasets retain source units. [XSF format](https://web.mit.edu/xcrysden_v1.5.60/www/XCRYSDEN/doc/XSF.html)
+
 - Gaussian CUBE (`.cube`, `.cub`): atom geometry, origin, arbitrary voxel vectors,
   scalar fields, multiple values per voxel, and orbital-labelled channels.
   Positive grid counts mean Bohr and negative counts mean Å. Mixed signs are

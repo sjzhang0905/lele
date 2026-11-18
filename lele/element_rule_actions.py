@@ -1,6 +1,6 @@
 """Explicit, undoable application of per-document pair rules."""
 from copy import deepcopy
-from PySide6.QtWidgets import QMessageBox
+from .dialog_policy import QMessageBox
 
 
 class ElementRuleActions:

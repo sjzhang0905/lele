@@ -132,6 +132,8 @@ class Volume:
     periodic: bool = False
     reference_origin: Optional[np.ndarray] = None
     reference_voxel_vectors: Optional[np.ndarray] = None
+    # JSON-compatible derivation metadata, independent of source-file access.
+    provenance: dict = field(default_factory=dict)
 
     def __post_init__(self):
         self.data = np.asarray(self.data, dtype=np.float32)
@@ -139,6 +141,7 @@ class Volume:
         self.voxel_vectors = np.asarray(self.voxel_vectors, dtype=float).reshape(3, 3)
         self.reference_origin = self.origin.copy() if self.reference_origin is None else np.asarray(self.reference_origin, dtype=float).reshape(3)
         self.reference_voxel_vectors = self.voxel_vectors.copy() if self.reference_voxel_vectors is None else np.asarray(self.reference_voxel_vectors, dtype=float).reshape(3, 3)
+        self.provenance = dict(self.provenance)
         if self.data.ndim != 3 or min(self.data.shape) < 2:
             raise ValueError("Volumetric data must be a 3D grid with at least 2 points per axis")
 
@@ -230,6 +233,8 @@ class Document:
     wavefunction: object = None
     wavecar: object = None
     nmr_results: list = field(default_factory=list)
+    annotations: list = field(default_factory=list)
+    trajectory_link: dict = field(default_factory=dict)
 
     def __post_init__(self):
         if self.volume is not None and not self.volumes:
@@ -483,7 +488,7 @@ def measure(frame: Frame, atoms: list[int]) -> tuple[str, float]:
 
 
 def atom_label_texts(symbols: list[str], mode: str, poscar_groups=None) -> list[str]:
-    """Generate GUI labels; indices always start at 1.
+    """Generate GUI labels; ORCA modes use zero-based source atom indices.
 
     VESTA grouping restarts at each declared POSCAR species block.
     VESTA POSCAR grouping instead RESTARTS the counter at every declared
@@ -516,6 +521,10 @@ def atom_label_texts(symbols: list[str], mode: str, poscar_groups=None) -> list[
             result.append(symbol)
         elif mode in ('Index', 'Index (1..N)'):
             result.append(str(i))
+        elif mode == 'ORCA index (0..N-1)':
+            result.append(str(i - 1))
+        elif mode == 'Element + ORCA index':
+            result.append(f'{symbol}{i - 1}')
         elif mode == 'VESTA fallback':
             result.append(f'{symbol}{counters[symbol]}')
         elif mode in ('Element + index (global)', 'Element + index'):

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="3" time="2.745" timestamp="2026-11-11T23:06:19.820806+09:00" hostname="42ea4163047b"><testcase classname="tests.test_delta_acceptance_v2131" name="test_palette_against_original_tcl" time="0.042"><failure message="AssertionError: assert {'H': '#DADAD...#DAFF46', ...} == {'H': '#D3D3D...#D3FF25', ...}&#10;  &#10;  Differing items:&#10;  {'Ba': '#906A46'} != {'Ba': '#7C5025'}&#10;  {'Tc': '#70B8C0'} != {'Tc': '#57ACB5'}&#10;  {'Pm': '#BCFFD6'} != {'Pm': '#B0FFCF'}&#10;  {'Ca': '#B5B546'} != {'Ca': '#A8A825'}&#10;  {'Tm': '#46DF80'} != {'Tm': '#25D96A'}...&#10;  &#10;  ...Full output truncated, use '-vv' to show">tests/test_delta_acceptance_v2131.py:131: in test_palette_against_original_tcl
+    assert {s:draw.atom_color(f,i) for i,s in enumerate(symbols)}==expected
+E   AssertionError: assert {'H': '#DADAD...#DAFF46', ...} == {'H': '#D3D3D...#D3FF25', ...}
+E     
+E     Differing items:
+E     {'Ba': '#906A46'} != {'Ba': '#7C5025'}
+E     {'Tc': '#70B8C0'} != {'Tc': '#57ACB5'}
+E     {'Pm': '#BCFFD6'} != {'Pm': '#B0FFCF'}
+E     {'Ca': '#B5B546'} != {'Ca': '#A8A825'}
+E     {'Tm': '#46DF80'} != {'Tm': '#25D96A'}...
+E     
+E     ...Full output truncated, use '-vv' to show</failure></testcase><testcase classname="tests.test_boundary_surface_v354" name="test_actual_chgcar_periodic_meshes_keep_boundary_repetition" time="0.579" /><testcase classname="tests.test_chgcar_gui_v352" name="test_supplied_chgcar_renamed_exact_original_grid" time="0.653" /></testsuite></testsuites>

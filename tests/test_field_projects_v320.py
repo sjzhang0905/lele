@@ -144,20 +144,15 @@ def test_wavecar_project_retains_metadata_and_explains_missing_source(tmp_path):
         restored.wavecar.coefficients()
 
 
-def test_converted_gbw_project_has_no_temporary_file_dependency(tmp_path, monkeypatch):
-    from lele.binary_wavefunctions import read_gbw
+def test_molden_project_has_no_source_file_dependency(tmp_path):
+    from lele.formats import load_document
     from test_wavefunction_inputs import molden_text
-    converted_paths=[]
-    def converter(source, destination):
-        converted_paths.append(destination)
-        destination.write_text(molden_text())
-        return destination
-    monkeypatch.setattr('lele.binary_wavefunctions.convert_gbw_to_molden', converter)
-    source=tmp_path/'source.gbw';source.write_bytes(b'synthetic GBW placeholder')
-    doc=read_gbw(source)
-    assert doc.path==source
-    assert not converted_paths[0].exists()
-    expected=doc.wavefunction.evaluate_points('alpha',1,np.zeros((1,3)))
-    path=tmp_path/'converted.lele';save_project(path,state_for(doc));source.unlink()
-    restored=load_project(path)['documents'][0]['document']
-    np.testing.assert_array_equal(restored.wavefunction.evaluate_points('alpha',1,np.zeros((1,3))),expected)
+    source = tmp_path / 'source.molden.input'
+    source.write_text(molden_text())
+    doc = load_document(source)
+    expected = doc.wavefunction.evaluate_points('alpha', 1, np.zeros((1, 3)))
+    path = tmp_path / 'molden.lele'
+    save_project(path, state_for(doc))
+    source.unlink()
+    restored = load_project(path)['documents'][0]['document']
+    np.testing.assert_array_equal(restored.wavefunction.evaluate_points('alpha', 1, np.zeros((1, 3))), expected)

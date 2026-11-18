@@ -1,0 +1,29 @@
+{
+  "base": "3.14.0",
+  "target": "3.15.0",
+  "modified_modules": [
+    "lele/__init__.py",
+    "lele/app.py",
+    "lele/cube_input.py",
+    "lele/dialog_policy.py",
+    "lele/document_view.py",
+    "lele/field_actions.py",
+    "lele/field_mapping.py",
+    "lele/field_mapping_dialog.py",
+    "lele/figure_export.py",
+    "lele/formats.py",
+    "lele/isosurface_dialog.py",
+    "lele/png_dialog.py",
+    "lele/png_export.py",
+    "lele/project_actions.py",
+    "lele/renderer.py",
+    "lele/surface_rendering.py",
+    "lele/vasp_neb_dialog.py",
+    "lele/volumetric_input.py",
+    "lele/workflow_ui.py"
+  ],
+  "new_modules": [
+    "lele/boundary_selection.py",
+    "lele/loaded_documents.py"
+  ]
+}

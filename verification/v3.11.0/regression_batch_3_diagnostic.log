@@ -1,0 +1,149 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.18, pytest-9.2.0, pluggy-1.7.0 -- /workspace/scratch/20b20befcaeb/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /workspace/scratch/20b20befcaeb/work/LELE
+configfile: pyproject.toml
+collecting ... collected 479 items / 1 skipped
+
+tests/test_gif_dialog.py::GifDialogTests::test_selected_mode_uses_amplitude_and_cycle_and_preserves_sufficient_samples PASSED
+tests/test_gif_dialog.py::GifDialogTests::test_trajectory_range_step_ping_pong_and_aspect_ratio PASSED
+tests/test_hydrogen_bonds_and_views_v203.py::test_manual_dashed_bond_never_joins_the_covalent_fragment_graph PASSED
+tests/test_hydrogen_bonds_and_views_v203.py::test_ctrl_h_can_suppress_an_automatic_candidate_without_duplicate_lines PASSED
+tests/test_hydrogen_bonds_and_views_v203.py::test_ctrl_h_and_ctrl_b_are_independent_and_undoable 2026-11-12 11:51:57.496 (   1.034s) [    7F70C297C740]vtkXOpenGLRenderWindow.:1452  WARN| bad X server connection. DISPLAY=
+This plugin does not support propagateSizeHints()
+PASSED
+tests/test_hydrogen_bonds_and_views_v203.py::test_manual_periodic_image_survives_movement_and_cloning PASSED
+tests/test_hydrogen_bonds_and_views_v203.py::test_manual_dashes_follow_display_alignment_and_boundary_images[False] PASSED
+tests/test_hydrogen_bonds_and_views_v203.py::test_manual_dashes_follow_display_alignment_and_boundary_images[True] PASSED
+tests/test_hydrogen_bonds_and_views_v203.py::test_clipboard_and_deletion_remap_manual_hydrogen_bonds PASSED
+tests/test_hydrogen_bonds_and_views_v203.py::test_supercell_retains_manual_hydrogen_bond_paths[True] PASSED
+tests/test_hydrogen_bonds_and_views_v203.py::test_supercell_retains_manual_hydrogen_bond_paths[False] PASSED
+tests/test_hydrogen_bonds_and_views_v203.py::test_coordinate_edit_and_delete_undo_retain_manual_hydrogen_bonds PASSED
+tests/test_hydrogen_bonds_and_views_v203.py::test_each_file_restores_camera_colours_and_all_render_controls PASSED
+tests/test_hydrogen_bonds_and_views_v203.py::test_opening_another_file_preserves_the_previous_view PASSED
+tests/test_hydrogen_bonds_and_views_v203.py::test_energy_only_switches_do_not_overwrite_a_geometry_camera[False] PASSED
+tests/test_hydrogen_bonds_and_views_v203.py::test_energy_only_switches_do_not_overwrite_a_geometry_camera[True] PASSED
+tests/test_hydrogen_bonds_and_views_v203.py::test_frequency_tree_switch_restores_view_without_a_second_camera_reset PASSED
+tests/test_hydrogen_bonds_and_views_v203.py::test_analysis_result_navigation_restores_file_view PASSED
+tests/test_independent_results_v1111.py::test_energy_only_document_has_no_geometry_and_does_not_require_companion PASSED
+tests/test_independent_results_v1111.py::test_nearby_trajectory_cannot_supply_coordinates_not_present_in_energy_only_file PASSED
+tests/test_independent_results_v1111.py::test_structure_only_document_keeps_frames_without_energy_or_curve PASSED
+tests/test_independent_results_v1111.py::test_single_point_energy_without_geometry_is_a_real_result PASSED
+tests/test_independent_results_v1111.py::test_energy_only_page_has_no_frame_coordinates_or_3d_view PASSED
+tests/test_independent_results_v1111.py::test_energy_only_plot_keeps_all_points_and_never_jumps_to_a_structure This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+PASSED
+tests/test_independent_results_v1111.py::test_structure_only_page_disables_empty_curve_but_keeps_navigation PASSED
+tests/test_independent_results_v1111.py::test_switching_documents_does_not_reuse_previous_geometry_or_energy PASSED
+tests/test_independent_results_v1111.py::test_energy_only_can_load_without_constructing_the_native_canvas PASSED
+tests/test_independent_results_v1111.py::test_orbitals_remain_available_without_a_geometry This plugin does not support propagateSizeHints()
+PASSED
+tests/test_isometry_v07.py::IsometricTests::test_projection_and_direction PASSED
+tests/test_isometry_v07.py::IsometricTests::test_repeat_isometric_is_stable PASSED
+tests/test_isosurface_controls_v330.py::test_basic_signed_defaults_and_independent_controls PASSED
+tests/test_isosurface_controls_v330.py::test_custom_dialog_accept_cancel_and_basic PASSED
+tests/test_isosurface_controls_v330.py::test_layer_add_remove_zero_and_ui_restore PASSED
+tests/test_isosurface_controls_v330.py::test_layers_project_roundtrip_and_old_defaults PASSED
+tests/test_isosurface_controls_v330.py::test_color_swatches_edit_and_restore_without_hex_labels PASSED
+tests/test_isosurface_controls_v330.py::test_empty_custom_commit_does_not_silently_restore_basic PASSED
+tests/test_isosurface_integration_v330.py::test_custom_surface_project_roundtrip_and_detachment PASSED
+tests/test_isosurface_integration_v330.py::test_custom_surface_png_and_gif_export PASSED
+tests/test_isosurface_render_v330.py::test_legacy_default_surfaces PASSED
+tests/test_isosurface_render_v330.py::test_independent_signs_opacity_and_styles PASSED
+tests/test_isosurface_render_v330.py::test_multiple_levels_custom_zero_and_hidden PASSED
+tests/test_isosurface_render_v330.py::test_invalid_custom_surface_rejected[spec0] PASSED
+tests/test_isosurface_render_v330.py::test_invalid_custom_surface_rejected[spec1] PASSED
+tests/test_isosurface_render_v330.py::test_invalid_custom_surface_rejected[spec2] PASSED
+tests/test_isosurface_render_v330.py::test_invalid_custom_surface_rejected[spec3] PASSED
+tests/test_isosurface_render_v330.py::test_surface_shading_and_empty_range PASSED
+tests/test_isosurface_render_v330.py::test_actual_egl_multisurface_render PASSED
+tests/test_large_files_v250.py::test_cp2k_xyz_over_750_keeps_every_coordinate_energy_time_and_source PASSED
+tests/test_large_files_v250.py::test_plain_xyz_over_750_and_extended_xyz_metadata_remain_distinct PASSED
+tests/test_large_files_v250.py::test_streamed_xdatcar_over_750_keeps_variable_cells_and_missing_energies PASSED
+tests/test_large_files_v250.py::test_long_outcar_stays_e0_only PASSED
+tests/test_large_files_v250.py::test_molecular_optimization_outputs_over_750_keep_last_step[gaussian] PASSED
+tests/test_large_files_v250.py::test_molecular_optimization_outputs_over_750_keep_last_step[orca] PASSED
+tests/test_large_files_v250.py::test_siesta_and_xtb_trajectories_over_750 PASSED
+tests/test_large_files_v250.py::test_explicit_api_limits_still_raise_without_silent_last_frame_fallback PASSED
+tests/test_large_files_v250.py::test_source_lines_cache_is_one_load_only_and_uses_current_file_bytes PASSED
+tests/test_large_files_v250.py::test_orca_optional_analyses_share_one_decoded_source PASSED
+tests/test_large_files_v250.py::test_streamed_cp2k_xyz_never_reads_all_bytes_and_retains_complete_tail PASSED
+tests/test_large_files_v250.py::test_utf16_streamed_xyz_and_source_text PASSED
+tests/test_large_files_v250.py::test_long_lazy_tree_reaches_last_frame_and_keyboard_crosses_pages PASSED
+tests/test_large_files_v250.py::test_multistage_lazy_tree_uses_each_stage_sequence_without_crossing This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+PASSED
+tests/test_large_files_v250.py::test_energy_only_lazy_pages_keep_final_record_and_all_curve_points This plugin does not support propagateSizeHints()
+PASSED
+tests/test_large_files_v250.py::test_long_project_roundtrip_keeps_last_frame_and_edits PASSED
+tests/test_large_files_v250.py::test_cp2k_stdout_over_750_printed_structures_keeps_energy_pairing PASSED
+tests/test_large_files_v250.py::test_neb_reader_has_no_old_50000_frame_cap PASSED
+tests/test_large_files_v250.py::test_packed_outcar_numeric_columns_still_use_original_semantics PASSED
+tests/test_large_files_v250.py::test_background_import_keeps_gui_responsive_and_attaches_on_main_thread PASSED
+tests/test_large_files_v250.py::test_cancelled_background_import_adds_no_partial_document_and_queue_continues PASSED
+tests/test_large_files_v250.py::test_cancellation_is_not_reported_as_parse_failure_or_partial_success PASSED
+tests/test_lighting_defaults_v380.py::test_default_style_changes_do_not_modify_custom_colors_or_geometry PASSED
+tests/test_lighting_defaults_v380.py::test_four_camera_lights_two_enabled_switch_without_geometry_rebuild PASSED
+tests/test_lighting_defaults_v380.py::test_light_settings_survive_project_roundtrip PASSED
+tests/test_lighting_defaults_v380.py::test_selection_outline_is_thick_solid_and_closed PASSED
+tests/test_lighting_defaults_v380.py::test_invalid_light_settings_rejected_before_mutating_scene[bad0] PASSED
+tests/test_lighting_defaults_v380.py::test_invalid_light_settings_rejected_before_mutating_scene[bad1] PASSED
+tests/test_lighting_defaults_v380.py::test_invalid_light_settings_rejected_before_mutating_scene[bad2] PASSED
+tests/test_long_operations_v270.py::test_progress_does_not_repeat_read_ahead_eof PASSED
+tests/test_long_operations_v270.py::test_qe_matches_ase_structures_cells_energies_forces_and_keeps_all_frames[False] PASSED
+tests/test_long_operations_v270.py::test_qe_matches_ase_structures_cells_energies_forces_and_keeps_all_frames[True] PASSED
+tests/test_long_operations_v270.py::test_qe_job_boundaries_and_final_reprinted_structure PASSED
+tests/test_long_operations_v270.py::test_cp2k_many_spectra_have_only_their_next_printed_energy PASSED
+tests/test_long_operations_v270.py::test_xtb_orbitals_keep_cycle_associations PASSED
+tests/test_long_operations_v270.py::test_nwchem_matches_ase_for_geometries_and_long_geometry_free_continuations[False] PASSED
+tests/test_long_operations_v270.py::test_nwchem_matches_ase_for_geometries_and_long_geometry_free_continuations[True] PASSED
+tests/test_long_operations_v270.py::test_success_marks_only_matching_geometry_and_edits_remove_status PASSED
+tests/test_long_operations_v270.py::test_cp2k_and_vasp_convergence_has_a_geometry_not_a_normal_exit PASSED
+tests/test_long_operations_v270.py::test_atom_legend_is_distinct_visible_elements_with_no_structure_mutation PASSED
+tests/test_long_operations_v270.py::test_legacy_legend_flag_does_not_add_a_main_canvas_overlay PASSED
+tests/test_long_operations_v270.py::test_data_task_dialog_is_delayed_enabled_and_qt_timer_runs Fatal Python error: none_dealloc: deallocating None: bug likely caused by a refcount error in a C extension
+Python runtime state: initialized
+
+Thread 0x00007f6ff67fc6c0 (most recent call first):
+  File "/workspace/scratch/20b20befcaeb/work/LELE/tests/test_long_operations_v270.py", line 203 in calculate
+  File "/workspace/scratch/20b20befcaeb/work/LELE/lele/operations.py", line 105 in run
+
+Current thread 0x00007f70c297c740 (most recent call first):
+  File "/workspace/scratch/20b20befcaeb/work/LELE/lele/app.py", line 1626 in _queue_summary_alignment
+  File "/workspace/scratch/20b20befcaeb/work/LELE/lele/app.py", line 103 in eventFilter
+  File "/workspace/scratch/20b20befcaeb/work/LELE/lele/operations.py", line 131 in run_data_task
+  File "/workspace/scratch/20b20befcaeb/work/LELE/tests/test_long_operations_v270.py", line 205 in test_data_task_dialog_is_delayed_enabled_and_qt_timer_runs
+  File "/workspace/scratch/20b20befcaeb/.venv/lib/python3.11/site-packages/_pytest/python.py", line 187 in pytest_pyfunc_call
+  File "/workspace/scratch/20b20befcaeb/.venv/lib/python3.11/site-packages/pluggy/_execution.py", line 147 in _multicall
+  File "/workspace/scratch/20b20befcaeb/.venv/lib/python3.11/site-packages/pluggy/_manager.py", line 183 in _hookexec
+  File "/workspace/scratch/20b20befcaeb/.venv/lib/python3.11/site-packages/pluggy/_caller.py", line 197 in __call__
+  File "/workspace/scratch/20b20befcaeb/.venv/lib/python3.11/site-packages/_pytest/python.py", line 1798 in runtest
+  File "/workspace/scratch/20b20befcaeb/.venv/lib/python3.11/site-packages/_pytest/runner.py", line 184 in pytest_runtest_call
+  File "/workspace/scratch/20b20befcaeb/.venv/lib/python3.11/site-packages/pluggy/_execution.py", line 147 in _multicall
+  File "/workspace/scratch/20b20befcaeb/.venv/lib/python3.11/site-packages/pluggy/_manager.py", line 183 in _hookexec
+  File "/workspace/scratch/20b20befcaeb/.venv/lib/python3.11/site-packages/pluggy/_caller.py", line 197 in __call__
+  File "/workspace/scratch/20b20befcaeb/.venv/lib/python3.11/site-packages/_pytest/runner.py", line 250 in <lambda>
+  File "/workspace/scratch/20b20befcaeb/.venv/lib/python3.11/site-packages/_pytest/runner.py", line 361 in from_call
+  File "/workspace/scratch/20b20befcaeb/.venv/lib/python3.11/site-packages/_pytest/runner.py", line 249 in call_and_report
+  File "/workspace/scratch/20b20befcaeb/.venv/lib/python3.11/site-packages/_pytest/runner.py", line 139 in runtestprotocol
+  File "/workspace/scratch/20b20befcaeb/.venv/lib/python3.11/site-packages/_pytest/runner.py", line 118 in pytest_runtest_protocol
+  File "/workspace/scratch/20b20befcaeb/.venv/lib/python3.11/site-packages/pluggy/_execution.py", line 147 in _multicall
+  File "/workspace/scratch/20b20befcaeb/.venv/lib/python3.11/site-packages/pluggy/_manager.py", line 183 in _hookexec
+  File "/workspace/scratch/20b20befcaeb/.venv/lib/python3.11/site-packages/pluggy/_caller.py", line 197 in __call__
+  File "/workspace/scratch/20b20befcaeb/.venv/lib/python3.11/site-packages/_pytest/main.py", line 411 in pytest_runtestloop
+  File "/workspace/scratch/20b20befcaeb/.venv/lib/python3.11/site-packages/pluggy/_execution.py", line 147 in _multicall
+  File "/workspace/scratch/20b20befcaeb/.venv/lib/python3.11/site-packages/pluggy/_manager.py", line 183 in _hookexec
+  File "/workspace/scratch/20b20befcaeb/.venv/lib/python3.11/site-packages/pluggy/_caller.py", line 197 in __call__
+  File "/workspace/scratch/20b20befcaeb/.venv/lib/python3.11/site-packages/_pytest/main.py", line 387 in _main
+  File "/workspace/scratch/20b20befcaeb/.venv/lib/python3.11/site-packages/_pytest/main.py", line 333 in wrap_session
+  File "/workspace/scratch/20b20befcaeb/.venv/lib/python3.11/site-packages/_pytest/main.py", line 380 in pytest_cmdline_main
+  File "/workspace/scratch/20b20befcaeb/.venv/lib/python3.11/site-packages/pluggy/_execution.py", line 147 in _multicall
+  File "/workspace/scratch/20b20befcaeb/.venv/lib/python3.11/site-packages/pluggy/_manager.py", line 183 in _hookexec
+  File "/workspace/scratch/20b20befcaeb/.venv/lib/python3.11/site-packages/pluggy/_caller.py", line 197 in __call__
+  File "/workspace/scratch/20b20befcaeb/.venv/lib/python3.11/site-packages/_pytest/config/__init__.py", line 262 in _main
+  File "/workspace/scratch/20b20befcaeb/.venv/lib/python3.11/site-packages/_pytest/config/__init__.py", line 286 in _console_main
+  File "/workspace/scratch/20b20befcaeb/.venv/lib/python3.11/site-packages/pytest/__main__.py", line 9 in <module>
+  File "<frozen runpy>", line 88 in _run_code
+  File "<frozen runpy>", line 198 in _run_module_as_main
+
+Extension modules: shiboken6.Shiboken, PySide6.QtCore, PySide6.QtGui, PySide6.QtWidgets, numpy._core._multiarray_umath, numpy.linalg._umath_linalg, PySide6.QtTest, vtkmodules.vtkCommonCore, vtkmodules.vtkCommonMath, vtkmodules.vtkCommonTransforms, vtkmodules.vtkCommonDataModel, vtkmodules.vtkCommonExecutionModel, vtkmodules.vtkCommonMisc, vtkmodules.vtkFiltersCore, vtkmodules.vtkCommonSystem, vtkmodules.vtkParallelCore, vtkmodules.vtkRenderingCore, vtkmodules.vtkFiltersGeneral, vtkmodules.vtkIOCore, vtkmodules.vtkImagingCore, vtkmodules.vtkIOImage, vtkmodules.vtkRenderingHyperTreeGrid, vtkmodules.vtkRenderingFreeType, vtkmodules.vtkRenderingLabel, vtkmodules.vtkRenderingUI, vtkmodules.vtkRenderingOpenGL2, vtkmodules.vtkInteractionStyle, vtkmodules.vtkFiltersSources, PIL._imaging, vtkmodules.vtkRenderingAnnotation, _cyutility, scipy._cyutility, scipy._lib._ccallback_c, scipy.special._ufuncs_cxx, scipy.special._ellip_harm_2, scipy.special._special_ufuncs, scipy.special._gufuncs, scipy.special._ufuncs, scipy.special._specfun, scipy.special._comb, numpy.random._common, numpy.random.bit_generator, numpy.random._bounded_integers, numpy.random._pcg64, numpy.random._generator, numpy.random._mt19937, numpy.random._philox, numpy.random._sfc64, numpy.random.mtrand, scipy.integrate._odepack, scipy.integrate._quadpack, scipy.integrate._vode, scipy.integrate._dop, scipy.sparse._sparsetools, _csparsetools, scipy.sparse._csparsetools, scipy.linalg._fblas, scipy.linalg._flapack, scipy.linalg.cython_lapack, scipy.linalg._cythonized_array_utils, scipy.linalg._solve_toeplitz, scipy.linalg._batched_linalg, scipy.linalg._decomp_lu_cython, scipy.linalg._matfuncs_schur_sqrtm, scipy.linalg._matfuncs_expm, scipy.linalg._linalg_pythran, scipy.linalg.cython_blas, scipy.linalg._decomp_update, scipy.sparse.linalg._dsolve._superlu, scipy.sparse.linalg._eigen.arpack._arpacklib, scipy.sparse.linalg._propack, scipy.optimize._group_columns, scipy._lib.messagestream, scipy.optimize._trlib._trlib, scipy.optimize._lbfgsb, _moduleTNC, scipy.optimize._moduleTNC, scipy.optimize._slsqplib, scipy.optimize._minpack, scipy.optimize._lsq.givens_elimination, scipy.optimize._zeros, scipy._lib._uarray._uarray, scipy.linalg._decomp_interpolative, scipy.optimize._bglu_dense, scipy.optimize._lsap, scipy.spatial._ckdtree, scipy.spatial._qhull, scipy.spatial._voronoi, scipy.spatial._hausdorff, scipy.spatial._distance_wrap, scipy.spatial.transform._rotation_cy, scipy.spatial.transform._rigid_transform_cy, scipy.optimize._direct, vtkmodules.vtkRenderingContext2D, vtkmodules.vtkInteractionWidgets, scipy.sparse.csgraph._tools, scipy.sparse.csgraph._shortest_path, scipy.sparse.csgraph._traversal, scipy.sparse.csgraph._min_spanning_tree, scipy.sparse.csgraph._flow, scipy.sparse.csgraph._matching, scipy.sparse.csgraph._reordering, kiwisolver._cext, PySide6.QtSvg, PIL._imagingmath (total: 105)

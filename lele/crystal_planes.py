@@ -26,7 +26,10 @@ def validate_planes(values):
             if not np.isfinite(p[key]):raise ValueError('Plane values must be finite.')
         if p['thickness'] <= 0 or not 0 <= p['opacity'] <= 1:
             raise ValueError('Slab thickness must be positive and opacity must be between 0 and 1.')
-        if not re.fullmatch(r'#[0-9A-Fa-f]{6}', p['color']):raise ValueError('Choose a valid plane colour.')
+        if not re.fullmatch(r'#[0-9A-Fa-f]{6}', p['color']):raise ValueError('Choose a valid plane color.')
+        from .plane_field import validate_plane_style, FIELD_STYLE_KEYS
+        style = validate_plane_style(p)
+        for key in FIELD_STYLE_KEYS:p[key] = style[key]
         p['enabled'], p['show'] = bool(p['enabled']), bool(p['show'])
         if p['enabled']:
             cuts += 2 if p['mode'] == 'Slab' else int(p['mode'] != 'Show only')

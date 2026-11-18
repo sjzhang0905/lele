@@ -1,8 +1,8 @@
 """Origin/X/Z selection and a compatible row-matrix paste mode."""
 import re
 import numpy as np
-from PySide6.QtWidgets import (QDialog,QVBoxLayout,QFormLayout,QLabel,QComboBox,
-    QSpinBox,QPlainTextEdit,QCheckBox,QDialogButtonBox,QMessageBox)
+from PySide6.QtWidgets import QVBoxLayout, QFormLayout, QLabel, QComboBox, QSpinBox, QPlainTextEdit, QCheckBox, QDialogButtonBox
+from .dialog_policy import QDialog, QMessageBox
 from .coordinate_reorientation import local_axis_rotation,proper_rotation
 from .periodic_geometry import periodic_basis
 
@@ -69,6 +69,8 @@ class ReorientationDialog(QDialog):
         return rotation,-center@rotation.T,center if self.nearest.isChecked() else None,details
 
     def _update_preview(self,*_):
+        from .dialog_policy import ensure_source_current
+        if not ensure_source_current(self):return
         manual=self.mode.currentIndex()==1
         self.matrix.setVisible(manual);self.matrix_label.setVisible(manual)
         self.x_atom.setEnabled(not manual);self.z_atom.setEnabled(not manual)
@@ -84,6 +86,8 @@ class ReorientationDialog(QDialog):
         self.buttons.button(QDialogButtonBox.StandardButton.Ok).setEnabled(valid)
 
     def _accept_plan(self):
+        from .dialog_policy import ensure_source_current
+        if not ensure_source_current(self):return
         try:self.plan()
         except ValueError as exc:QMessageBox.warning(self,'Orientation unavailable',str(exc));return
         self.accept()

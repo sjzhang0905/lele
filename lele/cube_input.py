@@ -140,12 +140,16 @@ def read_cube_file(path,*,read_data=True,max_points=64_000_000):
         positions=np.asarray([row[2:5] for row in rows],float).reshape((-1,3))*Bohr
         castep='castep2cube' in header[1].lower()
         cell=(np.asarray(shape)-(1 if castep else 0))[:,None]*spacing
-        atoms=Atoms(numbers=numbers,positions=positions,cell=cell,pbc=True)
+        # A CUBE grid is a sampling box, not evidence of a periodic atom cell.
+        # CASTEP's explicit converter marker and LELE metadata below are the
+        # only periodicity declarations this format provides reliably.
+        atoms=Atoms(numbers=numbers,positions=positions,cell=cell,pbc=castep)
         labels=[]
         if nlabels:
             tokens=' '.join(header[6+natoms:]).split();labels=[int(x) for x in tokens[1:]]
-        result={'atoms':atoms,'origin':origin,'spacing':spacing,'labels':labels}
-        if header[0].startswith('LELE_CUBE ') and len(header[0]) < 16384:
+        result={'atoms':atoms,'origin':origin,'spacing':spacing,'labels':labels,
+                'periodic':castep}
+        if header[0].startswith('LELE_CUBE ') and len(header[0]) <= 1024*1024:
             import json
             try:
                 metadata=json.loads(header[0][10:])
@@ -158,6 +162,7 @@ def read_cube_file(path,*,read_data=True,max_points=64_000_000):
                 if len(saved_pbc)!=3 or any(type(x) is not bool for x in saved_pbc):raise ValueError()
                 atoms.set_cell(saved_cell);atoms.set_pbc(saved_pbc)
                 result['metadata']=metadata
+                result['periodic']=metadata.get('periodic',False)
             except (ValueError,KeyError,TypeError):pass
         if not read_data:return result
         channels=nlabels or nvalues

@@ -58,6 +58,9 @@ class SelectionWorkflowTests(unittest.TestCase):
         w._ignore_table = w._ignore_tree = False
         w._fragment_gesture = None
         w._user_style_presets = {}
+        # This harness bypasses LELEWindow.__init__; retain its lifecycle state
+        # when exercising direct open/attach methods on the headless window.
+        w._closing = False
         self.enterContext(patch('lele.interaction.InteractiveVTKView', HeadlessCanvas))
         w._build_ui()
         w.playback = QTimer(w)
@@ -565,6 +568,7 @@ class SelectionWorkflowTests(unittest.TestCase):
         self.assertAlmostEqual(appearance(w.frame, 1).opacity, .3)
 
     def test_atom_settings_stay_with_frame_and_survive_delete_undo(self):
+        from PySide6.QtCore import Qt
         from lele.atom_appearance import appearance
         w = self.window
         second = w.frame.clone()
@@ -579,13 +583,14 @@ class SelectionWorkflowTests(unittest.TestCase):
         w.delete_selected_atoms()
         self.assertFalse(appearance(w.frame, 0).visible)
         self.assertEqual(appearance(w.frame, 2).label_text, 'last')
-        self.assertEqual(w.atom_panel._items[2].text(1), '#ff00aa')
+        self.assertEqual(w.atom_panel._items[2].text(1), '')
+        self.assertEqual(w.atom_panel._items[2].data(1, Qt.ItemDataRole.DecorationRole).name(), '#ff00aa')
         w.undo_edit()
         self.assertEqual(len(w.frame.symbols), 4)
         self.assertFalse(appearance(w.frame, 1).visible)
         self.assertEqual(appearance(w.frame, 3).label_text, 'last')
 
-    def test_lower_panel_is_evenly_split_with_settings_left_coordinates_right(self):
+    def test_lower_panel_has_settings_coordinates_and_selection_columns(self):
         from PySide6.QtCore import Qt
         from PySide6.QtWidgets import QWidget
         w = self.window
@@ -595,9 +600,11 @@ class SelectionWorkflowTests(unittest.TestCase):
         self.assertEqual(w.lower_splitter.orientation(), Qt.Orientation.Horizontal)
         self.assertIs(w.lower_splitter.widget(0), w.bottom_control_tabs)
         self.assertIs(w.lower_splitter.widget(1), w.tabs)
+        self.assertIs(w.lower_splitter.widget(2), w.selection_tabs)
         sizes = w.lower_splitter.sizes()
-        self.assertLess(abs(sizes[0] - sizes[1]), sum(sizes) * .08)
-        self.assertEqual([w.bottom_control_tabs.tabText(i) for i in range(w.bottom_control_tabs.count())], ['Axes','Labels','Field','Boundary'])
+        self.assertEqual(len(sizes), 3)
+        self.assertTrue(all(size >= 200 for size in sizes))
+        self.assertEqual([w.bottom_control_tabs.tabText(i) for i in range(w.bottom_control_tabs.count())], ['Axes','Labels','Boundary'])
         self.assertTrue(w.atom_table.verticalHeader().isHidden())
         self.assertLessEqual(w.atom_table.verticalHeader().defaultSectionSize(),
                              max(24, w.atom_table.fontMetrics().height() + 4))
@@ -611,8 +618,8 @@ class SelectionWorkflowTests(unittest.TestCase):
         w = self.window
         volume = Volume(np.linspace(-.1, .1, 64).reshape(4, 4, 4), [0, 0, 0], np.eye(3))
         self.attach(w.frame, volume=volume)
-        page = next(i for i in range(w.bottom_control_tabs.count()) if w.bottom_control_tabs.tabText(i) == 'Field')
-        w.bottom_control_tabs.setCurrentIndex(page)
+        page = next(i for i in range(w.sidebar_tabs.count()) if w.sidebar_tabs.tabText(i) == 'Field')
+        w.sidebar_tabs.setCurrentIndex(page)
         w.show()
         w.iso_spin.setFocus()
         self.app.processEvents()
@@ -636,8 +643,8 @@ class SelectionWorkflowTests(unittest.TestCase):
         from PySide6.QtCore import Qt
         from PySide6.QtTest import QTest
         w = self.window
-        page = next(i for i in range(w.bottom_control_tabs.count()) if w.bottom_control_tabs.tabText(i) == 'Field')
-        w.bottom_control_tabs.setCurrentIndex(page)
+        page = next(i for i in range(w.sidebar_tabs.count()) if w.sidebar_tabs.tabText(i) == 'Field')
+        w.sidebar_tabs.setCurrentIndex(page)
         w.show()
         w.iso_spin.setFocus()
         self.app.processEvents()

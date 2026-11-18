@@ -1,0 +1,8 @@
+......                                                                   [100%]
+=============================== warnings summary ===============================
+tests/test_orca_workflows_ui_v1100.py: 56 warnings
+  /workspace/scratch/20b20befcaeb/.venv/lib/python3.11/site-packages/matplotlib/backends/backend_qt.py:726: DeprecationWarning: Enum value 'Qt::ApplicationAttribute.AA_UseHighDpiPixmaps' is marked as deprecated, please check the documentation for more information.
+    use_high_dpi_pixmaps = app.testAttribute(QtCore.Qt.AA_UseHighDpiPixmaps)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+6 passed, 56 warnings in 3.93s

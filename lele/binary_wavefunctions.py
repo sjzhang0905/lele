@@ -1,16 +1,11 @@
-"""Validated WAVECAR access and official ORCA GBW conversion.
+"""Validated WAVECAR access.
 
-No GBW binary layout is guessed. WAVECAR bands are read lazily; PAW on-site
+WAVECAR bands are read lazily; PAW on-site
 augmentation is not present in the reconstructed pseudo-wavefunction.
 """
 from dataclasses import dataclass
 from pathlib import Path
-import os
 import re
-import shutil
-import subprocess
-import tempfile
-import time
 import numpy as np
 from .core import Document, Frame, Volume
 from .calculation_results import CalculationResults, CalculationJob, Orbital, OrbitalSet
@@ -203,82 +198,5 @@ def read_wavecar(path):
             note+=' Multiple matching OUTCAR companions found; geometry was not selected automatically.'
     note+=' '+wave.reconstruction_reason
     doc=Document(Path(path),'VASP WAVECAR',frames,note=note,calculation_results=results)
-    doc.source_preview=note+'\n\nBinary WAVECAR content is not displayed as text.'
     doc.wavecar=wave
     return doc
-
-
-def convert_gbw_to_molden(path, destination, executable=None, timeout=120):
-    """Run the installed official converter on a disposable copy, without shell.
-
-    LELE_ORCA_2MKL can name an absolute official executable; otherwise PATH is
-    used. Source and neighboring files are never overwritten by the converter.
-    """
-    executable=executable or os.environ.get('LELE_ORCA_2MKL') or shutil.which('orca_2mkl') or shutil.which('orca_2mkl.exe')
-    if not executable:
-        raise ValueError('ORCA GBW requires the matching ORCA orca_2mkl utility. Put it on PATH or set LELE_ORCA_2MKL to its full path, or run: orca_2mkl basename -molden and open basename.molden.input.')
-    executable=str(Path(executable).expanduser().resolve())
-    if not Path(executable).is_file():raise ValueError('Configured orca_2mkl executable does not exist')
-    destination=Path(destination)
-    with tempfile.TemporaryDirectory(prefix='lele-gbw-') as directory:
-        local=Path(directory)/'wavefunction.gbw';shutil.copyfile(path,local)
-        with tempfile.TemporaryFile(mode='w+b') as log:
-            process=subprocess.Popen([executable,'wavefunction','-molden'],cwd=directory,stdout=log,stderr=subprocess.STDOUT,shell=False)
-            start=time.monotonic()
-            try:
-                while process.poll() is None:
-                    check_load_cancelled()
-                    if time.monotonic()-start>timeout:raise ValueError('ORCA GBW conversion timed out')
-                    time.sleep(.05)
-            except BaseException:
-                process.kill();process.wait();raise
-            output=Path(directory)/'wavefunction.molden.input'
-            if process.returncode or not output.is_file():
-                log.seek(0);detail=log.read(4096).decode('utf-8',errors='replace')
-                raise ValueError('ORCA GBW conversion failed; use the ORCA version that created the GBW. '+detail)
-            check_load_cancelled();shutil.copyfile(output,destination)
-    return destination
-
-
-def read_gbw(path):
-    from .formats import load_document
-    path = Path(path)
-    converter = (os.environ.get('LELE_ORCA_2MKL') or shutil.which('orca_2mkl')
-                 or shutil.which('orca_2mkl.exe'))
-    if not converter:
-        # A GBW is not self-describing across ORCA releases. A neighboring log
-        # is useful, but is not evidence that its wavefunction matches the GBW.
-        for suffix in ('.log', '.out'):
-            companion = path.with_suffix(suffix)
-            if not companion.is_file():
-                continue
-            from .legacy_converter import detect_format, ConversionError
-            try:
-                kind = detect_format(companion).kind
-            except ConversionError:
-                continue
-            if kind != 'orca_out':
-                continue
-            document = load_document(companion)
-            document.path = path
-            document.format_name = 'ORCA GBW companion output (GBW not decoded)'
-            document.wavefunction = None
-            for frame in document.frames:
-                frame.info['companion_output_path'] = str(companion)
-                frame.info['gbw_match_verified'] = False
-            document.note = (
-                f'The GBW was NOT decoded. Displayed geometry, energies and other results '
-                f'come only from the same-basename companion {companion.name}; this does '
-                f'not verify that the output and GBW describe the same calculation. '
-                f'GBW orbital coefficients and surfaces are unavailable. Install the '
-                f'orca_2mkl utility from the ORCA release that created this GBW, put it on '
-                f'PATH or set LELE_ORCA_2MKL to its full path, then reopen the GBW. '
-                f'Alternatively run: orca_2mkl "{path.stem}" -molden and open '
-                f'"{path.stem}.molden.input". ' + document.note)
-            return document
-    with tempfile.TemporaryDirectory(prefix='lele-molden-') as directory:
-        converted=convert_gbw_to_molden(path,Path(directory)/'wavefunction.molden.input')
-        document=load_document(converted)
-        document.path=Path(path);document.format_name='ORCA GBW via orca_2mkl'
-        document.note=('GBW converted using the installed official ORCA orca_2mkl utility. '+document.note)
-        return document
