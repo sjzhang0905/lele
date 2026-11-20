@@ -69,8 +69,11 @@ class RenderOptions:
     light_enabled: tuple = (True, True, False, False)
     light_intensities: tuple = (.85, .45, .45, .35)
     light_positions: tuple = ((-.1, .1, 1.), (1., 2., .5), (-1., 2., -1.), (-1., -1., 0.))
+    highlight_size: float = 50.
 
     def __post_init__(self):
         # Projects saved before 2.13.4 use the palette's former name.
         if self.atom_palette == 'Sibyl':
             self.atom_palette = 'Default'
+        if not 0 <= self.highlight_size <= 100:
+            raise ValueError('Highlight size must lie between 0 and 100.')

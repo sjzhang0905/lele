@@ -13,6 +13,10 @@ from test_periodic_fragment_ui_v171 import gui
 
 INPUT = '%mem=2GB\n# hf/sto-3g\n\nkeep this title\n\n0 1\nO 0 0 0\nH 0 0 1\nH 0 1 0\n\n'
 
+def browse_to(dialog, path):
+    with patch('lele.coordinate_update_actions.QFileDialog.getOpenFileName', return_value=(str(path), '')):
+        dialog.browse.click()
+
 
 def setup_documents(gui, tmp_path, *, duplicate=False):
     w = gui.window
@@ -82,7 +86,9 @@ def test_stale_plan_keeps_external_edit_and_loaded_document(gui, tmp_path):
 def test_dialog_shows_diff_and_cancel_does_not_write(gui, tmp_path):
     w, path, target, source = setup_documents(gui, tmp_path)
     original = path.read_bytes()
-    dialog = CoordinateUpdateDialog([target], w.frame, w)
+    dialog = CoordinateUpdateDialog(source.path, w.frame, w)
+    assert dialog.plan is None and not dialog.apply_button.isEnabled()
+    browse_to(dialog, path)
     assert dialog.plan is not None and dialog.apply_button.isEnabled()
     assert '(updated)' in dialog.preview.toPlainText()
     dialog.reject()
@@ -94,7 +100,8 @@ def test_unsupported_geometry_disables_apply_without_touching_file(gui, tmp_path
     w, path, target, source = setup_documents(gui, tmp_path)
     path.write_text(INPUT + '--Link1--\n' + INPUT)
     original = path.read_bytes()
-    dialog = CoordinateUpdateDialog([target], w.frame, w)
+    dialog = CoordinateUpdateDialog(source.path, w.frame, w)
+    browse_to(dialog, path)
     assert dialog.plan is None and not dialog.apply_button.isEnabled()
     assert dialog.summary.text()
     assert path.read_bytes() == original
@@ -109,9 +116,9 @@ def test_coordinate_dialog_pauses_trajectory_and_disposes_cancelled_preview(gui,
     disposed = []
     class CancelDialog:
         plan = None
-        def __init__(self, candidates, frame, parent):
+        def __init__(self, active_path, frame, parent):
             assert not w.playback.isActive()
-            assert candidates == [target]
+            assert active_path == source.path
             assert frame is source.frames[0]
         def exec(self): return QDialog.DialogCode.Rejected
         def deleteLater(self): disposed.append(True)
@@ -124,7 +131,8 @@ def test_coordinate_dialog_pauses_trajectory_and_disposes_cancelled_preview(gui,
 def test_reader_validation_error_is_shown_without_enabling_apply(gui, tmp_path):
     w, path, target, source = setup_documents(gui, tmp_path)
     with patch('lele.coordinate_update.prepare_coordinate_update', side_effect=RuntimeError('Unsupported input detail')):
-        dialog = CoordinateUpdateDialog([target], w.frame, w)
+        dialog = CoordinateUpdateDialog(source.path, w.frame, w)
+        browse_to(dialog, path)
     assert dialog.plan is None and not dialog.apply_button.isEnabled()
     assert dialog.summary.text() == 'Unsupported input detail'
     assert path.read_text() == INPUT

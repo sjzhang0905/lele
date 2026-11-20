@@ -23,7 +23,8 @@ TRAJECTORY_KINDS = {
     'qe_out', 'ase_generic',
 }
 MAX_FRAMES = None  # No application frame-count limit.
-MAX_VOLUME_POINTS = 64_000_000
+from .grid_memory import AUTO
+MAX_VOLUME_POINTS = AUTO
 BOHR_ANG = 0.529177210903
 
 
@@ -77,10 +78,15 @@ def _with_poscar_groups(frame: Frame, path: Path) -> Frame:
     groups = read_poscar_groups(path, frame.symbols)
     if groups is not None:
         frame.info['poscar_groups'] = groups
-    with Path(path).open('r',encoding='utf-8-sig',errors='replace') as stream:
-        header=[next(stream,'') for _ in range(9)]
-    if any(line.strip().lower().startswith('selective') for line in header):
-        frame.info.setdefault('vasp_fixed_axes',[[False]*3 for _ in frame.symbols])
+    with Path(path).open('r', encoding='utf-8-sig', errors='replace') as stream:
+        header = [next(stream, '') for _ in range(6)]
+        if not header[-1].split('!', 1)[0].split()[0].isdigit():
+            next(stream, '')  # VASP 5/6 species counts
+        if next(stream, '').lstrip().lower().startswith('s'):
+            next(stream, '')  # Direct / Cartesian
+            flags = [next(stream, '').upper().split()[3:6] for _ in frame.symbols]
+            if all(len(row) == 3 and all(flag in ('T', 'F') for flag in row) for row in flags):
+                frame.info['vasp_fixed_axes'] = [[flag == 'F' for flag in row] for row in flags]
     return frame
 
 
@@ -165,8 +171,14 @@ def _load_document(filename: str | Path, max_frames: int | None = MAX_FRAMES) ->
         from .cp2k_results import read_cp2k_output,read_cp2k_xyz
         from .cp2k_input import read_cp2k_input
         if kind=='cp2k_in':results,frames=read_cp2k_input(path)
+        elif kind=='cp2k_xyz':
+            from .trajectory_storage import trajectory_store
+            with trajectory_store(path) as store:
+                results=read_cp2k_xyz(path,max_frames, store=store)
+                store.finish()
+                frames=results.frames(max_frames, store=store)
         else:
-            results=read_cp2k_xyz(path,max_frames) if kind=='cp2k_xyz' else read_cp2k_output(path)
+            results=read_cp2k_output(path)
             frames=results.frames(max_frames)
         if max_frames is not None and len(frames)>max_frames:raise ValueError(f'Trajectory exceeds {max_frames} frames')
         return Document(path,detection.label,frames,note=results.note,calculation_results=results,
@@ -174,14 +186,26 @@ def _load_document(filename: str | Path, max_frames: int | None = MAX_FRAMES) ->
 
     if kind in ('vasp_out', 'vasp_xdatcar', 'vasp_oszicar'):
         from .vasp_results import read_vasp_results, read_xdatcar, read_oszicar
-        results = (read_xdatcar(path, max_frames) if kind == 'vasp_xdatcar' else
-                   read_oszicar(path) if kind == 'vasp_oszicar' else read_vasp_results(path))
-        frames = results.frames(max_frames)
+        nmr_records = []
+        if kind == 'vasp_xdatcar':
+            from .trajectory_storage import trajectory_store
+            with trajectory_store(path) as store:
+                results = read_xdatcar(path, max_frames, store=store)
+                store.finish()
+                frames = results.frames(max_frames, store=store)
+        else:
+            results = (read_oszicar(path) if kind == 'vasp_oszicar' else
+                       read_vasp_results(path, nmr_records=nmr_records))
+            frames = results.frames(max_frames)
         note = results.note
         if not frames:
             note += ' Results loaded independently; no complete, identified structure was printed in this file.'
-        return Document(path, detection.label, frames, note=note,
-                        calculation_results=results, vibrations=results.vibrations)
+        doc = Document(path, detection.label, frames, note=note,
+                       calculation_results=results, vibrations=results.vibrations)
+        if nmr_records:
+            from .nmr_input import link_nmr_results
+            doc.nmr_results = link_nmr_results(path, nmr_records, doc)
+        return doc
 
     if kind in ('xtb_out','xtb_trj'):
         from .xtb_results import read_xtb_results
@@ -353,7 +377,7 @@ def _load_complete_document(filename, max_frames):
         for frame in document.frames:
             frame.info.setdefault('source_kind',kind)
             frame.info.setdefault('source_format',document.format_name)
-    if not document.nmr_results:
+    if kind != 'vasp_out' and not document.nmr_results:
         document.nmr_results=read_nmr_results(document.path,kind,document)
     from .atom_constraints import attach_document_constraints
     attach_document_constraints(document, kind)

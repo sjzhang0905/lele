@@ -2,6 +2,10 @@
 
 **Local Environment and Lattice Explorer**
 
+Version **4.0.0** accelerates large CUBE fields, indexed OUTCAR records, editable AIMD trajectories and WAVECAR reconstruction. Large trajectories keep float64 coordinates in a temporary snapshot that supports random frame access and independent edits. [Performance measurements](verification/v4.0.0/README.md)
+
+Version **3.18.0** adds fragment mirroring under Edit and a highlight-size slider under Style. Right drag rolls about the geometric center of all atoms. Alt + right drag uses the moving fragment's geometric center. File → Apply new coordinates browses local files and preserves POSCAR/CONTCAR selective-dynamics flags by row when the atom count changes.
+
 Version **3.17.0** adds manual CP2K optimization/MD and xTB trajectory association, clickable per-step curves, and text copying in Results / info. [Release notes](docs/FEATURES_v3.17.0_CN.md).
 
 Version **3.16.0** speeds up Alt+right fragment rotation, opens DIM-GROUP XSF

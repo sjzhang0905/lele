@@ -37,6 +37,7 @@ class AtomLegend:
 
     def set_samples(self,samples,options):
         from .renderer import rgb
+        from .lighting import apply_surface_finish
         self.renderer.RemoveAllViewProps();self.actors=[];self.labels=[];self.spheres=[]
         self.samples=deepcopy(samples);self.renderer.SetBackground(rgb(options.background))
         for sample in self.samples:
@@ -44,8 +45,7 @@ class AtomLegend:
             mapper=vtkPolyDataMapper();mapper.SetInputConnection(sphere.GetOutputPort())
             actor=vtkActor();actor.SetMapper(mapper);actor.PickableOff()
             prop=actor.GetProperty();prop.SetColor(rgb(sample['color']));prop.SetOpacity(sample['opacity'])
-            ambient,diffuse,specular,power={'Glossy':(.17,.70,.78,60),'Matte':(.32,.67,.05,9)}.get(options.surface_finish,(.22,.72,.36,24))
-            prop.SetAmbient(ambient);prop.SetDiffuse(diffuse);prop.SetSpecular(specular);prop.SetSpecularPower(power)
+            apply_surface_finish(prop, options)
             self.renderer.AddActor(actor);self.actors.append(actor);self.spheres.append(sphere)
             label=vtkTextActor();label.SetInput(sample['symbol']);label.PickableOff()
             label.GetPositionCoordinate().SetCoordinateSystemToNormalizedViewport()

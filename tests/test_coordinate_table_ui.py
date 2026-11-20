@@ -101,6 +101,7 @@ class DummyWindow:
         return False
 
     def __init__(self, frame):
+        self.doc = None
         self.frame = frame
         self.atom_table = FakeTable()
         self.tabs = FakeTabs()
@@ -128,7 +129,7 @@ class DummyWindow:
 def extracted_methods():
     tree = ast.parse(APP_PATH.read_text(encoding='utf-8'))
     cls = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == 'LELEWindow')
-    wanted = {'_refresh_coordinates', '_refresh_after_geometry_edit', '_refresh_element_choices'}
+    wanted = {'_large_trajectory', '_refresh_coordinates', '_refresh_after_geometry_edit', '_refresh_element_choices'}
     methods = [n for n in cls.body if isinstance(n, ast.FunctionDef) and n.name in wanted]
     assert len(methods) == len(wanted)
     namespace = {'__name__': 'lele.app', '__package__': 'lele',
@@ -142,7 +143,7 @@ class CoordinateUIRegressionTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         methods = extracted_methods()
-        for name in ('_refresh_coordinates', '_refresh_after_geometry_edit', '_refresh_element_choices'):
+        for name in ('_large_trajectory', '_refresh_coordinates', '_refresh_after_geometry_edit', '_refresh_element_choices'):
             setattr(DummyWindow, name, methods[name])
 
     def test_translation_updates_coordinate_cells_and_keeps_selection(self):

@@ -13,7 +13,7 @@ import re
 STYLE_KEYS = (
     'style', 'atom_scale', 'bond_scale', 'background', 'bonds',
     'atom_palette', 'bond_palette', 'surface_finish', 'element_colors',
-    'space_filling_radii', 'space_filling_scale',
+    'space_filling_radii', 'space_filling_scale', 'highlight_size',
 )
 
 STYLE_MODES = ('Ball and stick', 'Space filling', 'Sticks', 'Wireframe', 'Polyhedral')
@@ -46,7 +46,7 @@ def _preset(style='Ball and stick', atom_scale=.45, bond_scale=.05,
                 background=background, bonds=bonds, atom_palette=atom_palette,
                 bond_palette=bond_palette, surface_finish=surface_finish,
                 element_colors={}, space_filling_radii=space_filling_radii,
-                space_filling_scale=space_filling_scale)
+                space_filling_scale=space_filling_scale, highlight_size=50.)
 
 
 BUILTIN_PRESETS = OrderedDict([
@@ -81,13 +81,14 @@ def snapshot(options):
 
 def validate_preset(values):
     """Validate a saved user preset before it is applied to render options."""
-    optional = {'element_colors', 'space_filling_radii', 'space_filling_scale'}
+    optional = {'element_colors', 'space_filling_radii', 'space_filling_scale', 'highlight_size'}
     if not isinstance(values, dict) or not all(k in values for k in STYLE_KEYS if k not in optional):
         raise ValueError('Incomplete style preset')
     # v0.8.0 files predate per-preset element colours.
     normalized = {k: values[k] for k in STYLE_KEYS if k not in optional}
     normalized['space_filling_radii'] = values.get('space_filling_radii', 'Atomic')
     normalized['space_filling_scale'] = values.get('space_filling_scale', 1.)
+    normalized['highlight_size'] = values.get('highlight_size', 50.)
     if normalized['space_filling_radii'] not in ('Atomic', 'Ionic', 'van der Waals'):
         raise ValueError('Invalid VESTA radius type')
     colors = values.get('element_colors', {})
@@ -109,7 +110,8 @@ def validate_preset(values):
         raise ValueError('Unsupported bond palette')
     if normalized['surface_finish'] not in SURFACE_FINISHES:
         raise ValueError('Unsupported surface finish')
-    for key, lo, hi in (('atom_scale', .20, 1.8), ('space_filling_scale', .20, 1.8), ('bond_scale', .03, .35)):
+    for key, lo, hi in (('atom_scale', .20, 1.8), ('space_filling_scale', .20, 1.8),
+                        ('bond_scale', .03, .35), ('highlight_size', 0., 100.)):
         value = normalized[key]
         if isinstance(value, bool) or not isinstance(value, (int, float)) or not lo <= value <= hi:
             raise ValueError(f'Invalid {key}')

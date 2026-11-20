@@ -1,5 +1,9 @@
 # LELE
 
+**4.0.0 更新**　加快大体积 CUBE、OUTCAR、AIMD 轨迹和 WAVECAR 的读取与显示。长轨迹保留全部帧和双精度坐标，编辑帧与计算源记录彼此独立。[实测数据和使用说明](verification/v4.0.0/README.md)
+
+**3.18.0 更新**　普通右键拖动绕全部原子的几何中心旋转，Alt＋右键绕移动片段的几何中心旋转。Edit → Mirror selected fragment 可按 YZ、XZ 或 XY 平面镜像所选原子。Style → Highlight size 可调节高光大小。File → Apply new coordinates 可浏览本地 POSCAR、CONTCAR 和其他计算输入，预览写回路径与差异。目标文件的 Selective dynamics 按行保留，新增行补 T T T，减少时从末尾截断。
+
 **3.17.0 更新**　可手动关联 CP2K 优化、AIMD 和 xTB 优化轨迹，点曲线查看对应结构。Results / info 支持复制，底部原文页和原子索引说明已移除。[更新说明](docs/FEATURES_v3.17.0_CN.md)
 
 **3.16.0 更新**　加快 Alt＋右键片段旋转，支持 DIM-GROUP 周期结构和 XSF 三维等值面。调整 11 种常用元素的默认配色，将 Style 三条滑杆的默认值置于中点，主窗口标题栏改为灰色。[更新说明](docs/FEATURES_v3.16.0_CN.md)

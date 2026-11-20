@@ -8,7 +8,8 @@ from ase.io.xsf import iread_xsf
 
 from .core import Document, Volume
 from .output_text import check_load_cancelled, open_output_text
-from .volumetric_input import MAX_GRID_VALUES, _FieldStream, _array
+from .volumetric_input import _FieldStream, _array
+from .grid_memory import AUTO, scalar_limit
 
 _DIMENSIONS = ('ATOMS', 'POLYMER', 'SLAB', 'CRYSTAL')
 _GRID = re.compile(r'(?:BEGIN_)?DATAGRID_?3D(?:[_\s]+(.*))?$', re.I)
@@ -112,7 +113,7 @@ def _field(stream, lines, label, frame, remaining):
     return Volume(data, origin, basis, label, 'source units', periodic, provenance=provenance), count
 
 
-def read_xsf_document(path, *, max_points=MAX_GRID_VALUES, max_frames=None):
+def read_xsf_document(path, *, max_points=AUTO, max_frames=None):
     from .formats import _frame_from_ase
     path = Path(path)
     with open_output_text(path) as source:
@@ -128,7 +129,7 @@ def read_xsf_document(path, *, max_points=MAX_GRID_VALUES, max_frames=None):
         fields = []
         used_labels = set()
         block = None
-        remaining = max_points
+        remaining = scalar_limit(max_points)
         lines = _content(stream)
         try:
             for line in lines:

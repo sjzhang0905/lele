@@ -79,17 +79,16 @@ def test_reconstruction_gate_metadata_and_periodicity(tmp_path):
     assert not w.validate_reconstruction()
     assert 'not a verified' in w.reconstruction_reason
 
-def test_outcar_companion_is_unambiguous_and_labeled(tmp_path,monkeypatch):
-    from lele.core import Frame
-    from types import SimpleNamespace
+def test_outcar_companion_is_unambiguous_and_labeled(tmp_path):
     p=write_wavecar(tmp_path/'WAVECAR')
-    frame=Frame(['H'],np.zeros((1,3)),np.eye(3),(True,True,True))
-    monkeypatch.setattr('lele.vasp_results.read_vasp_results',lambda path:SimpleNamespace(frames=lambda:[frame]))
-    (tmp_path/'OUTCAR(1)').write_text('test')
+    outcar = ('vasp.6.4.0\n TITEL = PAW H\n ions per type = 1\n direct lattice vectors\n'
+              ' 1 0 0\n 0 1 0\n 0 0 1\n POSITION     TOTAL-FORCE (eV/Angst)\n'
+              ' -------\n 0 0 0 0 0 0\n')
+    (tmp_path/'OUTCAR(1)').write_text(outcar)
     doc=read_wavecar(p)
     assert len(doc.frames)==1 and 'OUTCAR(1)' in doc.note
     assert 'does not establish an exact calculation match' in doc.note
     assert 'raw occupation' in doc.note
-    (tmp_path/'OUTCAR(2)').write_text('test')
+    (tmp_path/'OUTCAR(2)').write_text(outcar)
     doc=read_wavecar(p)
     assert not doc.frames and 'Multiple matching OUTCAR' in doc.note

@@ -11,7 +11,8 @@ from .core import Volume
 from .field_mapping import field_transform
 from .output_text import check_load_cancelled, load_progress
 
-MAX_FIELD_VALUES = 64_000_000
+from .grid_memory import AUTO, scalar_limit
+MAX_FIELD_VALUES = AUTO
 GRID_ATOL = 1e-6  # Å, allows text round-trip precision, not real alignment.
 GRID_RTOL = 1e-8
 DECLARED_UNITS = ('e/Å³', 'e/Bohr³', 'eV', 'Hartree', 'dimensionless',
@@ -131,8 +132,8 @@ def combine_fields(terms, *, target_document=None, target_frame=None,
     shape = reference.data.shape
     if len(shape) != 3 or min(shape) < 2:
         raise ValueError('A field must be a three-dimensional grid with at least two nodes per direction.')
-    if sum(v.data.size for v in target.volumes) + reference.data.size > MAX_FIELD_VALUES:
-        raise ValueError('Adding this result would exceed the 64,000,000 scalar-value limit for the document.')
+    if sum(v.data.size for v in target.volumes) + reference.data.size > scalar_limit(MAX_FIELD_VALUES):
+        raise ValueError('Adding this result would exceed the available scalar-field memory budget for the document.')
     origin, basis = _effective_grid(target, reference)
     if reference.periodic and not np.allclose(basis*np.asarray(shape)[:, None],
             target_frame.cell, atol=GRID_ATOL, rtol=GRID_RTOL):
@@ -209,7 +210,7 @@ def append_field_result(document, result, *, expected_active):
         raise ValueError('The active reference field changed. Reopen field arithmetic and calculate again.')
     if result.provenance.get('operation') != 'field_arithmetic':
         raise ValueError('This is not a completed field-arithmetic result.')
-    if sum(v.data.size for v in document.volumes)+result.data.size > MAX_FIELD_VALUES:
+    if sum(v.data.size for v in document.volumes)+result.data.size > scalar_limit(MAX_FIELD_VALUES):
         raise ValueError('The resulting document exceeds the scalar-value memory limit.')
     check_load_cancelled()
     document.volumes.append(result)

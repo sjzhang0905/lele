@@ -190,64 +190,87 @@ def nwchem(lines):
     return [r for r in results if r.nuclei]
 
 
-def vasp(lines,symbols=()):
-    results=[];i=0
-    while i<len(lines):
-        if i%128==0:check_load_cancelled()
-        if 'CSA tensor' not in lines[i]:i+=1;continue
-        start=i;j=i+1
-        while j<len(lines) and not re.search(r'IF\s+SPAN|CSA tensor',lines[j],re.I):j+=1
-        segment=lines[start:j]
-        header=' '.join(segment[:20]).lower()
-        modern='bdir' in header
-        sign=1. if 'iso_shield' in header else -1.
-        group='valence + core' if modern and 'core contribution' in header else 'valence only'
-        pair=None
-        def create_pair(label,line):
-            note=('ISO_SHIFT is negated to shielding; no reference shift has been added. ' if sign<0 else
-                  'ISO_SHIELD is retained as shielding. ')
-            records=[NMRResult('VASP',label+' · '+g,line,
-                     note=note+'SPAN and SKEW retain their printed conventions.')
-                     for g in ('excluding G=0','including G=0')]
-            results.extend(records);return records
-        k=0
-        while k<len(segment):
-            line=segment[k]
+def vasp(lines, symbols=(), *, start_line=1):
+    from collections import deque
+    from itertools import chain, groupby, islice
+    end_section = re.compile(r'IF\s+SPAN|CSA tensor', re.I)
+
+    def numbered_sections():
+        active = None
+        for line_no,line in enumerate(lines, start_line):
+            if line_no % 512 == 0:
+                check_load_cancelled()
+            if 'CSA tensor' in line:
+                active = line_no
+            elif end_section.search(line):
+                active = None
+            yield active, line_no, line
+
+    results = []
+    for start, group_rows in groupby(numbered_sections(), key=lambda item:item[0]):
+        if start is None:
+            continue
+        first = list(islice(group_rows,20))
+        header = ' '.join(row[2] for row in first).lower()
+        modern = 'bdir' in header
+        sign = 1. if 'iso_shield' in header else -1.
+        group = 'valence + core' if modern and 'core contribution' in header else 'valence only'
+        pair = None
+
+        def create_pair(label, line_no):
+            note = ('ISO_SHIFT is negated to shielding; no reference shift has been added. ' if sign<0 else
+                    'ISO_SHIELD is retained as shielding. ')
+            records = [NMRResult('VASP',label+' · '+g,line_no,
+                       note=note+'SPAN and SKEW retain their printed conventions.')
+                       for g in ('excluding G=0','including G=0')]
+            results.extend(records)
+            return records
+
+        rows = chain(first, group_rows)
+        window = deque(islice(rows,4))
+        while window:
+            _, line_no, line = window[0]
+            advance = 1
             if '(absolute,' in line.lower():
-                group='valence + core' if 'core' in line.lower() else 'valence only'
-                pair=create_pair(group,start+k+1)
-            bits=line.split()
+                group = 'valence + core' if 'core' in line.lower() else 'valence only'
+                pair = create_pair(group,line_no)
+            bits = line.split()
             if not modern and pair is not None and len(bits)==7 and bits[0].isdigit():
-                try:vals=[number(v) for v in bits[1:]]
-                except ValueError:k+=1;continue
-                no=int(bits[0]);sym=symbols[no-1] if 0<no<=len(symbols) else '?'
-                if no<1:k+=1;continue
-                for g in range(2):
-                    iso,span,skew=vals[g*3:g*3+3]
-                    pair[g].nuclei.append(NMRNucleus(no,sym,sign*iso,source_number=no,
-                        source_line=start+k+1,span_ppm=span,skew=skew,raw_value_ppm=iso))
-            elif modern and len(bits)==8 and bits[0].isdigit() and bits[1]=='1':
-                no=int(bits[0]);sym=symbols[no-1] if 0<no<=len(symbols) else '?'
-                if no<1:k+=1;continue
-                try:
-                    values=[[number(v) for v in bits[2:]]]
-                    for offset in (1,2):
-                        rest=segment[k+offset].split()
-                        if len(rest)!=7 or rest[0]!=str(offset+1):raise ValueError()
-                        values.append([number(v) for v in rest[1:]])
-                    iso_values=[number(v) for v in re.findall(NUMBER,segment[k+3])]
-                    if len(iso_values)!=6 or '(' not in segment[k+3]:raise ValueError()
-                except (ValueError,IndexError):k+=1;continue
-                if pair is None:pair=create_pair(group,start+1)
-                for g in range(2):
-                    iso,span,skew=iso_values[g*3:g*3+3]
-                    # Each printed BDIR row is an applied-field column.
-                    tensor=sign*np.array(values)[:,g*3:g*3+3].T
-                    pair[g].nuclei.append(NMRNucleus(no,sym,sign*iso,tensor=tensor,source_number=no,
-                        source_line=start+k+1,span_ppm=span,skew=skew,raw_value_ppm=iso))
-                k+=3
-            k+=1
-        i=j
+                no = int(bits[0])
+                try: vals = [number(v) for v in bits[1:]]
+                except ValueError: vals = None
+                if no>0 and vals is not None:
+                    sym = symbols[no-1] if no<=len(symbols) else '?'
+                    for g in range(2):
+                        iso,span,skew = vals[g*3:g*3+3]
+                        pair[g].nuclei.append(NMRNucleus(no,sym,sign*iso,source_number=no,
+                            source_line=line_no,span_ppm=span,skew=skew,raw_value_ppm=iso))
+            elif modern and len(window)==4 and len(bits)==8 and bits[0].isdigit() and bits[1]=='1':
+                no = int(bits[0])
+                if no>0:
+                    try:
+                        values = [[number(v) for v in bits[2:]]]
+                        for offset in (1,2):
+                            rest = window[offset][2].split()
+                            if len(rest)!=7 or rest[0]!=str(offset+1):raise ValueError()
+                            values.append([number(v) for v in rest[1:]])
+                        iso_values = [number(v) for v in re.findall(NUMBER,window[3][2])]
+                        if len(iso_values)!=6 or '(' not in window[3][2]:raise ValueError()
+                    except ValueError:
+                        pass
+                    else:
+                        if pair is None:pair=create_pair(group,start)
+                        sym = symbols[no-1] if no<=len(symbols) else '?'
+                        for g in range(2):
+                            iso,span,skew = iso_values[g*3:g*3+3]
+                            tensor = sign*np.array(values)[:,g*3:g*3+3].T
+                            pair[g].nuclei.append(NMRNucleus(no,sym,sign*iso,tensor=tensor,
+                                source_number=no,source_line=line_no,span_ppm=span,
+                                skew=skew,raw_value_ppm=iso))
+                        advance = 4
+            for _ in range(advance):
+                window.popleft()
+            window.extend(islice(rows,advance))
     return [r for r in results if r.nuclei]
 
 
@@ -277,6 +300,10 @@ def read_nmr_results(path,kind='',document=None):
     else:
         header='\n'.join(lines[:150])
         results=cp2k(lines) if 'Shielding atom at atomic positions' in header else gipaw(lines)
+    return link_nmr_results(path, results, document)
+
+
+def link_nmr_results(path, results, document):
     for result in results:
         result.source_path=str(path)
         if document is None or not document.frames:continue

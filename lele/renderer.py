@@ -93,6 +93,7 @@ class MoleculeRenderer(CrystalRendering):
         self._lights = create_lights(renderer)
         self.apply_lighting()
         self.dynamic = []
+        self._finished_properties = []
         self.frame: Frame | None = None
         self.volume: Volume | None = None
         self.field_warnings = []
@@ -104,6 +105,7 @@ class MoleculeRenderer(CrystalRendering):
         self.periodic_preview = None
         self.boundary_display = None
         self._boundary_cache = None
+        self._scalar_grids = {}
         self.dipole_vector = None
         self.dipole_label = 'μ'
         self.corner_labels = []
@@ -146,6 +148,12 @@ class MoleculeRenderer(CrystalRendering):
         from .lighting import update_lights
         update_lights(self._lights, self.options)
 
+    def atom_center(self):
+        """Mean Cartesian site position in the current display orientation, before Boundary copies."""
+        if self.frame is not None and len(self.frame.positions):
+            return self.frame.positions.mean(axis=0)
+        return None
+
     def clear(self):
         preview = getattr(self, '_fragment_pan_preview', None)
         if preview is not None:
@@ -160,7 +168,9 @@ class MoleculeRenderer(CrystalRendering):
         for actor in self.dynamic:
             self.renderer.RemoveViewProp(actor)
         self.dynamic.clear()
+        self._finished_properties.clear()
         self._keepalive.clear()
+        self._scalar_grids.clear()
         self.atom_highlights.clear()
         self.fragment_geometry_actors.clear()
         self._label_actors.clear()
@@ -198,7 +208,11 @@ class MoleculeRenderer(CrystalRendering):
             except ValueError as exc:
                 self.alignment_note = 'Display alignment unavailable for this frame: ' + str(exc)
         self.frame, self.volume = frame, volume
+        active = {(id(v.data), v.periodic) for v in fields} if (
+            volume is not None and self.options.show_volume and self.options.volume_signs != 'None') else set()
+        retained = {key: item for key, item in self._scalar_grids.items() if key in active}
         self.clear()
+        self._scalar_grids = retained
         self.mode_arrow_actors = []
         self.renderer.SetBackground(rgb(self.options.background))
         self.apply_lighting()
@@ -306,17 +320,14 @@ class MoleculeRenderer(CrystalRendering):
         return element_palette_color(self.options,symbol,for_bond=for_bond)
 
     def _finish(self, prop):
-        lighting = {
-            'Balanced': (.22, .72, .36, 24),
-            'Glossy': (.17, .70, .78, 60),
-            'Matte': (.32, .67, .05, 9),
-        }
-        ambient, diffuse, specular, power = lighting.get(
-            self.options.surface_finish, lighting['Balanced'])
-        prop.SetAmbient(ambient)
-        prop.SetDiffuse(diffuse)
-        prop.SetSpecular(specular)
-        prop.SetSpecularPower(power)
+        from .lighting import apply_surface_finish
+        apply_surface_finish(prop, self.options)
+        self._finished_properties.append(prop)
+
+    def refresh_surface_finish(self):
+        from .lighting import apply_surface_finish
+        for prop in self._finished_properties:
+            apply_surface_finish(prop, self.options)
 
     def atom_color(self, frame, index, *, for_bond=False):
         override = appearance(frame, index).color

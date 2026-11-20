@@ -11,6 +11,27 @@ DEFAULT_LIGHT_ENABLED = (True, True, False, False)
 DEFAULT_LIGHT_INTENSITIES = (.85, .45, .45, .35)
 DEFAULT_LIGHT_POSITIONS = ((-.1, .1, 1.), (1., 2., .5), (-1., 2., -1.), (-1., -1., 0.))
 
+_FINISHES = {
+    'Balanced': (.22, .72, .36, 24.),
+    'Glossy': (.17, .70, .78, 60.),
+    'Matte': (.32, .67, .05, 9.),
+}
+
+
+def apply_surface_finish(prop, options):
+    ambient, diffuse, specular, power = _FINISHES.get(options.surface_finish, _FINISHES['Balanced'])
+    # Interpolate the Phong exponent logarithmically within VTK's supported
+    # range. The middle position exactly reproduces each material's old finish.
+    adjustment = (options.highlight_size - 50.) / 50.
+    if adjustment < 0:
+        power *= (128. / power) ** -adjustment
+    else:
+        power **= 1. - adjustment
+    prop.SetAmbient(ambient)
+    prop.SetDiffuse(diffuse)
+    prop.SetSpecular(specular)
+    prop.SetSpecularPower(power)
+
 
 def light_settings(options):
     """Validate persisted settings before updating any live lights."""

@@ -12,13 +12,31 @@ PALETTES = ('VMD RWB', 'VMD BWR', 'Red-white-blue', 'Blue-white-red', 'Viridis')
 DEFAULT_PALETTE = 'VMD RWB'
 
 
+def _finite_range(values):
+    data = np.asarray(values)
+    if not data.size:
+        return None
+    low, high = float(np.min(data)), float(np.max(data))
+    if np.isfinite(low) and np.isfinite(high):
+        return low, high
+    # Imported fields are normally finite. Only the exceptional path needs a
+    # mask, and never one as large as a multi-gigabyte grid.
+    low, high = np.inf, -np.inf
+    for block in np.nditer(data, flags=['external_loop', 'buffered'], order='K',
+                           op_flags=['readonly', 'contig'], buffersize=262144):
+        check_load_cancelled()
+        finite = block[np.isfinite(block)]
+        if finite.size:
+            low, high = min(low, float(finite.min())), max(high, float(finite.max()))
+    return (low, high) if low <= high else None
+
+
 def field_data_limits(values):
     """Finite scalar range, expanded only for a constant field."""
-    data = np.asarray(values)
-    finite = data[np.isfinite(data)]
-    if not finite.size:
+    limits = _finite_range(values)
+    if limits is None:
         raise ValueError('The field contains no finite scalar values.')
-    low, high = float(finite.min()), float(finite.max())
+    low, high = limits
     if low == high:
         delta = max(abs(low)*1e-6, 1e-12)
         return low-delta, high+delta
@@ -32,11 +50,10 @@ def suggested_isovalue(values, requested):
     For a density field, try its positive magnitude before choosing an interior
     level. Never alter the underlying density or silently normalize it.
     """
-    data = np.asarray(values)
-    finite = data[np.isfinite(data)]
-    if not finite.size:
+    limits = _finite_range(values)
+    if limits is None:
         return float(requested)
-    low, high = float(finite.min()), float(finite.max())
+    low, high = limits
     requested = float(requested)
     if low < requested < high or low == high:
         return requested
@@ -80,6 +97,7 @@ def sample_field(volume, points, *, chunk_size=65536, progress=None):
     Periodic fields wrap using all three grid periods. Nonperiodic fields are
     sampled only from their first through last grid nodes; no extrapolation.
     """
+    from scipy.ndimage import map_coordinates
     data = np.asarray(volume.data)
     basis = np.asarray(volume.voxel_vectors, float)
     if not np.isfinite(basis).all() or abs(np.linalg.det(basis)) < 1e-15:
@@ -100,21 +118,10 @@ def sample_field(volume, points, *, chunk_size=65536, progress=None):
             # roundoff at the exact edge without allowing real extrapolation.
             valid &= ((p >= -2e-5) & (p <= shape-1+2e-5)).all(axis=1)
             p = np.clip(np.where(np.isfinite(p), p, 0), 0, shape-1)
-        low = np.floor(p).astype(int)
-        fraction = p-low
-        # mod(-epsilon, n) can round to exactly n at a periodic seam.
-        # Keep its zero fractional weight, but wrap both integer neighbors.
-        if volume.periodic:
-            low %= shape
-        high = (low+1) % shape if volume.periodic else np.minimum(low+1, shape-1)
-        values = np.zeros(len(p))
-        for x in (0,1):
-            for y in (0,1):
-                for z in (0,1):
-                    bit=np.array([x,y,z]);index=np.where(bit, high, low)
-                    weight=np.prod(np.where(bit, fraction, 1-fraction),axis=1)
-                    values += data[tuple(index.T)] * weight
-        result[start:start+len(p)] = np.where(valid, values, np.nan)
+        values = result[start:start+len(p)]
+        map_coordinates(data, p.T, output=values, order=1, prefilter=False,
+                        mode='grid-wrap' if volume.periodic else 'nearest')
+        values[~valid] = np.nan
         report(start+len(p))
         if progress is not None:
             progress('Sampling color field on surface', start+len(p), len(points))
@@ -164,8 +171,9 @@ def prepare_field_attachment(target, frame, incoming):
     if periodic and not np.allclose(source.cell @ transform, frame.cell, atol=2e-4, rtol=1e-6):
         raise ValueError('Periodic field lattice does not match the current structure.')
     total = sum(v.data.size for v in target.volumes) + sum(v.data.size for v in incoming.volumes)
-    if total > 64_000_000:
-        raise ValueError('Combined fields exceed the 64,000,000 scalar-value memory limit.')
+    from .grid_memory import scalar_limit
+    if total > scalar_limit():
+        raise ValueError('Combined fields exceed the available scalar-field memory budget.')
     added=[]
     for volume in incoming.volumes:
         check_load_cancelled()

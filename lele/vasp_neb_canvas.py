@@ -9,12 +9,16 @@ class NebCanvas(LegendCanvas):
         super().__init__(parent)
         self.setObjectName('vaspNebCanvas')
         self.scene = None
+        self.rotation_center = None
         self._drag = None
-        self.setToolTip('Left drag rotates; right drag rolls; wheel zooms.')
+        self._roll_center = None
+        self.setToolTip('Left drag rotates. Right drag rolls about the atom center. Wheel zooms.')
 
     def mousePressEvent(self, event):
         if event.button() in (Qt.MouseButton.LeftButton, Qt.MouseButton.RightButton):
             self._drag = (event.position(), event.button())
+            if event.button() == Qt.MouseButton.RightButton and self.rotation_center is not None:
+                self._roll_center = self.rotation_center()
             event.accept()
         else:
             super().mousePressEvent(event)
@@ -28,20 +32,25 @@ class NebCanvas(LegendCanvas):
         if button == Qt.MouseButton.LeftButton:
             camera.Azimuth(-.45 * (now.x() - old.x()))
             camera.Elevation(.45 * (now.y() - old.y()))
+            camera.OrthogonalizeViewUp()
+            self.scene.ResetCameraClippingRange()
         else:
-            camera.Roll(-.65 * (now.x() - old.x()))
-        camera.OrthogonalizeViewUp()
-        self.scene.ResetCameraClippingRange()
+            from .interaction import roll_camera
+            roll_camera(camera, self._roll_center, now.x() - old.x())
         self._drag = (now, button)
         self.render()
         event.accept()
 
     def mouseReleaseEvent(self, event):
+        if self._drag is not None and event.position() != self._drag[0]:
+            self.mouseMoveEvent(event)
         self._drag = None
+        self._roll_center = None
         event.accept()
 
     def focusOutEvent(self, event):
         self._drag = None
+        self._roll_center = None
         super().focusOutEvent(event)
 
     def wheelEvent(self, event):
