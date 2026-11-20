@@ -57,14 +57,15 @@ class Cp2kResults(CalculationResults):
     dipoles: list=field(default_factory=list)
     metadata: dict=field(default_factory=dict)
 
-    def frames(self,max_frames=None):
+    def frames(self,max_frames=None,*,store=None):
         frames=[]
         for _,step in scan_lines(self.steps,'CP2K: collecting structure frames'):
             check_load_cancelled()
             step.frame_index=None
             if step.geometry is None:continue
             if max_frames is not None and len(frames)>=max_frames:raise ValueError(f'Trajectory exceeds {max_frames} frames')
-            frame=step.geometry.clone();frame.energy_ev=step.energy_ev
+            frame=step.geometry.clone() if store is None else store.editable_frame(step.geometry)
+            frame.energy_ev=step.energy_ev
             frame.info.update(step.info,source_line=step.source_line,
                               calculation_index=step.job_index,stage_index=step.stage_index)
             frame.info.setdefault('source_kind','cp2k_out')
@@ -564,7 +565,7 @@ def read_cp2k_output(path):
     return results
 
 
-def read_cp2k_xyz(path,max_frames=None,*,strict=False):
+def read_cp2k_xyz(path,max_frames=None,*,strict=False,store=None):
     from .trajectory_io import xyz_blocks,IncompleteXYZ,TruncatedXYZ
     results=Cp2kResults('CP2K');results.jobs.append(CalculationJob(0,1,tasks={'Structure trajectory'}))
     results.stages.append(CalculationStage(0,0,'CP2K XYZ trajectory','trajectory',1))
@@ -594,6 +595,8 @@ def read_cp2k_xyz(path,max_frames=None,*,strict=False):
                     pbc=tuple(x in ('t','true','1') for x in flags)
                     info['trajectory_pbc']=True
             frame=Frame(symbols,positions,cell,pbc,energy_ev=value,info=info)
+            if store is not None:
+                store.append(frame)
             results.steps.append(Cp2kStep(0,source,frame,value,stage_index=0,cycle=int(step[1]) if step else len(results.steps)+1,info=info))
             if value is not None:results.jobs[0].energy_ev=value
     except IncompleteXYZ as error:

@@ -9,6 +9,7 @@ from math import prod
 from collections import deque
 import numpy as np
 from .core import Document, Volume
+from .grid_memory import AUTO, scalar_limit
 from .output_text import check_load_cancelled, load_progress, open_output_text, LoadCancelled
 from .vasp_volume_detection import is_vasp_volume, named_vasp_volume_kind
 
@@ -195,7 +196,7 @@ def _vasp_labels(kind,n):
     return [first]+[f'Charge channel {i+1}' for i in range(1,n)]
 
 
-def read_vasp_volume_document(path,*,max_points=MAX_GRID_VALUES):
+def read_vasp_volume_document(path,*,max_points=AUTO):
     """Read all complete scalar channels, excluding PAW augmentation values.
 
     A malformed/truncated field retains geometry but never presents a partial
@@ -203,6 +204,7 @@ def read_vasp_volume_document(path,*,max_points=MAX_GRID_VALUES):
     """
     from ase.io.vasp import read_vasp_configuration
     from .formats import _frame_from_ase
+    max_points=scalar_limit(max_points)
     path=Path(path);kind=_kind(path)
     with open_output_text(path) as stream:
         atoms=read_vasp_configuration(stream)
@@ -236,7 +238,7 @@ def read_vasp_volume_document(path,*,max_points=MAX_GRID_VALUES):
     return doc
 
 
-def read_cube_document(path,*,max_points=MAX_GRID_VALUES):
+def read_cube_document(path,*,max_points=AUTO):
     from .cube_input import read_cube_file
     from .formats import _frame_from_ase
     path=Path(path)

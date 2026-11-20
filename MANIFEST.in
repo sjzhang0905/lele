@@ -10,3 +10,6 @@ recursive-include verification/v3.5.2 *.json *.xml
 recursive-include lele/assets *.png *.ico
 recursive-include .github *.yml
 global-exclude __pycache__ *.py[cod]
+
+recursive-include lele/native *.cpp *.dll *.so
+recursive-include verification/v4.0.0 *.md *.json *.xml

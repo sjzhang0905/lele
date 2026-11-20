@@ -258,6 +258,7 @@ class VaspNebDialog(QDialog):
         self.canvas.scene = self.scene
         self.canvas.GetRenderWindow().AddRenderer(self.scene)
         self.drawing = MoleculeRenderer(self.scene)
+        self.canvas.rotation_center = self.drawing.atom_center
         # Draw the surroundings and the path independently. This keeps all
         # main-canvas styles (including Boundary) on the reference structure,
         # without replicating or bonding the moving atoms between images.

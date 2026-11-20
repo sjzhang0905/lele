@@ -175,10 +175,13 @@ def test_poscar_cartesian_velocities_preserved_and_reordered_restart_rejected(tm
         replace_poscar_coordinates(text, frame)
 
 
-def test_poscar_rejects_species_change_and_complex_restart_tail():
+def test_poscar_previews_changed_potcar_order_and_rejects_malformed_restart(tmp_path):
     frame = periodic();frame.symbols.reverse()
-    with pytest.raises(ValueError, match='POTCAR'):
-        replace_poscar_coordinates(POSCAR, frame)
+    path = tmp_path / 'CONTCAR'
+    path.write_text(POSCAR)
+    plan = prepare_coordinate_update(path, frame)
+    assert 'POTCAR' in plan.summary and plan.validated_document.frames[0].symbols == ['H', 'C']
+    assert path.read_text() == POSCAR
     with pytest.raises(ValueError, match='predictor'):
         replace_poscar_coordinates(POSCAR + '\nPREDICTOR-CORRECTOR\n1 2 3\n', periodic())
 

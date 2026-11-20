@@ -87,18 +87,60 @@ def draw_fields(draw, active, fields, active_index):
             draw.field_warnings.append(f'Layer {number}: source field is unavailable.');continue
         spec={**spec,'_layer_number':number}
         groups.setdefault(index,[]).append(spec)
+    visible = {(id(fields[i].data), fields[i].periodic) for i in groups}
+    draw._scalar_grids = {k: v for k, v in draw._scalar_grids.items() if k in visible}
     for index,layers in groups.items():
         draw_volume(draw,fields[index],layers,fields)
+
+
+def _grid_signature(data):
+    # Arrays also have public, mutable NumPy views. Key cached meshes by the
+    # actual scalar contents so an in-place edit cannot leave a stale surface.
+    from hashlib import sha256
+    if data.flags.c_contiguous or data.flags.f_contiguous:
+        return sha256(data.ravel(order='K').view(np.uint8)).digest()
+    digest = sha256()
+    for block in np.nditer(data, flags=['external_loop', 'buffered', 'zerosize_ok'],
+                           op_flags=['readonly', 'contig'], order='K', buffersize=262144):
+        digest.update(block.view(np.uint8))
+    return digest.digest()
+
+
+def _prepared_grid(draw, volume):
+    source = volume.data
+    key = (id(source), volume.periodic)
+    signature = _grid_signature(source)
+    cached = draw._scalar_grids.get(key)
+    if cached is not None and cached[0] is source and cached[1] == signature and cached[2] == source.shape:
+        return cached[3:]
+    if volume.periodic:
+        ordered = np.empty(tuple(n+1 for n in source.shape), dtype=source.dtype, order='F')
+        ordered[:-1, :-1, :-1] = source
+        ordered[-1, :-1, :-1] = source[0]
+        ordered[:, -1, :-1] = ordered[:, 0, :-1]
+        ordered[:, :, -1] = ordered[:, :, 0]
+    else:
+        ordered = np.asfortranarray(source)
+    grid = vtkImageData()
+    grid.SetDimensions(*ordered.shape)
+    values = numpy_to_vtk(ordered.ravel(order='F'), deep=False)
+    values.SetName('volume_field')
+    grid.GetPointData().SetScalars(values)
+    limits = float(source.min()), float(source.max())
+    item = (source, signature, source.shape, grid, values, ordered, limits, {})
+    draw._scalar_grids[key] = item
+    return item[3:]
 
 
 def draw_volume(draw, volume, specs, fields=()):
     from .renderer import rgb
     if not specs or draw.options.volume_signs == 'None':return
-    data=np.pad(volume.data,((0,1),)*3,mode='wrap') if volume.periodic else volume.data
-    grid=vtkImageData();grid.SetDimensions(*data.shape)
-    values=numpy_to_vtk(np.ascontiguousarray(data.ravel(order='F')),deep=True)
-    values.SetName('volume_field');grid.GetPointData().SetScalars(values)
-    draw._keepalive.append((grid,values))
+    grid, values, buffer, limits, contours = _prepared_grid(draw, volume)
+    draw._keepalive.append((grid, values, buffer))
+    active_levels = {spec['value'] for spec in specs if spec['opacity']}
+    for level in tuple(contours):
+        if level not in active_levels:
+            del contours[level]
     matrix=vtkMatrix4x4()
     for i in range(3):
         for j in range(3):matrix.SetElement(i,j,float(volume.voxel_vectors[j,i]))
@@ -142,7 +184,7 @@ def draw_volume(draw, volume, specs, fields=()):
     if len(tiles)*len(specs)>512:
         draw.field_warnings.append('Too many surface copies (limit 512 per source field); reduce Boundary or layers.')
         return
-    low,high=float(data.min()),float(data.max())
+    low,high=limits
     for spec in specs:
         check_load_cancelled();validate_layer_mapping(spec)
         if not low<=spec['value']<=high:
@@ -150,9 +192,15 @@ def draw_volume(draw, volume, specs, fields=()):
                                        f'is outside source range [{low:.6g}, {high:.6g}]; no surface.')
             continue
         if spec['opacity']==0:continue
-        contour=vtkContourFilter();contour.SetInputData(grid);contour.SetValue(0,spec['value'])
-        contour.AddObserver('ProgressEvent',lambda a,_:ui_checkpoint('Computing isosurface',a.GetProgress(),1))
-        contour.Update()
+        level = spec['value']
+        contour = contours.get(level)
+        if contour is None:
+            contour = vtkContourFilter()
+            contour.SetInputData(grid)
+            contour.SetValue(0, level)
+            contour.AddObserver('ProgressEvent', lambda a, _: ui_checkpoint('Computing isosurface', a.GetProgress(), 1))
+            contour.Update()
+            contours[level] = contour
         transformed=vtkTransformPolyDataFilter();transformed.SetInputConnection(contour.GetOutputPort())
         transformed.SetTransform(transform);transformed.Update()
         poly=transformed.GetOutput()

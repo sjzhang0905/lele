@@ -22,7 +22,7 @@ SUPPORTED_INPUT_KINDS = frozenset({
 _LABELS = {
     'gaussian_in': 'Gaussian', 'orca_in': 'ORCA', 'nwchem_in': 'NWChem',
     'cp2k_in': 'CP2K', 'qe_in': 'Quantum ESPRESSO', 'siesta_in': 'SIESTA',
-    'vasp_in': 'VASP POSCAR',
+    'vasp_in': 'VASP POSCAR / CONTCAR',
 }
 
 
@@ -89,7 +89,7 @@ def _validated_document(text, path, frame):
 
 
 def prepare_coordinate_update(path, frame):
-    """Create a validated, read-only replacement plan for one loaded input."""
+    """Create a validated, read-only replacement plan for a local input."""
     from .site_occupancy import is_disordered
     path = Path(path).expanduser().resolve()
     if not path.is_file():
@@ -102,9 +102,10 @@ def prepare_coordinate_update(path, frame):
         raise ValueError('The current periodic structure has no valid cell.')
     kind = supported_input_kind(path)
     if kind is None:
-        raise ValueError('Select a loaded Gaussian, ORCA, NWChem, CP2K, QE, SIESTA or POSCAR input file.')
+        raise ValueError('The file to update must be a Gaussian, ORCA, NWChem, CP2K, QE, SIESTA or VASP POSCAR/CONTCAR input.')
     original = path.read_bytes()
     text, encoding, bom = _decode(original)
+    notes = []
     if kind in ('gaussian_in', 'orca_in', 'nwchem_in'):
         from .coordinate_templates_molecular import replace_molecular_coordinates
         updated = replace_molecular_coordinates(text, kind, frame)
@@ -113,7 +114,7 @@ def prepare_coordinate_update(path, frame):
         updated = replace_periodic_coordinates(text, kind, frame)
     else:
         from .coordinate_templates_poscar import replace_poscar_coordinates
-        updated = replace_poscar_coordinates(text, frame)
+        updated = replace_poscar_coordinates(text, frame, path=path, notes=notes)
     new_bytes = bom + updated.encode(encoding)
     document = _validated_document(updated, path, frame)
     # Fail preparation if a separate editor changed the file while parsing.
@@ -124,7 +125,15 @@ def prepare_coordinate_update(path, frame):
         description = 'current cell' if any(frame.pbc) else '30 × 30 × 30 Å cell'
     else:
         description = 'isolated coordinates'
-    summary = f'{_LABELS[kind]} · {len(frame.symbols)} atoms · {description}\nOnly structural text is replaced; calculation settings are retained.'
+    summary = f'{_LABELS[kind]} · {len(frame.symbols)} atoms · {description}'
+    if kind == 'vasp_in':
+        old_header, new_header = text.splitlines(), updated.splitlines()
+        if new_header[7].lstrip().lower().startswith('s'):
+            notes.insert(0, 'Selective dynamics follows target row order. Extra rows get T T T and surplus trailing rows are removed.')
+        if old_header[5].split() != new_header[5].split():
+            notes.append(f'Check the POTCAR sequence for these species blocks: {new_header[5].strip()}')
+        if notes:
+            summary += '\n' + '\n'.join(notes)
     changes = difflib.unified_diff(text.splitlines(keepends=True), updated.splitlines(keepends=True),
                                    fromfile=path.name, tofile=path.name + ' (updated)', n=3)
     preview = ''.join(changes)

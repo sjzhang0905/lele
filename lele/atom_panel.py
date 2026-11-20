@@ -172,7 +172,7 @@ class AtomPanel(QWidget):
         self._frame,self._colors=frame,list(colors)
         if frame is not None and len(self._colors)!=len(frame.symbols):
             self._colors=[appearance(frame,i).color or colour(s) for i,s in enumerate(frame.symbols)]
-        signature=None if frame is None else (id(frame),tuple(frame.symbols),tuple(tuple(s) for s in sites),tuple(component_rows(frame)))
+        signature=None if frame is None else (document_key,tuple(frame.symbols),tuple(tuple(s) for s in sites),tuple(component_rows(frame)))
         supplied=component_colors or {}
         self._component_colors={}
         with QSignalBlocker(self.tree):

@@ -45,7 +45,7 @@ class VaspResults(CalculationResults):
         self.vibrations = []
         self.frequency_records = []
 
-    def frames(self, max_frames=None):
+    def frames(self, max_frames=None, *, store=None):
         # Equal positions can still represent different times or unit cells.
         frames = []
         for _,step in scan_lines(self.steps,'VASP: collecting structure frames'):
@@ -55,7 +55,7 @@ class VaspResults(CalculationResults):
                 continue
             if max_frames is not None and len(frames) >= max_frames:
                 raise ValueError(f'Trajectory exceeds {max_frames} frames')
-            frame = step.geometry.clone()
+            frame = step.geometry.clone() if store is None else store.editable_frame(step.geometry)
             frame.energy_ev = step.energy_ev
             frame.info.update(step.info, calculation_index=step.job_index,
                               source_line=step.source_line,
@@ -198,8 +198,8 @@ def _frame(symbols, positions, cell, info):
     return Frame(list(symbols), positions, cell.copy(), (periodic,)*3, info=dict(info))
 
 
-def _read_outcar_segment(lines, offset, results):
-    counts, species, symbols, masses, printed_masses, tags = _metadata(lines)
+def _read_outcar_segment(lines, offset, results, *, selected_geometry=None):
+    counts, species, symbols, masses, printed_masses, tags = _metadata(lines.metadata)
     natoms = sum(counts) or int(tags.get('NIONS') or 0)
     ibrion = tags.get('IBRION')
     frequency = ibrion in (5, 6, 7, 8)
@@ -234,6 +234,8 @@ def _read_outcar_segment(lines, offset, results):
     i = 0
     progress=load_progress('VASP: ionic structures, energies and modes',len(lines))
     while i < len(lines):
+        i = lines.next_event(i)
+        if i >= len(lines):break
         check_load_cancelled()
         progress(i)
         line = lines[i]
@@ -247,23 +249,27 @@ def _read_outcar_segment(lines, offset, results):
         if 'free energie of the ion-electron system' in lower:
             in_scf = False
         if 'direct lattice vectors' in lower:
-            rows, end = _rows(lines, i+1, 3, 3)
+            rows, end = lines.rows(i+1, 3, 3)
             if len(rows) == 3:
                 cell = rows
                 results.periodic_geometry_seen = True
                 i = end
                 continue
         if 'position of ions in cartesian coordinates' in lower and natoms:
-            rows, end = _rows(lines, i+1, 3, natoms)
+            rows, end = lines.rows(i+1, 3, natoms)
             if len(rows) == natoms:
                 initial = (_frame(symbols, rows, cell, info), source)
                 i = end
                 continue
         if 'position' in lower and re.match(r'^\s*POSITION\s+TOTAL-FORCE', line, re.I):
             in_scf = False
-            rows, end = _rows(lines, i+1, 6, natoms or None)
             cycle += 1
-            frame = _frame(symbols, rows[:, :3], cell, info) if len(rows) == natoms else None
+            if selected_geometry is not None and i != selected_geometry:
+                current = VaspStep(ji, source, stage_index=si, cycle=cycle)
+                i += 1
+                continue
+            rows, end = lines.rows(i+1, 6, natoms or None)
+            frame = _frame(symbols, rows[:, :3].copy(), cell, info) if len(rows) == natoms else None
             current = VaspStep(ji, source, frame, stage_index=si, cycle=cycle)
             if frame is not None:
                 force = rows[:, 3:]
@@ -313,10 +319,10 @@ def _read_outcar_segment(lines, offset, results):
             j = i+1
             while j < min(len(lines), i+5) and not re.search(r'\bdx\s+dy\s+dz\b', lines[j], re.I):
                 j += 1
-            rows, end = _rows(lines, j+1, 6, natoms or None) if j < min(len(lines), i+5) else (np.empty((0, 6)), i+1)
+            rows, end = lines.rows(j+1, 6, natoms or None) if j < min(len(lines), i+5) else (np.empty((0, 6)), i+1)
             vectors = None
             if natoms and len(rows) == natoms and len(symbols) == natoms:
-                reference = _frame(symbols, rows[:, :3], cell, info)
+                reference = _frame(symbols, rows[:, :3].copy(), cell, info)
                 if mode_reference is None:
                     mode_reference = reference
                 if np.allclose(reference.positions, mode_reference.positions, atol=1.e-6, rtol=0):
@@ -379,15 +385,55 @@ def _read_outcar_segment(lines, offset, results):
                      'Force curves use Cartesian maximum/RMS components; no unprinted thresholds are assumed.')
 
 
-def read_vasp_results(path):
-    lines = read_output_lines(path)
+def read_vasp_results(path, *, nmr_records=None):
+    from .outcar_index import indexed_outcar
     results = VaspResults()
-    boundaries = [i for i, line in scan_lines(lines,'VASP: identifying runs') if VERSION.match(line)]
-    starts = [0] + boundaries[1:]
-    for start, end in zip(starts, starts[1:]+[len(lines)]):
-        _read_outcar_segment(lines if start==0 and end==len(lines) else lines[start:end], start, results)
+    with indexed_outcar(path) as runs:
+        for run in runs:
+            _read_outcar_segment(run, run.start, results)
+            if nmr_records is not None and run.nmr:
+                for start in run.nmr:
+                    if 'CSA tensor' not in run.records[start][1]:continue
+                    end = run.next_event(start+1)
+                    run.seek_line(start)
+                    from .nmr_input import vasp
+                    symbols = next((s.geometry.symbols for s in reversed(results.steps) if s.geometry is not None), ())
+                    from itertools import islice
+                    raw = islice(run.stream, end-start)
+                    lines = (row.decode('utf-8', errors='replace') for row in raw)
+                    nmr_records.extend(vasp(lines, symbols, start_line=run.start+start+1))
     results.note = ' '.join(dict.fromkeys(results.note.split('  '))).strip()
     return results
+
+
+def last_outcar_frame(path):
+    """Read one companion geometry, keeping the normal energy/cell association."""
+    from .outcar_index import indexed_outcar
+    with indexed_outcar(path) as runs:
+        for job in reversed(range(len(runs))):
+            run = runs[job]
+            counts, _, symbols, _, _, tags = _metadata(run.metadata)
+            n = sum(counts) or int(tags.get('NIONS') or 0)
+            if not n or len(symbols) != n:
+                continue
+            selected = -1  # No matching force table still permits initial/mode geometry.
+            for i in reversed(run.numbers):
+                if re.match(r'^\s*POSITION\s+TOTAL-FORCE', run.records[i][1], re.I):
+                    rows, _ = run.rows(i+1, 6, n)
+                    if len(rows) == n:
+                        selected = i
+                        break
+            result = VaspResults()
+            _read_outcar_segment(run, run.start, result, selected_geometry=selected)
+            for step in reversed(result.steps):
+                if step.geometry is not None:
+                    frame = step.geometry.clone()
+                    frame.energy_ev = step.energy_ev
+                    frame.info.update(step.info, calculation_index=job, stage_index=job,
+                                      source_line=step.source_line, optimization_cycle=step.cycle)
+                    if step.converged:frame.info['optimization_converged'] = True
+                    return frame
+    return None
 
 
 def read_oszicar(path):
@@ -439,7 +485,7 @@ def _xdat_header(lines, start):
     return cell, scale, species, counts, end
 
 
-def read_xdatcar(path, max_frames=None):
+def read_xdatcar(path, max_frames=None, *, store=None):
     from .output_text import open_output_text
     from .trajectory_io import numeric_array, coordinate_lines
     results=VaspResults()
@@ -512,8 +558,13 @@ def read_xdatcar(path, max_frames=None):
             try:
                 if len(rows)!=natoms:raise ValueError('Incomplete coordinate table')
                 if natoms >= 24:
-                    try:numeric=np.loadtxt(rows,comments=None,ndmin=2)
-                    except ValueError:numeric=numeric_array([row.split() for row in rows])
+                    from ._cube_native import coordinate_array
+                    native = coordinate_array(rows)
+                    if native is not None:
+                        numeric = native[0]
+                    else:
+                        try:numeric=np.loadtxt(rows,comments=None,ndmin=2)
+                        except ValueError:numeric=numeric_array([row.split() for row in rows])
                 else:numeric=numeric_array([row.split() for row in rows])
                 complete=(len(rows)==natoms and numeric.ndim==2 and numeric.shape[0]==natoms
                           and numeric.shape[1]>=3 and np.isfinite(numeric).all())
@@ -525,6 +576,8 @@ def read_xdatcar(path, max_frames=None):
             positions=numeric[:,:3]@cell if match[1].lower()=='direct' else numeric[:,:3]*scale
             frame=(Frame(list(symbols),positions,cell.copy(),(periodic,)*3,
                          info={'poscar_groups':list(groups)}) if len(symbols)==len(positions) else None)
+            if store is not None and frame is not None:
+                store.append(frame)
             results.steps.append(VaspStep(0,source,frame,stage_index=0,cycle=int(match[2])))
     progress(size)
     results.note=('XDATCAR contains structure records only; no energies or times are assumed. '+results.note).strip()

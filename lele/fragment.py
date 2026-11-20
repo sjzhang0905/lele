@@ -76,6 +76,21 @@ def apply_fragment_translation(frame: Frame, indices, offset) -> None:
     frame.positions[ids] += np.asarray(offset, dtype=float).reshape(3)
 
 
+def mirrored_coordinate(frame, images, axis=0, *, through_origin=False):
+    """Reflect the chosen Cartesian component, using the selected periodic images."""
+    offsets = {}
+    for image in images:
+        offset = float((np.asarray(image.shift) @ frame.cell)[axis])
+        if image.index in offsets and not np.isclose(offset, offsets[image.index], rtol=0., atol=1e-10):
+            raise ValueError('Choose one periodic image per atom, or build a supercell to edit copies independently.')
+        offsets[image.index] = offset
+    indices = list(offsets)
+    coordinates = frame.positions[indices, axis]
+    displayed = coordinates + list(offsets.values())
+    center = 0. if through_origin else displayed.mean()
+    return indices, coordinates + 2. * (center - displayed)
+
+
 def camera_basis(camera):
     """Return view direction, screen-right and screen-up unit vectors."""
     forward = np.asarray(camera.GetDirectionOfProjection(), dtype=float)

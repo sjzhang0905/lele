@@ -33,6 +33,7 @@ def numeric_array(rows):
 # Structured loadtxt parses normal XYZ atom rows in C without allocating a
 # Python string for every coordinate. Object strings preserve the complete
 # symbol token, so malformed labels cannot be truncated to valid elements.
+_SYMBOL_CODES = {ord(s[0])*256 + (ord(s[1]) if len(s) > 1 else 0): s for s in atomic_numbers}
 _XYZ_DTYPE = np.dtype([('symbol', object), ('position', float, (3,))])
 
 
@@ -48,12 +49,27 @@ def coordinate_lines(stream, count):
     return rows
 
 
-def _xyz_coordinates(rows, count, source, plain):
+def _xyz_coordinates(rows, count, source, plain, previous=None):
     if len(rows) != count:
         raise TruncatedXYZ(f'Incomplete XYZ coordinates at line {source}')
     # Tiny frames are cheaper through the straightforward reader. The slow
     # path also retains precise legacy errors and Fortran-D support.
     if count >= 24:
+        from ._cube_native import coordinate_array
+        native = coordinate_array(rows, labeled=True)
+        if native is not None:
+            positions, codes = native
+            key = codes.tobytes()
+            if previous and previous[0] == key:
+                return list(previous[1]), positions
+            try:
+                labels = [_SYMBOL_CODES[v] for v in codes.tolist()]
+            except KeyError:
+                pass  # Let the normal reader report the exact source line.
+            else:
+                if previous is not None:
+                    previous[:] = [key, tuple(labels)]
+                return labels, positions
         try:
             values = np.loadtxt(rows, dtype=_XYZ_DTYPE, comments=None, ndmin=1, encoding=None,
                                 usecols=None if plain else (0, 1, 2, 3))
@@ -87,6 +103,7 @@ def xyz_blocks(path, *, plain=False):
     from pathlib import Path
     size = Path(path).stat().st_size
     progress = load_progress('XYZ: reading coordinate frames', size)
+    previous = []
     with open_output_text(path) as stream:
         line_number = 0
         while True:
@@ -114,7 +131,7 @@ def xyz_blocks(path, *, plain=False):
                 raise NotPlainXYZ('Extended XYZ metadata requires ASE')
             rows = coordinate_lines(stream, count)
             line_number += len(rows)
-            symbols, positions = _xyz_coordinates(rows, count, source, plain)
+            symbols, positions = _xyz_coordinates(rows, count, source, plain, previous)
             progress(min(max(0, size-1), stream.buffer.tell()))
             yield source, comment, symbols, positions
 
@@ -123,10 +140,14 @@ def read_plain_xyz(path, max_frames=None):
     from ase.io.extxyz import key_val_str_to_dict
     from .core import Frame
     frames = []
-    for _, comment, symbols, positions in xyz_blocks(path, plain=True):
-        if max_frames is not None and len(frames) >= max_frames:
-            raise FrameLimitExceeded(f'Trajectory exceeds {max_frames} frames')
-        info = {str(k): str(v)[:180] for k, v in key_val_str_to_dict(comment).items()
-                if isinstance(v, (str, int, float, bool))}
-        frames.append(Frame(symbols, positions, info=info))
+    from .trajectory_storage import trajectory_store
+    with trajectory_store(path) as store:
+        for _, comment, symbols, positions in xyz_blocks(path, plain=True):
+            if max_frames is not None and len(frames) >= max_frames:
+                raise FrameLimitExceeded(f'Trajectory exceeds {max_frames} frames')
+            info = {str(k): str(v)[:180] for k, v in key_val_str_to_dict(comment).items()
+                    if isinstance(v, (str, int, float, bool))}
+            frames.append(Frame(symbols, positions, info=info))
+            store.append(frames[-1])
+        store.finish(editable=False)
     return frames

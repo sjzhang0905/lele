@@ -4,12 +4,54 @@ WAVECAR bands are read lazily; PAW on-site
 augmentation is not present in the reconstructed pseudo-wavefunction.
 """
 from dataclasses import dataclass
+from functools import lru_cache
+from math import prod
 from pathlib import Path
 import re
 import numpy as np
 from .core import Document, Frame, Volume
 from .calculation_results import CalculationResults, CalculationJob, Orbital, OrbitalSet
 from .output_text import check_load_cancelled
+
+
+KINETIC_EV_ANG2 = 3.80998211615486
+UNSUPPORTED_LAYOUT = ('WAVECAR is not a verified full-complex scalar wavefunction '
+                      '(Gamma-only, spinor/SOC, or incompatible cutoff convention). '
+                      'Export a CUBE with a compatible VASP tool.')
+GRID_LIMIT = 'WAVECAR FFT grid exceeds the display memory limit; use a smaller exported CUBE'
+
+
+def _ordered_basis(cell, k, cutoff, bounds, expected):
+    reciprocal = 2*np.pi*np.linalg.inv(np.asarray(cell).reshape(3,3)).T
+    nx, ny, nz = (2*n+1 for n in bounds)
+    vectors = np.empty((expected, 3), dtype=np.int32)
+    written = 0
+    # VASP advances Gx first. Positive frequencies precede negative ones on
+    # each axis. A bounded block works for long thin as well as cubic cells.
+    for start in range(0, nx*ny*nz, 32768):
+        check_load_cancelled()
+        ranks = np.arange(start, min(start+32768, nx*ny*nz), dtype=np.int64)
+        candidates = np.empty((len(ranks), 3), dtype=np.int32)
+        for axis, (n, extent) in enumerate(zip(bounds, (nx,ny,nz))):
+            index = ranks % extent
+            candidates[:,axis] = np.where(index <= n, index, index-extent)
+            ranks //= extent
+        kinetic = KINETIC_EV_ANG2 * np.sum(((candidates+k) @ reciprocal)**2, axis=1)
+        block = candidates[kinetic < cutoff]
+        end = written + len(block)
+        if end > expected:
+            raise ValueError(UNSUPPORTED_LAYOUT)
+        vectors[written:end] = block
+        written = end
+    if written != expected:
+        raise ValueError(UNSUPPORTED_LAYOUT)
+    vectors.flags.writeable = False
+    return vectors
+
+
+# Only small bases enter this cache. Keys include all geometric inputs and
+# the printed count, so later edits and files with different layouts revalidate.
+_cached_basis = lru_cache(maxsize=8)(_ordered_basis)
 
 
 @dataclass
@@ -46,34 +88,41 @@ class Wavecar:
             raise ValueError('Truncated or non-finite WAVECAR coefficient record')
         return data
 
-    def reciprocal_vectors(self, spin=0, kpoint=0, max_points=16_000_000):
-        """Enumerate the full-complex scalar G basis in VASP record order."""
+    def _basis(self, spin, kpoint, max_points):
         if not (0 <= spin < self.spins and 0 <= kpoint < self.nkpoints):
             raise IndexError('WAVECAR spin or k-point index out of range')
         k = self.kpoints[spin,kpoint]
-        constant = 3.80998211615486  # eV Angstrom²
-        bounds = np.ceil(np.linalg.norm(self.cell,axis=1) * np.sqrt(self.encut_ev/constant)/(2*np.pi) + np.abs(k)).astype(int) + 1
-        if int(np.prod(2*bounds+1, dtype=object)) > max_points:
-            raise ValueError('WAVECAR FFT grid exceeds the display memory limit; use a smaller exported CUBE')
-        axes = [np.r_[np.arange(n+1),np.arange(-n,0)] for n in bounds]
-        reciprocal = 2*np.pi*np.linalg.inv(self.cell).T
-        vectors=[]
-        for gz in axes[2]:
-            check_load_cancelled()
-            for gy in axes[1]:
-                gs = np.column_stack((axes[0],np.full(len(axes[0]),gy),np.full(len(axes[0]),gz)))
-                kinetic=constant*np.sum(((gs+k)@reciprocal)**2,axis=1)
-                vectors.extend(gs[kinetic < self.encut_ev].tolist())
-        vectors=np.asarray(vectors,dtype=int).reshape(-1,3)
-        if len(vectors) != int(self.ncoeff[spin,kpoint]):
-            raise ValueError('WAVECAR is not a verified full-complex scalar wavefunction (Gamma-only, spinor/SOC, or incompatible cutoff convention). Export a CUBE with a compatible VASP tool.')
+        radii = np.ceil(np.linalg.norm(self.cell,axis=1) *
+                        np.sqrt(self.encut_ev/KINETIC_EV_ANG2)/(2*np.pi) + np.abs(k)) + 1
+        if not np.isfinite(radii).all() or np.any(2*radii+1 > max_points):
+            raise ValueError(GRID_LIMIT)
+        bounds = radii.astype(np.int64)
+        counts = tuple(int(x) for x in bounds)
+        size = prod(2*x+1 for x in counts)
+        if size > max_points:
+            raise ValueError(GRID_LIMIT)
+        expected = int(self.ncoeff[spin,kpoint])
+        if not 0 < expected <= size:
+            raise ValueError(UNSUPPORTED_LAYOUT)
+        compute = _cached_basis if expected*12 <= 2*1024*1024 else _ordered_basis
+        vectors = compute(tuple(self.cell.flat), tuple(k), self.encut_ev, counts, expected)
         return vectors, bounds
+
+    def reciprocal_vectors(self, spin=0, kpoint=0, max_points=16_000_000):
+        """Return independently writable G vectors in VASP coefficient order."""
+        vectors, bounds = self._basis(spin, kpoint, max_points)
+        return vectors.astype(int, copy=True), bounds
 
     def validate_reconstruction(self):
         try:
+            verified = set()
             for spin in range(self.spins):
                 for kpoint in range(self.nkpoints):
-                    self.reciprocal_vectors(spin,kpoint)
+                    check_load_cancelled()
+                    key = (tuple(self.kpoints[spin,kpoint]), int(self.ncoeff[spin,kpoint]))
+                    if key not in verified:
+                        self._basis(spin, kpoint, 16_000_000)
+                        verified.add(key)
         except ValueError as exc:
             self.reconstruction_supported=False
             self.reconstruction_reason=str(exc)
@@ -90,21 +139,26 @@ class Wavecar:
         A doubled Fourier grid also resolves the |psi|² bandwidth.
         """
         coefficients = self.coefficients(spin,kpoint,band)
-        vectors,bounds = self.reciprocal_vectors(spin,kpoint,max_points)
+        vectors,bounds = self._basis(spin,kpoint,max_points)
         shape=4*bounds+1
         if int(np.prod(shape, dtype=object)) > max_points:
-            raise ValueError('WAVECAR FFT grid exceeds the display memory limit; use a smaller exported CUBE')
+            raise ValueError(GRID_LIMIT)
         reciprocal_grid=np.zeros(tuple(shape),dtype=complex)
         reciprocal_grid[tuple((vectors % shape).T)] = coefficients
         check_load_cancelled()
-        wave=np.fft.ifftn(reciprocal_grid)*np.prod(shape)/np.sqrt(abs(np.linalg.det(self.cell)))
+        wave=np.fft.ifftn(reciprocal_grid)
+        del reciprocal_grid
+        wave *= np.prod(shape)
+        wave /= np.sqrt(abs(np.linalg.det(self.cell)))
         k=self.kpoints[spin,kpoint]
         if kind in ('real','imag'):
             for axis in range(3):
                 view=[1,1,1];view[axis]=shape[axis]
                 wave *= np.exp(2j*np.pi*k[axis]*np.arange(shape[axis])/shape[axis]).reshape(view)
             values=wave.real if kind=='real' else wave.imag
-        elif kind=='density':values=np.abs(wave)**2
+        elif kind=='density':
+            values=np.abs(wave)
+            np.square(values, out=values)
         else:raise ValueError('Wavefunction field must be density, real, or imag')
         check_load_cancelled()
         label=f'WAVECAR spin {spin+1}, k {kpoint+1}, band {band+1}: '+({'density':'|psi|² (single pseudo state)','real':'Re psi (stored phase)','imag':'Im psi (stored phase)'}[kind])
@@ -186,10 +240,10 @@ def read_wavecar(path):
         for companion in sorted(Path(path).parent.iterdir()):
             if not companion.is_file() or not re.match(r'^OUTCAR(?:$|[._ (])',companion.name,re.I):continue
             try:
-                from .vasp_results import read_vasp_results
-                records=read_vasp_results(companion).frames()
-                if records and np.allclose(records[-1].cell,wave.cell,atol=1.e-5,rtol=1.e-6):
-                    candidates.append((companion,records[-1]))
+                from .vasp_results import last_outcar_frame
+                frame=last_outcar_frame(companion)
+                if frame is not None and np.allclose(frame.cell,wave.cell,atol=1.e-5,rtol=1.e-6):
+                    candidates.append((companion,frame))
             except (OSError,ValueError,IndexError):continue
         if len(candidates)==1:
             companion,frame=candidates[0];frames=[frame.clone()]

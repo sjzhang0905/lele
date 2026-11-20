@@ -561,12 +561,13 @@ def axis_vectors(frame: Frame, basis='XYZ', length=2.5, *, corner=False):
     return [(name, np.asarray(vec, dtype=float)) for name, vec in zip(names, vectors)]
 
 
-def coordinate_table_rows(frame: Frame, precision: int = 6) -> list[tuple[str, str, str, str]]:
-    """View formatting of the current in-memory coordinates, including edits."""
+def coordinate_table_rows(frame: Frame, precision: int = 6, *, indices=None) -> list[tuple[str, str, str, str]]:
+    """Format Cartesian coordinates for all sites or the requested table rows."""
     from .site_occupancy import site_is_disordered
     fmt = f'{{:.{precision}f}}'
+    rows = range(len(frame.symbols)) if indices is None else indices
     return [
-        (f'{i + 1} {symbol}'+('*' if site_is_disordered(frame,i) else ''),
-         *(fmt.format(float(value)) for value in xyz))
-        for i, (symbol, xyz) in enumerate(zip(frame.symbols, frame.positions))
+        (f'{i + 1} {frame.symbols[i]}'+('*' if site_is_disordered(frame,i) else ''),
+         *(fmt.format(float(value)) for value in frame.positions[i]))
+        for i in rows
     ]

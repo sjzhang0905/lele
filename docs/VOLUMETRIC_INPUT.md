@@ -33,7 +33,7 @@ PARCHG.0001 and CHGCAR_spin.
 ## Validation and limits
 
 The readers stream numeric blocks without storing the complete source text.
-The default import budget is 64 million scalar values across all channels.
+The default import budget uses available memory and counts scalar values across all channels. It allows 16 bytes of working space per scalar. When available memory cannot be determined, the budget is 64 million scalar values. Rendered surface meshes have additional geometry costs.
 An explicitly supplied programmatic `max_points=None` disables that budget.
 Malformed, truncated, nonfinite or oversized fields retain valid atomic geometry
 with an explanatory note. They never expose partially read channels as complete.

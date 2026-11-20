@@ -7,8 +7,7 @@ vtkRenderWindowInteractor sees the corresponding button-release callback. Qt
 is the actual receiver of native Windows pointer events, so a short click is
 reported here, after forwarding the ordinary left-button event to VTK.
 
-Left drag: VTK trackball rotation. Right drag: camera roll around the view
-axis (no VTK zoom). Wheel: VTK zoom.
+Left drag uses the VTK trackball. Right drag rolls about the geometric center of the atoms. Wheel zooms.
 """
 from __future__ import annotations
 
@@ -31,6 +30,25 @@ def vtk_display_from_qt(x: float, y: float, qt_width: int, qt_height: int,
             (qt_height - float(y)) * vtk_height / qt_height)
 
 
+def roll_camera(camera, center, dx):
+    """Roll the view around the atom centroid, preserving its projected position."""
+    angle = -.65 * dx
+    if center is not None:
+        import numpy as np
+        from lele.fragment import rotation_about_axis
+        focus = np.asarray(camera.GetFocalPoint())
+        position = np.asarray(camera.GetPosition())
+        rotation = rotation_about_axis(camera.GetDirectionOfProjection(), angle)
+        # A lateral camera translation moves the roll axis from its focal
+        # line to the centroid, including after a pan or an off-center fit.
+        offset = focus - center
+        shift = rotation @ offset - offset
+        camera.SetFocalPoint(*(focus + shift))
+        camera.SetPosition(*(position + shift))
+    camera.Roll(angle)
+    camera.OrthogonalizeViewUp()
+
+
 class InteractiveVTKView(QVTKRenderWindowInteractor):
     """A reliable, Qt-level single-click signal and dedicated right-button roll."""
 
@@ -49,11 +67,13 @@ class InteractiveVTKView(QVTKRenderWindowInteractor):
         self._right_last = None
         self._right_start = None
         self._right_dragged = False
+        self._right_center = None
         self._fragment_mode = None
         self._fragment_start = None
         self._fragment_last = None
         self._fragment_dragged = False
         self.scene_renderer = None
+        self.rotation_center = None
         self._box_enabled=False
         self._box_start=None
         self._rubber_band=None
@@ -121,6 +141,7 @@ class InteractiveVTKView(QVTKRenderWindowInteractor):
             self._right_last = event.position()
             self._right_start = event.position()
             self._right_dragged = False
+            self._right_center = self.rotation_center() if self.rotation_center is not None else None
             self.setFocus(Qt.FocusReason.MouseFocusReason)
             event.accept()
             return  # never enter VTK's right-button dolly state
@@ -143,6 +164,19 @@ class InteractiveVTKView(QVTKRenderWindowInteractor):
         if dx or dy:
             self.fragmentGestureMove.emit(self._fragment_mode, dx, dy)
 
+    def _update_right_drag(self, now):
+        if not self._right_dragged:
+            dx = now.x() - self._right_start.x()
+            dy = now.y() - self._right_start.y()
+            if dx * dx + dy * dy <= 64:
+                return
+            self._right_dragged = True
+        dx = now.x() - self._right_last.x()
+        self._right_last = now
+        if dx and self.scene_renderer is not None:
+            roll_camera(self.scene_renderer.GetActiveCamera(), self._right_center, dx)
+            self.GetRenderWindow().Render()
+
     def mouseMoveEvent(self, event):
         if getattr(self,'_box_start',None) is not None:
             from PySide6.QtCore import QRect,QPoint
@@ -154,25 +188,7 @@ class InteractiveVTKView(QVTKRenderWindowInteractor):
             event.accept()
             return
         if self._right_last is not None:
-            now = event.position()
-            dx = now.x() - self._right_last.x()
-            dy = now.y() - self._right_last.y()
-            self._right_last = now
-            if self._right_start is not None:
-                dx_total = now.x() - self._right_start.x()
-                dy_total = now.y() - self._right_start.y()
-                if dx_total ** 2 + dy_total ** 2 > 64:
-                    self._right_dragged = True
-            if self.scene_renderer is not None:
-                # Consistent gesture: right-drag RIGHT = clockwise on screen,
-                # right-drag LEFT = counterclockwise. Unlike VTK's default
-                # right button, this never changes zoom or camera distance.
-                angle = float(dx) * 0.65
-                if self._right_dragged and abs(angle) > 1.e-8:
-                    camera = self.scene_renderer.GetActiveCamera()
-                    camera.Roll(-angle)  # visual turn follows the pointer
-                    camera.OrthogonalizeViewUp()
-                    self.GetRenderWindow().Render()
+            self._update_right_drag(event.position())
             event.accept()
             return
         super().mouseMoveEvent(event)
@@ -194,13 +210,14 @@ class InteractiveVTKView(QVTKRenderWindowInteractor):
             event.accept()
             return
         if event.button() == Qt.MouseButton.RightButton:
-            if (self._right_start is not None and not self._right_dragged
-                and (event.position().x()-self._right_start.x())**2
-                  + (event.position().y()-self._right_start.y())**2 <= 64):
-                self.atomContextClick.emit(float(event.position().x()),float(event.position().y()))
+            if self._right_start is not None:
+                self._update_right_drag(event.position())
+                if not self._right_dragged:
+                    self.atomContextClick.emit(float(event.position().x()),float(event.position().y()))
             self._right_start = None
             self._right_last = None
             self._right_dragged = False
+            self._right_center = None
             event.accept()
             return
         if event.button() == Qt.MouseButton.LeftButton:
@@ -236,6 +253,7 @@ class InteractiveVTKView(QVTKRenderWindowInteractor):
         self._right_last = None
         self._right_start = None
         self._right_dragged = False
+        self._right_center = None
         self._left_start = None
         if self._fragment_mode is not None:
             mode = self._fragment_mode

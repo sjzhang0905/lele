@@ -1,5 +1,19 @@
 # Changelog
 
+## 4.0.0 · 2026-11-20
+
+- Read common CUBE scalar blocks with an optional x64 C++ parser. Size the import budget from available memory, share the VTK scalar buffer and reuse contours when field content and levels match.
+- Index OUTCAR records and stream numeric tables and shielding sections. Locate a WAVECAR companion's last complete structure while retaining printed lattice, energy and source-line associations.
+- Parse standard XDATCAR and XYZ coordinates as float64 in native code. Large trajectories use file-backed, independent source and editable coordinates. Update visible coordinate rows during playback and populate the Atoms tab when opened.
+- Validate full-complex WAVECAR bases in bounded vectorized blocks, reuse matching spin and k-point layouts and reduce FFT temporaries. Coefficients remain accessible by band.
+
+## 3.18.0 · 2026-11-20
+
+- Mirror selected atoms across a Cartesian plane through the selection centroid or the origin. YZ is the default plane.
+- Roll the full view about the arithmetic mean of all atomic positions. Alt + right drag uses the moving atoms' own centroid.
+- Adjust specular highlight width in Style with live updates. Presets, projects and image exports use the same material.
+- Browse local files in Apply new coordinates. The dialog shows the coordinate source and the input to update, supports either direction and keeps a backup. POSCAR and CONTCAR targets retain per-row selective dynamics, append all-free rows or truncate from the end.
+
 ## 3.17.0 · 2026-11-18
 
 - Associate CP2K geometry/cell optimization or MD outputs with position trajectories from the loaded-files menu. Link xTB optimization cycles, gradient norms and orbitals to their XYZ geometries.

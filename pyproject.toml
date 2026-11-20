@@ -31,7 +31,7 @@ dependencies = {file = ["requirements.txt"]}
 include = ["lele", "lele.*"]
 
 [tool.setuptools.package-data]
-lele = ["assets/*.png", "assets/*.ico"]
+lele = ["assets/*.png", "assets/*.ico", "native/*.dll", "native/*.so", "native/*.cpp"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

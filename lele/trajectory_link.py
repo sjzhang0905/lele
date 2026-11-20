@@ -27,7 +27,7 @@ def association_role(document):
     return None
 
 
-def _read_positions(path, program):
+def _read_positions(path, program, store=None):
     # CP2K writes the same i/time/E header for position, velocity and force XYZ.
     if re.search(r'(?:^|[-_.])(?:frc|forces?|vel|velocities)(?:[-_.]|$)', path.name, re.I):
         raise ValueError('Select the position trajectory, such as *-pos-1.xyz.')
@@ -42,7 +42,9 @@ def _read_positions(path, program):
         prop = re.search(r'\bProperties=([^\s]+)', comment, re.I)
         if prop and not prop[1].lower().startswith('species:s:1:pos:r:3'):
             raise ValueError('The extended XYZ must contain element symbols followed by Cartesian positions.')
-        data = read_cp2k_xyz(path, strict=True)
+        data = read_cp2k_xyz(path, strict=True, store=store)
+        if store is not None:
+            store.finish()
         frames = [s.geometry for s in data.steps]
         truncated = 'Incomplete trailing' in data.note
     else:
@@ -258,7 +260,13 @@ def link_trajectory(output_path, trajectory_path):
     if not stages:
         raise ValueError('The selected output contains no optimization or MD run.')
     program = results.program
-    frames, truncated = _read_positions(trajectory_path, program)
+    store = None
+    if program == 'CP2K':
+        from .trajectory_storage import trajectory_store
+        with trajectory_store(trajectory_path) as store:
+            frames, truncated = _read_positions(trajectory_path, program, store)
+    else:
+        frames, truncated = _read_positions(trajectory_path, program)
     eligible = [i for i, s in enumerate(results.steps) if s.stage_index in stages]
     matches, jobs, order_only = _match_frames(results, frames, eligible)
     if len(matches) < len(frames):
@@ -324,7 +332,7 @@ def link_trajectory(output_path, trajectory_path):
         note += ' Incomplete trailing trajectory data were omitted.'
     results.note = (note + ' ' + results.note).strip() if program == 'CP2K' else note
     label = program + ' output'
-    geometries = results.frames()
+    geometries = results.frames(store=store) if store is not None else results.frames()
     for frame in geometries:
         frame.info.update(source_kind=kind, source_format=label)
     document = Document(output_path, label, geometries, note=results.note, calculation_results=results,

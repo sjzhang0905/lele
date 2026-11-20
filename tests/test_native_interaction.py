@@ -138,6 +138,19 @@ class NativeInteractionTests(TestCase):
         self.assertEqual(camera.orthogonalized, 1)
         self.assertIsNone(view._right_last)
 
+    def test_right_drag_uses_the_same_atom_center_from_different_press_points(self):
+        view = self.interaction.InteractiveVTKView()
+        camera = _Camera()
+        view.scene_renderer = SimpleNamespace(GetActiveCamera=lambda: camera)
+        center = (1.5, -2., 3.)
+        view.rotation_center = lambda: center
+        for x, y in [(10, 80), (315, 240)]:
+            with patch.object(self.interaction, 'roll_camera') as roll:
+                view.mousePressEvent(_Event(2, x, y))
+                view.mouseMoveEvent(_Event(2, x + 3, y))
+                view.mouseReleaseEvent(_Event(2, x + 30, y))
+                roll.assert_called_once_with(camera, center, 30)
+
     def test_right_click_requests_atom_context_but_right_drag_does_not(self):
         view = self.interaction.InteractiveVTKView()
         camera = _Camera()

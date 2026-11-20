@@ -143,6 +143,8 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         if (watched in (getattr(self,'footer_row',None),getattr(self,'status_message_label',None),getattr(self,'_summary_status_bar',None))
                 and event.type() in (QEvent.Type.Move,QEvent.Type.Resize,QEvent.Type.Show,QEvent.Type.LayoutRequest)):
             self._queue_summary_alignment()
+        if watched is getattr(self, '_coordinate_viewport', None) and event.type() == QEvent.Type.Resize:
+            self._trajectory_table_visible()
         measurement=getattr(self,'measurement_value',None)
         if (measurement is not None and watched in (measurement,measurement.lineEdit())
                 and event.type()==QEvent.Type.FocusIn and hasattr(self,'playback')):
@@ -320,6 +322,8 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         self.reorient_action.setEnabled(False)
         self.rotate_axis_action = self._action(self.edit_menu, 'Rotate about selected axis…', self.rotate_about_selected_axis)
         self.rotate_axis_action.setEnabled(False)
+        self.mirror_action = self._action(self.edit_menu, 'Mirror selected fragment…', self.mirror_selected_fragment)
+        self.mirror_action.setEnabled(False)
         self.dihedral_action = self._action(self.edit_menu, 'Set selected dihedral…', self.set_selected_dihedral)
         self.dihedral_action.setEnabled(False)
         self.vacuum_action=self._action(self.edit_menu,'Modify slab vacuum…',self.configure_vacuum)
@@ -730,6 +734,13 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         self.finish_combo.currentTextChanged.connect(
             lambda val: self._set_option('surface_finish', val))
         form.addRow('Lighting', self.finish_combo)
+        self.highlight_slider = QSlider(Qt.Orientation.Horizontal)
+        self.highlight_slider.setRange(0, 100)
+        self.highlight_slider.setValue(round(self.render_options.highlight_size))
+        self.highlight_slider.setAccessibleName('Highlight size')
+        self.highlight_slider.setToolTip('Left narrows the light spots. Right broadens them. The midpoint restores the material default.')
+        self.highlight_slider.valueChanged.connect(lambda value: self._set_option('highlight_size', value))
+        form.addRow('Highlight size', self.highlight_slider)
         self.bond_model_combo = PanelComboBox()
         self.bond_model_combo.addItems(['Chemcraft pair ranges', 'Covalent radii'])
         self.bond_model_combo.setToolTip('Ordinary-bond limits from Chemcraft b816bt. Explicit element-pair rules override these limits. Hydrogen bonds are controlled separately.')
@@ -893,7 +904,7 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
                                 'Ctrl+G selects complete connected fragment(s).\n'
                                 'Canvas: Ctrl+1–9 saves/replaces a fragment; 1–9 selects it; Shift+1–9 adds atoms.\n'
                                 'Alt+left drag: rotate fragment in 3D.\n'
-                                'Alt+right drag: roll fragment.\n'
+                                'Alt+right drag: roll about the fragment’s geometric center.\n'
                                 'Alt+middle drag: move fragment in screen plane.\n'
                                 'Without Alt, mouse gestures control the camera.')
         selection_help.setWordWrap(True)
@@ -913,6 +924,10 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         self.fragment_btn = QPushButton('Select connected fragment(s)  (Ctrl+G)')
         self.fragment_btn.clicked.connect(self.select_connected_fragment)
         m_layout.addWidget(self.fragment_btn)
+        self.mirror_btn = QPushButton('Mirror selected fragment…')
+        self.mirror_btn.clicked.connect(self.mirror_selected_fragment)
+        self.mirror_btn.setEnabled(False)
+        m_layout.addWidget(self.mirror_btn)
         self.rotate_axis_btn = QPushButton('Rotate about selected axis…')
         self.rotate_axis_btn.clicked.connect(self.rotate_about_selected_axis)
         self.rotate_axis_btn.setToolTip('Select axis atoms first, then optional moving fragment seeds, in that order.')
@@ -1027,6 +1042,11 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         self._sync_color_controls()
         compact_panel_sliders(sidebar_tabs, self.bottom_control_tabs)
         compact_panel_editors(self.bottom_control_tabs)
+        self._coordinate_viewport = self.atom_table.viewport()
+        self._coordinate_viewport.installEventFilter(self)
+        self.atom_table.verticalScrollBar().valueChanged.connect(self._trajectory_table_visible)
+        self.tabs.currentChanged.connect(self._trajectory_table_visible)
+        self.sidebar_tabs.currentChanged.connect(self._trajectory_atom_tab_changed)
         root.setStretchFactor(0, 0)
         root.setStretchFactor(1, 1)
         root.setSizes([SIDEBAR_MIN_WIDTH, max(1, self.width() - SIDEBAR_MIN_WIDTH - root.handleWidth())])
@@ -1052,6 +1072,7 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         self.renderer.options = self.render_options
         self.vtk.GetRenderWindow().GetInteractor().SetInteractorStyle(vtkInteractorStyleTrackballCamera())
         self.vtk.scene_renderer = self.scene
+        self.vtk.rotation_center = self.renderer.atom_center
         self.vtk.atomClick.connect(self._pick_from_canvas)
         if hasattr(self.vtk,'atomContextClick'):self.vtk.atomContextClick.connect(self._atom_context_from_canvas)
         if hasattr(self.vtk,'rectangleSelected'):
@@ -1459,6 +1480,19 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         self.statusBar().showMessage('Select a geometry / optimization frame to edit coordinates or bonds.', 5000)
         return False
 
+    def _large_trajectory(self):
+        return (self.doc is not None and self.frame is not None and
+                len(self.doc.frames) >= 64 and len(self.frame.symbols) >= 128)
+
+    def _trajectory_table_visible(self, *_):
+        if (not self._ignore_table and self._large_trajectory() and
+                self.tabs.currentWidget() is self.atom_table):
+            self._refresh_coordinates()
+
+    def _trajectory_atom_tab_changed(self, *_):
+        if self._large_trajectory() and self.sidebar_tabs.currentWidget() is self.atom_panel:
+            self._refresh_atom_panel()
+
     def _refresh_coordinates(self):
         """Rebuild the table from the active Frame; never from source-file text.
 
@@ -1476,24 +1510,37 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
                         self.atom_table.setRowCount(0)
                         return
                     from .core import coordinate_table_rows
-                    rows = coordinate_table_rows(frame)
-                    self.atom_table.setRowCount(len(rows))
-                    for i, row in enumerate(rows):
-                        from .operations import ui_checkpoint
-                        ui_checkpoint('Building coordinate table',i,len(rows))
+                    from .operations import ui_checkpoint
+                    from .site_occupancy import description, site_is_disordered
+                    total = len(frame.symbols)
+                    self.atom_table.setRowCount(total)
+                    indices = range(total)
+                    if self._large_trajectory():
+                        if self.tabs.currentWidget() is not self.atom_table:
+                            return
+                        top = max(0, self.atom_table.rowAt(0))
+                        bottom = self.atom_table.rowAt(self.atom_table.viewport().height()-1)
+                        if bottom < 0:
+                            height = max(1, self.atom_table.verticalHeader().defaultSectionSize())
+                            bottom = top + self.atom_table.viewport().height() // height + 1
+                        indices = range(max(0,top-1), min(total,bottom+2))
+                    editable = self._active_vibration is None and not self._alignment_enabled()
+                    for i,row in zip(indices, coordinate_table_rows(frame, indices=indices)):
+                        ui_checkpoint('Building coordinate table',i,total)
+                        tooltip = f'Site #{i+1} · Occupancy: '+description(frame,i)
+                        if site_is_disordered(frame,i):
+                            tooltip += '\n* Mixed / partial occupancy; X/Y/Z locate this site.'
                         for j, value in enumerate(row):
                             item = self.atom_table.item(i, j)
                             if item is None:
                                 item = QTableWidgetItem()
                                 self.atom_table.setItem(i, j, item)
                             item.setText(value)
-                            from .site_occupancy import description,site_is_disordered
-                            item.setToolTip(f'Site #{i+1} · Occupancy: '+description(frame,i)+
-                                            ('\n* Mixed / partial occupancy; X/Y/Z locate this site.' if site_is_disordered(frame,i) else ''))
-                            if j == 0 or self._active_vibration is not None or self._alignment_enabled():
-                                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-                            else:
+                            item.setToolTip(tooltip)
+                            if j and editable:
                                 item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEditable)
+                            else:
+                                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
             finally:
                 self._ignore_table = False
                 self.atom_table.setUpdatesEnabled(True)
@@ -1536,7 +1583,9 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         self.tabs.setCurrentWidget(self.atom_table)
         if self.selection:
             first = self.atom_table.item(self.selection[0], 0)
-            if first is not None:
+            if first is None:
+                self.atom_table.scrollTo(self.atom_table.model().index(self.selection[0], 0))
+            else:
                 self.atom_table.scrollToItem(first)
         self.refresh_scene()
         self._refresh_info()
@@ -1829,6 +1878,8 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         if self.frame is None or self.renderer is None:
             self.atom_panel.set_frame(None)
             return
+        if self._large_trajectory() and self.sidebar_tabs.currentWidget() is not self.atom_panel:
+            return
         colors = [self.renderer.atom_color(self.frame, i) for i in range(len(self.frame.symbols))]
         from .site_occupancy import site_species
         from .atom_appearance import appearance
@@ -1996,7 +2047,7 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         opts = self.render_options
         controls = [self.style_combo, self.atom_slider, self.bond_slider,
                     self.atom_palette_combo, self.bond_palette_combo,
-                    self.finish_combo, self.bond_check, self.sf_radii_combo]
+                    self.finish_combo, self.highlight_slider, self.bond_check, self.sf_radii_combo]
         blockers = [QSignalBlocker(widget) for widget in controls]
         try:
             self.style_combo.setCurrentText(opts.style)
@@ -2008,6 +2059,7 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
             self.atom_palette_combo.setCurrentText(opts.atom_palette)
             self.bond_palette_combo.setCurrentText(opts.bond_palette)
             self.finish_combo.setCurrentText(opts.surface_finish)
+            self.highlight_slider.setValue(round(opts.highlight_size))
             self.bond_check.setChecked(opts.bonds)
         finally:
             del blockers
@@ -2081,6 +2133,11 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
                 self.preset_combo.setCurrentIndex(self.preset_combo.findData(CUSTOM_KEY))
         if option in ('background', 'label_color', 'element_colors', 'atom_palette'):
             self._sync_color_controls()
+        if option in ('highlight_size', 'surface_finish'):
+            if self.renderer is not None and self.frame is not None:
+                self.renderer.refresh_surface_finish()
+                self.vtk.GetRenderWindow().Render()
+            return
         if option in ('bond_cutoff', 'bond_model'):
             if option == 'bond_model':
                 value = RenderOptions().bond_cutoff if value == 'Chemcraft pair ranges' else 1.18
@@ -2157,6 +2214,8 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         if self.frame is None:
             return
         self._ignore_table = True
+        scroll = self.atom_table.verticalScrollBar()
+        previous_scroll = scroll.value()
         self.atom_table.blockSignals(True)
         self.atom_table.clearSelection()
         if len(self.selection) == 1:
@@ -2170,6 +2229,8 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
                              QItemSelectionModel.SelectionFlag.Rows)
         self.atom_table.blockSignals(False)
         self._ignore_table = False
+        if scroll.value() != previous_scroll:
+            self._trajectory_table_visible()
 
     def _coordinate_atom_activated(self,item):
         if self.frame is None or item.column()!=0:return
@@ -2214,6 +2275,8 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         self.toggle_hbond_btn.setEnabled(editable and n == 2)
         self.toggle_hbond_action.setEnabled(editable and n == 2)
         self.fragment_btn.setEnabled(frame is not None and n > 0)
+        self.mirror_action.setEnabled(editable and n > 0)
+        self.mirror_btn.setEnabled(self.mirror_action.isEnabled())
         self.origin_btn.setEnabled(editable and n == 1)
         self.align_btn.setEnabled(editable and n == 2)
         self.reorient_btn.setEnabled(editable and bool(frame.symbols))
@@ -2433,13 +2496,60 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
             self.statusBar().showMessage(
                 f'Selected {len(fragment)} atoms in connected fragment(s).', 3500)
 
-    def _fragment_begin(self, kind, _x, _y):
+    def mirror_selected_fragment(self):
+        if not self.selection or self.frame is None or not self._geometry_edit_allowed():
+            return
+        from .boundary_selection import selected_images
+        from .fragment import mirrored_coordinate
+        frame = self.frame
+        images = selected_images(self)
+        self.playback.stop()
+        self.play_btn.setText('Play')
+        dialog = QDialog(self)
+        dialog.setWindowTitle('Mirror selected fragment')
+        form = QFormLayout(dialog)
+        form.addRow(QLabel(f'{len(self.selection)} selected atoms'))
+        plane = PanelComboBox()
+        plane.addItems(['YZ (reflect X)', 'XZ (reflect Y)', 'XY (reflect Z)'])
+        form.addRow('Mirror plane', plane)
+        center = PanelComboBox()
+        center.addItems(['Center of selected atoms', 'Cartesian origin'])
+        form.addRow('Plane passes through', center)
+        from PySide6.QtWidgets import QDialogButtonBox
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        buttons.button(QDialogButtonBox.StandardButton.Ok).setText('Mirror')
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        form.addRow(buttons)
+        try:
+            if (dialog.exec() != QDialog.DialogCode.Accepted or self.frame is not frame
+                    or images != selected_images(self) or not self._geometry_edit_allowed()):
+                return
+            axis = plane.currentIndex()
+            try:
+                indices, values = mirrored_coordinate(frame, images, axis, through_origin=center.currentIndex() == 1)
+            except ValueError as exc:
+                QMessageBox.warning(self, 'Mirror selected fragment', str(exc))
+                return
+            import numpy as np
+            if np.array_equal(values, frame.positions[indices, axis]):
+                self.statusBar().showMessage('All selected atoms already lie in the mirror plane.', 5000)
+                return
+            self._record_undo()
+            frame.positions[indices, axis] = values
+            self.doc.modified = True
+            self._refresh_after_geometry_edit()
+            self.statusBar().showMessage(f'Mirrored {len(indices)} atoms. Ctrl+Z to undo.', 5000)
+        finally:
+            dialog.deleteLater()
+
+    def _fragment_begin(self, kind, x, y):
         """Freeze the graph component for this gesture; never grow it mid-drag."""
         old = self._fragment_gesture
         if old is not None and old.get('preview') is not None:
             old['preview'].close()
         self._fragment_gesture = None
-        if self._begin_annotation_gesture(kind, _x, _y):return
+        if self._begin_annotation_gesture(kind, x, y):return
         if not self._geometry_edit_allowed():
             return
         if self.frame is None or not self.selection:
@@ -3271,7 +3381,7 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
             'Open files: Ctrl+O; save PNG: Ctrl+S; export structure: Ctrl+Shift+S.\n\n'
             'File > Export animation GIF saves a trajectory or the selected vibration mode.\n'
             'Atoms selection accepts expressions; see Help > Atom selection syntax for examples.\n'
-            'Drag files into the window. Left-drag: rotate; right-drag: roll clockwise/counterclockwise; mouse wheel: zoom.\n'
+            'Drag files into the window. Left drag rotates. Right drag rolls about the geometric center of all atoms. The wheel zooms.\n'
             'Click atoms to select; right-click an atom to edit element / occupancy / index, empty space to clear; right-drag to roll.\n'
             'Ctrl+B toggles selected internal bonds; two atoms toggle regardless of distance.\n'
             'Ctrl+H draws/removes a dashed hydrogen bond between two selected atoms; Ctrl+Z undoes it.\n'

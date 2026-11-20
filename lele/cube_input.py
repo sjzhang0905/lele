@@ -7,6 +7,8 @@ consistent with their atom geometry.
 from math import prod
 import numpy as np
 from ase.units import Bohr
+from .grid_memory import AUTO, scalar_limit
+from ._cube_native import reader, write_chunk
 from .output_text import check_load_cancelled, load_progress, open_output_text
 
 
@@ -23,6 +25,7 @@ def _cube_array(stream, count):
     """
     import warnings
     data = np.empty(count, dtype=np.float32)
+    native = reader()
     offset = 0
     carry = ''
     report = load_progress('CUBE scalar field', count)
@@ -44,6 +47,14 @@ def _cube_array(stream, count):
         if text.strip():
             if offset == count:
                 raise ValueError('Extra values after CUBE scalar field.')
+            if native is not None:
+                consumed = write_chunk(native, text, data, offset)
+                if consumed >= 0:
+                    offset += consumed
+                    report(offset)
+                    if not chunk:
+                        break
+                    continue
             if 'D' in text or 'd' in text:
                 text = text.replace('D', 'E').replace('d', 'e')
             try:
@@ -121,7 +132,7 @@ def _header(stream):
     return header,tuple(abs(n) for n in counts),nvalues,len(labels)
 
 
-def read_cube_file(path,*,read_data=True,max_points=64_000_000):
+def read_cube_file(path,*,read_data=True,max_points=AUTO):
     """Return atoms and scalar channels with geometric lengths in Angstrom.
 
     Field channels are interleaved per voxel in CUBE. Orbital labels on a
@@ -168,6 +179,7 @@ def read_cube_file(path,*,read_data=True,max_points=64_000_000):
         channels=nlabels or nvalues
         if nlabels and nvalues not in (1,nlabels):raise ValueError('Conflicting CUBE orbital/value counts.')
         total=prod(shape)*channels
+        max_points = scalar_limit(max_points)
         if max_points is not None and total>max_points:
             raise ValueError(f'CUBE grid exceeds configured limit ({max_points:,} scalar values).')
         values=_cube_array(stream,total)
