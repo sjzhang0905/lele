@@ -2,7 +2,7 @@
 
 ## 面板与菜单
 
-在 Qt 的 Windows 和 Fusion 两种样式下，使用 1366 × 768 窗口并收窄底部面板。检查了 Axes 的旋转、位置、类型和长度各行，Labels 的字号、粗体和颜色，Boundary 的重复次数和操作按钮，以及 Style、Fragment 和 Atoms selection 对应的单行控件。各行的控件均完整可见。在 800 像素宽的窗口中，还验证了下方三栏互不遮挡，并可横向滚动到行末按钮。
+在 Qt 的 Windows 和 Fusion 两种样式下，使用 1366 × 768 窗口并收窄底部面板。检查了 Axes 的旋转、位置、类型和长度各行，Labels 的字号、粗体和颜色，Boundary 的重复次数和操作按钮，以及 Style、Fragment 和 Atoms selection 对应的单行控件。各行的控件均完整可见。在 800 像素宽的窗口中，还验证了下方三栏互不遮挡，并可横向滚动到行末按钮。补充检查覆盖 DejaVu Sans、Noto Sans 和 Liberation Sans 的 9 磅及 10 磅字号。纯结果页在窄屏上可滚动查看全部工具。
 
 Files 页的 Energy / RMS curves 使用三步纯能量文件实测。几何、扫描曲线的原入口以及 Analysis 中的振动筛选、轨道、NEB、GOAT 和 SOC 入口纳入回归。Edit 以 Mirror selected fragment 开头，Net charge 后紧接 Move selected atom to (0, 0, 0)。
 
