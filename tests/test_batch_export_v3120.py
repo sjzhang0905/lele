@@ -240,8 +240,11 @@ def test_batch_png_pixels_match_each_saved_view_and_restored_current_view(gui,tm
     original_labels=w.render_options.labels
     expected0=tmp_path/'expected0.png';expected1=tmp_path/'expected1.png'
     w.change_frame(1,switch_doc=0)
+    w.render_options.background = '#142635'
+    w.refresh_scene()
     export_png(expected0,w.vtk.GetRenderWindow(),settings,mesh_items=w.renderer._keepalive)
     w.change_frame(0,switch_doc=1)
+    w.render_options.background = '#CAD7DB'
     w.selection=list(selection);w._sync_selection_to_table();w.refresh_scene()
     export_png(expected1,w.vtk.GetRenderWindow(),settings,mesh_items=w.renderer._keepalive)
     folder=tmp_path/'actual_images';folder.mkdir()
@@ -251,10 +254,12 @@ def test_batch_png_pixels_match_each_saved_view_and_restored_current_view(gui,tm
     for expected,actual in ((expected0,folder/'same.png'),(expected1,folder/'same_2.png')):
         with Image.open(expected) as a,Image.open(actual) as b:
             np.testing.assert_array_equal(np.asarray(a),np.asarray(b))
+            assert b.getpixel((0, 0)) == (255,255,255)
     restored=tmp_path/'restored.png'
     export_png(restored,w.vtk.GetRenderWindow(),settings,mesh_items=w.renderer._keepalive)
     with Image.open(expected1) as a,Image.open(restored) as b:
         np.testing.assert_array_equal(np.asarray(a),np.asarray(b))
     assert_camera(camera_data(w.scene.GetActiveCamera()),camera)
     assert w.render_options.labels==original_labels and w.selection==selection
+    assert w.render_options.background == '#CAD7DB'
     assert w.convert_all_action.isEnabled() and w.export_png_all_action.isEnabled()

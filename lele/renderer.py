@@ -6,6 +6,7 @@ Used by the PySide6 desktop application. It is not tied to ChemStructConverter.
 from __future__ import annotations
 
 from collections import defaultdict
+from functools import lru_cache
 import numpy as np
 
 # vtkRenderingOpenGL2 must be imported to register OpenGL implementations.
@@ -81,6 +82,7 @@ def volume_surface_specs(options):
     return specs
 
 
+@lru_cache(maxsize=1024)
 def uchar_rgb(hex_color):
     return tuple(int(round(x * 255)) for x in rgb(hex_color))
 
@@ -89,12 +91,14 @@ class MoleculeRenderer(CrystalRendering):
     def __init__(self, renderer: vtkRenderer):
         self.renderer = renderer
         self.options = RenderOptions()
+        self.renderer.SetBackground(rgb(self.options.background))
         from .lighting import create_lights
         self._lights = create_lights(renderer)
         self.apply_lighting()
         self.dynamic = []
         self._finished_properties = []
         self.frame: Frame | None = None
+        self.source_frame: Frame | None = None
         self.volume: Volume | None = None
         self.field_warnings = []
         self.field_actors = []
@@ -224,7 +228,8 @@ class MoleculeRenderer(CrystalRendering):
             boundary = False
         original_fixed = self.fixed_bonds
         if boundary:
-            from .boundary import boundary_view
+            from .boundary import BoundaryLimitError, boundary_view
+            from .lattice_tiles import ONE_CELL
             from .element_rules import frame_rules, rule_signature
             source = source_frame
             key=(id(source),source.positions.tobytes(),source.cell.tobytes(),source.pbc,
@@ -236,13 +241,22 @@ class MoleculeRenderer(CrystalRendering):
                  tuple(sorted(source.hbond_added.items())), tuple(sorted(source.hbond_removed)),
                  rule_signature(*frame_rules(source)))
             if self._boundary_cache is None or self._boundary_cache[0]!=key:
-                self._boundary_cache=(key,boundary_view(source,self.options.boundary_bounds,self.options.bond_cutoff,
-                                                      preserve_origin=self.options.boundary_preserve_origin))
-            self.boundary_display=self._boundary_cache[1]
-            if self.alignment is not None:
-                self.boundary_display=self.boundary_display.transformed(self.display_rotation,self.display_translation)
-            frame=self.boundary_display.frame
-            self.fixed_bonds=self.boundary_display.bonds
+                try:
+                    display = boundary_view(source, self.options.boundary_bounds, self.options.bond_cutoff,
+                                            preserve_origin=self.options.boundary_preserve_origin)
+                except BoundaryLimitError:
+                    if not np.array_equal(self.options.boundary_bounds, ONE_CELL):
+                        raise
+                    # Draw the source once when even the outer face images exceed the display budget.
+                    display = None
+                self._boundary_cache = (key, display)
+            self.boundary_display = self._boundary_cache[1]
+            boundary = self.boundary_display is not None
+            if boundary:
+                if self.alignment is not None:
+                    self.boundary_display = self.boundary_display.transformed(self.display_rotation, self.display_translation)
+                frame = self.boundary_display.frame
+                self.fixed_bonds = self.boundary_display.bonds
         self._prepare_crystal_geometry()
         report(1)
         polyhedral = self.options.style == 'Polyhedral'
@@ -371,6 +385,15 @@ class MoleculeRenderer(CrystalRendering):
             pdata = vtkPolyData()
             pdata.SetPoints(pts)
             pdata.GetPointData().AddArray(sizes)
+            # Without explicit glyph RGB, VTK uses vtkProperty.GetColor(),
+            # a mix of diffuse and specular colors, as the instance's base color.
+            colors = vtkUnsignedCharArray()
+            colors.SetName('atom_rgb')
+            colors.SetNumberOfComponents(3)
+            colors.SetNumberOfTuples(len(indices))
+            for component, value in enumerate(uchar_rgb(color)):
+                colors.FillComponent(component, value)
+            pdata.GetPointData().SetScalars(colors)
             mapper = vtkGlyph3DMapper()
             mapper.SetInputData(pdata)
             mapper.SetSourceConnection(source.GetOutputPort())
@@ -378,7 +401,9 @@ class MoleculeRenderer(CrystalRendering):
             mapper.SetScaleModeToScaleByMagnitude()
             mapper.SetScaleFactor(1.0)
             mapper.ScalingOn()
-            mapper.ScalarVisibilityOff()
+            mapper.SetScalarModeToUsePointData()
+            mapper.SetColorModeToDirectScalars()
+            mapper.ScalarVisibilityOn()
             actor = vtkActor()
             actor.SetMapper(mapper)
             actor.GetProperty().SetColor(rgb(color))
@@ -422,8 +447,9 @@ class MoleculeRenderer(CrystalRendering):
             lines.InsertNextCell(2)
             lines.InsertCellPoint(a)
             lines.InsertCellPoint(b)
-            colors.InsertNextTuple3(*uchar_rgb(col))
-            colors.InsertNextTuple3(*uchar_rgb(col))
+            color = uchar_rgb(col)
+            colors.InsertNextTuple3(*color)
+            colors.InsertNextTuple3(*color)
         geometry = vtkPolyData()
         geometry.SetPoints(points)
         geometry.SetLines(lines)
@@ -494,7 +520,7 @@ class MoleculeRenderer(CrystalRendering):
         origin = minimum @ frame.cell + self.display_translation
         enlarged_cell = frame.cell * extent[:, None]
         edges = [(p + origin, q + origin, '#8199B5')
-                 for p, q in unit_cell_edges(enlarged_cell)]
+                 for p, q in unit_cell_edges(enlarged_cell, frame.pbc)]
         self._tube_segments(edges, .035)
 
     def _periodic_fragment_bonds(self, frame):
@@ -546,7 +572,7 @@ class MoleculeRenderer(CrystalRendering):
     def _cell(self, frame):
         if not any(frame.pbc):
             return
-        edges = unit_cell_edges(frame.cell)
+        edges = unit_cell_edges(frame.cell, frame.pbc)
         origin = self.display_translation + np.asarray(frame.info.get('cell_origin_fractional',(0,0,0))) @ frame.cell
         self._tube_segments([(p + origin, q + origin, '#7D8CA4') for p, q in edges], .025)
 

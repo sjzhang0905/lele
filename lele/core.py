@@ -403,18 +403,41 @@ def align_pair_to_axis(frame: Frame, first: int, second: int, axis: str) -> tupl
         raise ValueError('Axis must be X, Y, Z, a, b or c')
     pivot = frame.positions[first].copy()
     vector = frame.positions[second] - pivot
-    periodic=any(frame.pbc) and valid_lattice(frame)
-    if periodic and axis.lower() in ('x','y','z'):
-        from .periodic_geometry import minimum_image
+    from .periodic_geometry import minimum_image, periodic_basis
+    rotate_cell = axis.lower() in ('x', 'y', 'z') and periodic_basis(frame) is not None
+    if rotate_cell:
         vector,_=minimum_image(vector,frame)
     R = rotation_between_vectors(vector, target)
-    if periodic and axis.lower() in ('x','y','z'):
+    if rotate_cell:
         from .coordinate_reorientation import transform_complete_frame
         transform_complete_frame(frame,R,pivot-pivot@R.T,
                                  details={'selection':[first,second],'target_axis':axis.upper()})
         return R,pivot,True
     frame.positions = (frame.positions - pivot) @ R.T + pivot
     return R, pivot, False
+
+
+# At most 496 candidates. Avoid building a KD-tree (and importing SciPy)
+# for the ordinary small-molecule first frame.
+SMALL_PAIR_LIMIT = 32
+
+
+def nearby_pairs(positions, cutoff, *, tree_order=False):
+    if len(positions) > SMALL_PAIR_LIMIT or tree_order:
+        from scipy.spatial import cKDTree
+        return cKDTree(positions).query_pairs(r=cutoff, output_type='ndarray')
+    i, j = np.triu_indices(len(positions), k=1)
+    distances = np.linalg.norm(positions[i] - positions[j], axis=1)
+    within = distances <= cutoff
+    return np.column_stack((i[within], j[within]))
+
+
+def prepare_view_neighbors(frame):
+    """Load any native neighbor library for this frame on the file reader thread."""
+    if any(frame.pbc):
+        from ase import neighborlist  # noqa: F401
+    elif len(frame.symbols) > SMALL_PAIR_LIMIT:
+        from scipy.spatial import cKDTree  # noqa: F401
 
 
 def find_bonds(frame: Frame, multiplier: float = 1.0, *, max_bonds: int = 60000) -> list[tuple[int, int]]:
@@ -424,7 +447,6 @@ def find_bonds(frame: Frame, multiplier: float = 1.0, *, max_bonds: int = 60000)
     deliberately, rather than drawing an invalid long diagonal across cell.
     Translated-image bonds are handled separately by periodic_bonds.
     """
-    from scipy.spatial import cKDTree
     from .element_rules import frame_rules, pair_decision, search_radius
     from .display_reference import bond_limits, pair_limit
 
@@ -435,7 +457,9 @@ def find_bonds(frame: Frame, multiplier: float = 1.0, *, max_bonds: int = 60000)
     rules, only = frame_rules(frame)
     search_range = search_radius(rules, max(limits.values(), default=0.), only=only)
     if search_range <= 0:return []
-    pairs = cKDTree(xyz).query_pairs(r=search_range, output_type="ndarray")
+    # A caller-supplied cap can make traversal order observable.
+    can_truncate = max_bonds < len(xyz) * (len(xyz) - 1) // 2
+    pairs = nearby_pairs(xyz, search_range, tree_order=can_truncate)
     result = [];explicit = []
     for a, b in pairs:
         distance = np.linalg.norm(xyz[a] - xyz[b])
@@ -449,14 +473,20 @@ def find_bonds(frame: Frame, multiplier: float = 1.0, *, max_bonds: int = 60000)
     return sorted(set(explicit) | {(a, b) for a, b, _ in prune_occluded(xyz, [(a,b,(0,0,0)) for a,b in result])})
 
 
-def unit_cell_edges(cell: np.ndarray) -> list[tuple[np.ndarray, np.ndarray]]:
+def unit_cell_edges(cell: np.ndarray, pbc=None) -> list[tuple[np.ndarray, np.ndarray]]:
     cell = np.asarray(cell, dtype=float).reshape(3, 3)
-    if abs(np.linalg.det(cell)) < 1.e-9:
-        return []
+    from .periodic_geometry import full_cell, valid_periodic_cell
+    if full_cell(cell):
+        axes = (0, 1, 2)
+    else:
+        if pbc is None or not valid_periodic_cell(cell, pbc):
+            return []
+        axes = tuple(i for i, periodic in enumerate(pbc) if periodic)
+    from itertools import product
     points = {tuple(bits): np.asarray(bits, dtype=float) @ cell
-              for bits in __import__("itertools").product([0, 1], repeat=3)}
+              for bits in product(*[(0, 1) if i in axes else (0,) for i in range(3)])}
     return [(points[key], points[tuple((1 - v) if j == axis else v for j, v in enumerate(key))])
-            for key in points for axis in range(3) if key[axis] == 0]
+            for key in points for axis in axes if key[axis] == 0]
 
 
 def measure(frame: Frame, atoms: list[int]) -> tuple[str, float]:

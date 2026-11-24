@@ -114,7 +114,7 @@ def test_recolor_reuses_mesh_and_material_follows_main_finish():
     assert update_mapping_colors(draw,before,after)
     assert actor is draw.field_actors[0] and mapper.GetInput() is poly
     np.testing.assert_allclose(mapper.GetLookupTable().GetColor(.1),[1,1,1])
-    assert actor.GetProperty().GetSpecular()==pytest.approx(.05)
+    assert actor.GetProperty().GetSpecular()==pytest.approx(.05 * 47 / 50)
     assert draw.field_scalar_bars[0].GetTitle()=='Hartree'
     assert 'Layer' not in draw.field_scalar_bars[0].GetTitle()
     after[0]['value']*=2

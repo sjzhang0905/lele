@@ -158,7 +158,7 @@ def test_atom_legend_is_distinct_visible_elements_with_no_structure_mutation():
     assert [(s['symbol'],s['source_index']) for s in samples]==[('O',0),('H',1)]
     assert [label.GetInput() for label in legend.labels]==['O','H']
     assert legend.actors[0].GetPosition()[0]<legend.actors[1].GetPosition()[0]
-    np.testing.assert_allclose(legend.actors[0].GetProperty().GetColor(),rgb('#123456'))
+    np.testing.assert_allclose(legend.actors[0].GetProperty().GetDiffuseColor(),rgb('#123456'))
     assert all(not a.GetPickable() for a in legend.actors)
     assert legend.renderer.GetActors().GetNumberOfItems()==2
     draw.renderer.GetActiveCamera().Azimuth(70);legend.layout()

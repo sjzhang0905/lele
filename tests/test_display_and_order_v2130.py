@@ -61,7 +61,10 @@ def test_glossy_sibyl_defaults_reach_real_vtk_atoms_and_element_bonds():
     assert draw.atom_color(frame,1,for_bond=True)=='#EC4646'
     actors=[a for a in draw.dynamic if a.IsA('vtkActor')]
     assert actors
-    assert all(a.GetProperty().GetSpecular()==pytest.approx(.78) and a.GetProperty().GetSpecularPower()==60 for a in actors)
+    for actor in actors:
+        material = actor.GetProperty()
+        assert material.GetSpecular() == pytest.approx(.80 * 47 / 50)
+        assert material.GetSpecularPower() == pytest.approx(32 * 4**.06)
     frame.atom_appearance[1]=AtomAppearance(color='#123456')
     assert draw.atom_color(frame,1)==draw.atom_color(frame,1,for_bond=True)=='#123456'
     assert element_palette_color(draw.options,'D')=='#DADADA'
@@ -106,16 +109,16 @@ def test_gui_default_controls_and_auto_axes_survive_file_switching(gui,tmp_path)
     gui.attach(Frame(['C'],[[0,0,0]]));w._sync_corner_axes=lambda:None
     assert w.finish_combo.currentText()=='Glossy' and w.atom_palette_combo.currentText()=='Default'
     assert w.atom_slider.value()==45 and w.bond_slider.value()==5
-    assert w.axes_basis_combo.currentData()=='Auto'
+    assert w.coordinate_axes.basis.buttons['Auto'].isChecked()
     path=tmp_path/'slab.POSCAR';export_frame(crystal(),path,'poscar-cartesian');w._open_path_now(path)
-    assert w.axes_basis_combo.currentData()=='Auto'
+    assert w.coordinate_axes.basis.buttons['Auto'].isChecked()
     w.renderer.make_corner_marker(w.frame)
     assert [a.GetInput() for a in w.renderer.corner_labels]==list('abc')
-    w.axes_basis_combo.setCurrentIndex(w.axes_basis_combo.findData('XYZ'))
+    w.coordinate_axes.basis.buttons['XYZ'].click()
     w.change_frame(0,switch_doc=0);w.renderer.make_corner_marker(w.frame)
-    assert w.axes_basis_combo.currentData()=='Auto' and [a.GetInput() for a in w.renderer.corner_labels]==list('XYZ')
+    assert w.coordinate_axes.basis.buttons['Auto'].isChecked() and [a.GetInput() for a in w.renderer.corner_labels]==list('XYZ')
     w.change_frame(0,switch_doc=1)
-    assert w.axes_basis_combo.currentData()=='XYZ'
+    assert w.coordinate_axes.basis.buttons['XYZ'].isChecked()
 
 
 @pytest.mark.parametrize('old_choice',[False,True])
@@ -148,7 +151,16 @@ def test_all_exports_keep_existing_rows_then_addition_order(tmp_path,target):
     p=tmp_path/('export.'+{'xyz':'xyz','gjf':'gjf','cif':'cif'}.get(target,'POSCAR'))
     export_frame(frame,p,target)
     fmt={'xyz':'xyz','gjf':'gaussian-in','cif':'cif','poscar-direct':'vasp','poscar-cartesian':'vasp'}[target]
-    atoms=read(p,format=fmt)
+    if target == 'gjf':
+        # ASE's Gaussian reader rejects the Cartesian freeze column. Check
+        # its atom association independently, then read the coordinates.
+        from lele.atom_constraints import read_gaussian_atoms
+        rows = p.read_text().split('\n\n')[2].splitlines()[1:]
+        expected = [-1 if all(row) else 0 for row in frame.info['vasp_fixed_axes']]
+        assert [int(row.split()[1]) for row in rows] == expected
+        atoms = read_gaussian_atoms(p)
+    else:
+        atoms=read(p,format=fmt)
     assert atoms.get_chemical_symbols()==frame.symbols
     np.testing.assert_allclose(atoms.positions,before,atol=1.e-10)
     np.testing.assert_array_equal(frame.positions,before)

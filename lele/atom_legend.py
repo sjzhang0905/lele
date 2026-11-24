@@ -31,13 +31,16 @@ class AtomLegend:
     """A complete standalone VTK scene: spheres and element labels only."""
     def __init__(self,renderer):
         self.renderer=renderer;self.samples=[];self.actors=[];self.labels=[];self.spheres=[]
+        from .lighting import create_lights
+        self._lights = create_lights(renderer)
         cam=renderer.GetActiveCamera();cam.ParallelProjectionOn()
         cam.SetPosition(0,0,10);cam.SetFocalPoint(0,0,0);cam.SetViewUp(0,1,0);cam.SetParallelScale(2.)
         renderer.AddObserver('StartEvent',lambda *_:self.layout())
 
     def set_samples(self,samples,options):
         from .renderer import rgb
-        from .lighting import apply_surface_finish
+        from .lighting import apply_surface_finish, update_lights
+        update_lights(self._lights, options)
         self.renderer.RemoveAllViewProps();self.actors=[];self.labels=[];self.spheres=[]
         self.samples=deepcopy(samples);self.renderer.SetBackground(rgb(options.background))
         for sample in self.samples:
@@ -48,6 +51,7 @@ class AtomLegend:
             apply_surface_finish(prop, options)
             self.renderer.AddActor(actor);self.actors.append(actor);self.spheres.append(sphere)
             label=vtkTextActor();label.SetInput(sample['symbol']);label.PickableOff()
+            label.SetObjectName('lele-atom-legend-label')
             label.GetPositionCoordinate().SetCoordinateSystemToNormalizedViewport()
             label.GetTextProperty().SetJustificationToCentered();label.GetTextProperty().SetBold(True)
             light=np.mean(rgb(options.background))>.48

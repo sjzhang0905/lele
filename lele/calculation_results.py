@@ -149,7 +149,8 @@ class CalculationResults:
                     and previous.info.get('stage_index') == current.info.get('stage_index')
                     and previous.info.get('trajectory_frame') == current.info.get('trajectory_frame')
                     and np.allclose(previous.positions, current.positions, atol=1.e-7, rtol=0)
-                    and all(previous.info.get(k)==current.info.get(k) for k in ('converter_charge','converter_mult'))
+                    and all(previous.info.get(k)==current.info.get(k) for k in
+                            ('converter_charge','converter_mult','fixed_axes','fixed_axes_basis'))
                     and (current.energy_ev is None or (previous.energy_ev is not None
                          and abs(previous.energy_ev-current.energy_ev)<1.e-7)))
             if not duplicate:
@@ -271,6 +272,8 @@ def read_gaussian_results(path):
                 snapshot.channels['Restricted']=rows
             result.orbitals.append(snapshot);i=j;continue
         i+=1
+    from .output_constraints import attach_step_constraints
+    attach_step_constraints(result, 'gaussian_out', lines)
     progress(len(lines))
     return result
 

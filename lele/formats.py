@@ -78,7 +78,8 @@ def _with_poscar_groups(frame: Frame, path: Path) -> Frame:
     groups = read_poscar_groups(path, frame.symbols)
     if groups is not None:
         frame.info['poscar_groups'] = groups
-    with Path(path).open('r', encoding='utf-8-sig', errors='replace') as stream:
+    from .output_text import open_output_text
+    with open_output_text(path) as stream:
         header = [next(stream, '') for _ in range(6)]
         if not header[-1].split('!', 1)[0].split()[0].isdigit():
             next(stream, '')  # VASP 5/6 species counts
@@ -86,7 +87,9 @@ def _with_poscar_groups(frame: Frame, path: Path) -> Frame:
             next(stream, '')  # Direct / Cartesian
             flags = [next(stream, '').upper().split()[3:6] for _ in frame.symbols]
             if all(len(row) == 3 and all(flag in ('T', 'F') for flag in row) for row in flags):
-                frame.info['vasp_fixed_axes'] = [[flag == 'F' for flag in row] for row in flags]
+                rows = [[flag == 'F' for flag in row] for row in flags]
+                frame.info.update(vasp_fixed_axes=rows, fixed_axes=rows, fixed_axes_basis='direct',
+                                  fixed_axes_source='VASP Selective Dynamics (F=fixed)')
     return frame
 
 
@@ -410,8 +413,6 @@ def export_frame(frame: Frame, filename: str | Path, target: str, box_size: floa
         frame = grouped_poscar_frame(frame)
     atoms = Atoms(symbols=frame.symbols, positions=frame.positions.copy(),
                   cell=frame.cell.copy(), pbc=frame.pbc)
-    from .vasp_constraints import attach_fixed_axes
-    if target in ('poscar-direct','poscar-cartesian'):attach_fixed_axes(atoms,frame.info)
     if 'site_occupancies' in frame.info:
         atoms.info['occupancy']={str(i):dict(s) for i,s in enumerate(frame.info['site_occupancies'])}
         atoms.set_array('spacegroup_kinds',np.arange(len(atoms),dtype=int))
@@ -423,9 +424,25 @@ def export_frame(frame: Frame, filename: str | Path, target: str, box_size: floa
                 pass
     prepared, notices = legacy.prepare_for_target(atoms, target, float(box_size))
     if target in ('poscar-direct','poscar-cartesian'):
+        from .vasp_constraints import attach_fixed_axes
+        attach_fixed_axes(prepared,frame.info)
         from ase.io import write
         write(str(filename),prepared,format='vasp',direct=target=='poscar-direct',sort=False,vasp5=True,
               symbol_count=frame.info.get('poscar_groups'))
+    elif target=='gjf':
+        from .atom_constraints import export_fixed_mask
+        mask = export_fixed_mask(frame.info, len(prepared))
+        whole = None if mask is None else mask.all(axis=1)
+        title_note = ''
+        if mask is not None:
+            partial = np.flatnonzero(mask.any(axis=1) & ~whole)
+            if len(partial):
+                from .saved_fragments import index_summary
+                detail = 'Partial constraints omitted on atoms ' + index_summary(partial) + '.'
+                notices.append(detail + ' Gaussian freeze codes apply to whole atoms.')
+                title_note = detail if len(detail) <= 80 else f'Partial constraints omitted on {len(partial)} atoms.'
+        legacy.write_gjf(Path(filename), prepared, Path(filename).stem, legacy.DEFAULT_GAUSSIAN_ROUTE,
+                         fixed_atoms=whole, title_note=title_note)
     elif target=='cif':
         from .cif_output import write_frame_cif
         write_frame_cif(frame,prepared,filename)

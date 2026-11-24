@@ -35,6 +35,10 @@ class PngExportDialog(QDialog):
         self.smooth_check.setChecked(True)
         self.smooth_check.setToolTip('Use finer atom and bond meshes and render extra samples for smoother edges.')
         layout.addWidget(self.smooth_check)
+        self.white_background_check = QCheckBox('White background')
+        self.white_background_check.setChecked(True)
+        self.white_background_check.setToolTip('Clear this to export the current background color.')
+        layout.addWidget(self.white_background_check)
         self.crop_check = QCheckBox('Cropped image (remove empty margins' + (', omit coordinate axes)' if scene_image else ')'))
         self.crop_check.setChecked(QSettings('LELE', 'LELE').value('image_export/cropped', False, type=bool))
         self.crop_check.setToolTip('Keep the current view and trim empty margins. The saved image may be smaller than the requested canvas size. Your choice is remembered.')
@@ -63,7 +67,8 @@ class PngExportDialog(QDialog):
         return PngSettings(self.width_spin.value(),
                            max(1, min(MAX_OUTPUT_SIDE, round(self.width_spin.value() * self.aspect))),
                            supersample=2 if self.smooth_check.isChecked() else 1,
-                           cropped=self.crop_check.isChecked())
+                           cropped=self.crop_check.isChecked(),
+                           white_background=self.white_background_check.isChecked())
 
     def accept(self):
         preferences = QSettings('LELE', 'LELE')

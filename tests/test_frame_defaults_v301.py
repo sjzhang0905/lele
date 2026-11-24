@@ -122,18 +122,17 @@ def test_energy_only_outcar_still_opens_as_results_without_a_structure(gui, tmp_
     assert window.frame_count_label.text() == 'No structure'
 
 
-def test_boundary_default_is_active_and_explicit_disable_survives_step_navigation(gui, tmp_path):
+def test_boundary_remains_active_after_one_cell_reset_and_step_navigation(gui, tmp_path):
     document = outcar(tmp_path)
     window = attach_new(gui, document)
     assert window.render_options.boundary_enabled
-    assert window.boundary_panel.enabled.isChecked()
     assert window.renderer.options.boundary_enabled
     assert window.renderer.boundary_display is not None
     assert window.renderer.boundary_display.tiles == ((0, 0, 0),)
     assert window.boundary_panel.bounds() == ((0, 1),) * 3
     np.testing.assert_array_equal(window.frame.positions, document.frames[-1].positions)
-    window._apply_boundary(False, ((0, 1),) * 3)
+    window.boundary_panel.reset.click()
     window.change_frame(0)
-    assert not window.render_options.boundary_enabled
-    assert not window.boundary_panel.enabled.isChecked()
-    assert not window.renderer.options.boundary_enabled
+    assert window.render_options.boundary_enabled
+    assert window.renderer.boundary_display.tiles == ((0, 0, 0),)
+    assert window.renderer.options.boundary_enabled

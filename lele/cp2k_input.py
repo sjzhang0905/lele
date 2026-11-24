@@ -9,6 +9,7 @@ from ase.geometry import cellpar_to_cell
 from ase.units import Bohr
 from .core import Frame
 from .output_text import read_output_lines
+from .periodic_geometry import valid_periodic_cell
 
 
 class Section:
@@ -127,7 +128,8 @@ def inline_frame(subsys):
     coord_repeats=repeat_factors(subsys.child('TOPOLOGY'),'TOPOLOGY')
     periodic=''.join(cell_node.get('PERIODIC',('XYZ',))).upper()
     if periodic not in ('NONE','X','Y','Z','XY','XZ','YZ','XYZ'):raise ValueError('Invalid CP2K periodicity')
-    pbc=tuple(axis in periodic for axis in 'XYZ') if np.linalg.det(cell)!=0 else (False,)*3
+    requested_pbc = tuple(axis in periodic for axis in 'XYZ')
+    pbc = requested_pbc if valid_periodic_cell(cell, requested_pbc) else (False,) * 3
     kinds={k.argument:(k.get('ELEMENT',(k.argument,))[0]) for k in subsys.all('KIND')}
     coord=subsys.child('COORD');symbols=[];positions=[]
     unit=next(iter(coord.get('UNIT',('angstrom',))), 'angstrom')

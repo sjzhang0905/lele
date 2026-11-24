@@ -4,7 +4,8 @@ from PySide6.QtCore import Qt, Signal, QSignalBlocker
 from PySide6.QtWidgets import (QWidget, QFormLayout, QHBoxLayout, QComboBox,
     QCheckBox, QLineEdit, QLabel, QDialogButtonBox, QSlider, QVBoxLayout)
 from .dialog_policy import QDialog, QMessageBox
-from .field_mapping import PALETTES, DEFAULT_PALETTE, field_data_limits, validate_layer_mapping
+from .field_mapping import (PALETTES, DEFAULT_PALETTE, DEFAULT_ESP_RANGE, field_data_limits,
+                            is_esp_field, validate_layer_mapping)
 
 
 def field_title(index, field):
@@ -86,6 +87,9 @@ class FieldMappingWidget(QWidget):
                 selected = self.source.count()-1
             self.source.setCurrentIndex(selected)
             self.palette.setCurrentText(settings.get('map_palette', DEFAULT_PALETTE))
+            if ('map_range' not in settings and 0 <= index < len(self.fields)
+                    and is_esp_field(self.fields[index])):
+                settings['map_range'] = DEFAULT_ESP_RANGE
             self.automatic.setChecked(settings.get('map_range') is None)
             low, high = settings.get('map_range') or self._automatic_limits()
             self.minimum.setText(f'{low:.12g}'); self.maximum.setText(f'{high:.12g}')
@@ -123,8 +127,17 @@ class FieldMappingWidget(QWidget):
 
     def _source_changed(self, *_):
         if self._loading: return
-        if self.automatic.isChecked(): self._set_auto_numbers()
-        else: self._sync_sliders()
+        index = self.source.currentData()
+        if self.automatic.isChecked() and 0 <= index < len(self.fields) and is_esp_field(self.fields[index]):
+            with QSignalBlocker(self.automatic), QSignalBlocker(self.minimum), QSignalBlocker(self.maximum):
+                self.automatic.setChecked(False)
+                self.minimum.setText(str(DEFAULT_ESP_RANGE[0]))
+                self.maximum.setText(str(DEFAULT_ESP_RANGE[1]))
+            self._sync_sliders()
+        elif self.automatic.isChecked():
+            self._set_auto_numbers()
+        else:
+            self._sync_sliders()
         self.update_controls(); self._emit_changed()
 
     def _palette_changed(self, *_):

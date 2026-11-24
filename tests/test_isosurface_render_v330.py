@@ -12,7 +12,7 @@ def test_legacy_default_surfaces():
     opts=RenderOptions();specs=volume_surface_specs(opts)
     assert [x['value'] for x in specs]==[-.035,.035]
     assert [x['color'] for x in specs]==['#00C2FF','#80E666']
-    assert [x['opacity'] for x in specs]==[.90,.90]
+    assert [x['opacity'] for x in specs]==[.5,.5]
 
 
 def test_independent_signs_opacity_and_styles():

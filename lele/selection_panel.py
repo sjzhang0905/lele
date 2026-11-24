@@ -7,7 +7,7 @@ from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt, Signal, QSignal
 from PySide6.QtGui import QFont, QFontDatabase, QTextCursor
 from PySide6.QtWidgets import (
     QApplication, QAbstractItemView, QHBoxLayout, QLabel, QListWidget,
-    QListWidgetItem, QPlainTextEdit, QPushButton, QSizePolicy, QVBoxLayout, QWidget,
+    QListWidgetItem, QPlainTextEdit, QPushButton, QToolButton, QSizePolicy, QVBoxLayout, QWidget,
 )
 
 from .saved_fragments import fragments, index_summary, selected_indices
@@ -379,17 +379,18 @@ class FragmentPanel(QWidget):
         self.list_widget.itemClicked.connect(self._select_item)
         self.list_widget.currentItemChanged.connect(lambda *_: self._update_buttons())
         layout.addWidget(self.list_widget, 1)
-        self.save_button = QPushButton('Save selection')
-        self.delete_button = QPushButton('Delete')
-        self.front_button = QPushButton('Move to first')
-        self.back_button = QPushButton('Move to last')
-        for buttons in ((self.save_button, self.delete_button), (self.front_button, self.back_button)):
-            row = QHBoxLayout()
-            for button in buttons:
-                button.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
-                row.addWidget(button)
-            row.addStretch(1)
-            layout.addLayout(row)
+        self.save_button = QToolButton()
+        self.delete_button = QToolButton()
+        self.front_button = QToolButton()
+        self.back_button = QToolButton()
+        row = QHBoxLayout()
+        row.setSpacing(3)
+        for button, text in ((self.save_button, 'Save'), (self.delete_button, 'Delete'),
+                             (self.front_button, 'To first'), (self.back_button, 'To last')):
+            button.setText(text)
+            row.addWidget(button)
+        row.addStretch(1)
+        layout.addLayout(row)
         self.save_button.clicked.connect(self.saveRequested)
         self.delete_button.clicked.connect(lambda: self._emit_current(self.deleteRequested))
         self.front_button.clicked.connect(lambda: self._move('front'))

@@ -27,8 +27,8 @@ class HeadlessCanvas(QWidget):
     fragmentGestureMove = Signal(str, float, float)
     fragmentGestureEnd = Signal(str)
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None):
+        super().__init__(parent)
         self.initialize_count = 0
         self.window = vtkRenderWindow()
         self.interactor = vtkRenderWindowInteractor()
@@ -41,14 +41,19 @@ class HeadlessCanvas(QWidget):
 
 
 class ControlledLoader(QObject):
+    graphics_ready = Signal()
     finished = Signal()
 
     def __init__(self, *, auto_finish=True):
         super().__init__()
+        self.graphics_loaded = False
         self.loaded = False
         self.error = ''
         self.start_count = 0
         self.auto_finish = auto_finish
+
+    def prioritize_file(self):
+        self.file_requested = True
 
     def ensure_started(self):
         self.start_count += 1
@@ -57,7 +62,7 @@ class ControlledLoader(QObject):
 
     def complete(self, error=''):
         self.error = error
-        self.loaded = not error
+        self.graphics_loaded = self.loaded = not error
         self.finished.emit()
 
 
@@ -87,7 +92,7 @@ class WelcomeTests(unittest.TestCase):
             window = LELEWindow(initial_files)
         window._sync_corner_axes = lambda: None
         self.assertIsNone(window.vtk)
-        self.assertEqual(loader.start_count, 0)
+        self.assertIsNone(window._backend_loader)
         window.show()
         window.activateWindow()
         self.app.processEvents()
@@ -144,6 +149,31 @@ class WelcomeTests(unittest.TestCase):
         window.change_frame(0)
         self.assertEqual(window.vtk.initialize_count, 1)
 
+    def test_manual_link_opens_exact_address_with_mouse_and_keyboard(self):
+        from PySide6.QtCore import Slot
+        from PySide6.QtGui import QDesktopServices
+        page = self.window().welcome_page
+        link = page.manual_label
+        expected = 'https://sjzhang0905.dpdns.org/lele/manual/'
+        self.assertTrue(link.openExternalLinks())
+        self.assertEqual(link.toolTip(), expected)
+        self.assertLess(page.repository_label.geometry().bottom(), link.geometry().top())
+        self.assertLess(link.geometry().bottom(), page.parrot_walk.geometry().top())
+        opened = []
+        class Handler(QObject):
+            @Slot(QUrl)
+            def receive(self, url):
+                opened.append(url.toString())
+        handler = Handler()
+        QDesktopServices.setUrlHandler('https', handler, 'receive')
+        try:
+            QTest.mouseClick(link, Qt.MouseButton.LeftButton, pos=link.rect().center())
+            link.setFocus(Qt.FocusReason.TabFocusReason)
+            QTest.keyClick(link, Qt.Key.Key_Return)
+            self.assertEqual(opened, [expected, expected])
+        finally:
+            QDesktopServices.unsetUrlHandler('https')
+
     def test_ctrl_o_works_from_welcome_focus(self):
         window = self.window()
         window.welcome_page.setFocus()
@@ -176,7 +206,7 @@ class WelcomeTests(unittest.TestCase):
         warning.assert_called_once()
         self.assertIsNone(empty.doc)
         self.assertIs(empty.canvas_stack.currentWidget(), empty.welcome_page)
-        self.assertEqual(empty.vtk.initialize_count, 1)
+        self.wait_for(lambda: empty.vtk.initialize_count == 1)
 
     def test_style_edits_before_first_file_are_kept_and_backend_is_reused(self):
         loader = ControlledLoader(auto_finish=False)
@@ -212,6 +242,73 @@ class WelcomeTests(unittest.TestCase):
         self.wait_for(lambda: window.doc is not None)
         self.assert_loaded(window)
         self.assertEqual(loader.start_count, 1)
+
+    def test_file_can_open_while_optional_imports_are_still_running(self):
+        loader = ControlledLoader(auto_finish=False)
+        window = self.window(loader=loader, wait_ready=False)
+        self.wait_for(lambda: loader.start_count == 1)
+        loader.graphics_loaded = True
+        loader.graphics_ready.emit()
+        self.wait_for(lambda: window._vtk_initialized)
+        self.assertFalse(loader.loaded)
+        window.open_paths([self.path])
+        self.wait_for(lambda: window.doc is not None)
+        self.assertTrue(loader.file_requested)
+        self.assert_loaded(window)
+        loader.complete()
+        self.app.processEvents()
+        self.assertEqual(window.files_tree.topLevelItemCount(), 1)
+
+    def test_early_file_uses_its_own_scene_for_the_first_draw(self):
+        loader = ControlledLoader(auto_finish=False)
+        window = self.window([str(self.path)], loader=loader, wait_ready=False)
+        self.wait_for(lambda: loader.start_count == 1)
+        self.assertTrue(loader.file_requested)
+        with patch.object(window, '_warm_up_3d_view', side_effect=AssertionError('file already queued')):
+            loader.graphics_loaded = True
+            loader.graphics_ready.emit()
+            self.wait_for(lambda: window.doc is not None)
+            self.assertFalse(loader.loaded)
+            self.assert_loaded(window)
+        loader.complete()
+
+    def test_hidden_context_failure_retries_when_the_real_structure_is_visible(self):
+        loader = ControlledLoader(auto_finish=False)
+        window = self.window(loader=loader, wait_ready=False)
+        self.wait_for(lambda: loader.start_count == 1)
+        with patch.object(window, '_warm_up_3d_view', side_effect=RuntimeError('hidden context')) as warm:
+            loader.graphics_loaded = True
+            loader.graphics_ready.emit()
+            loader.complete()
+            self.wait_for(lambda: window._backend_state == 'ready')
+            self.assertIs(window.canvas_stack.currentWidget(), window.welcome_page)
+            self.assertFalse(window._vtk_initialized)
+            window.open_path(self.path)
+            self.assert_loaded(window)
+            warm.assert_called_once()
+
+    def test_real_import_worker_can_finish_after_the_first_file(self):
+        import threading
+        from lele.backend_loader import BackendLoader
+
+        loader = BackendLoader()
+        entered, release = threading.Event(), threading.Event()
+
+        def idle_readers(file_requested):
+            entered.set()
+            assert release.wait(8)
+
+        with patch('lele.backend_loader.load_idle_modules', idle_readers):
+            try:
+                window = self.window(loader=loader, wait_ready=False)
+                self.wait_for(entered.is_set)
+                window.open_paths([self.path])
+                self.wait_for(lambda: window.doc is not None)
+                self.assert_loaded(window)
+                self.assertTrue(loader.isRunning())
+            finally:
+                release.set()
+                loader.wait()
 
     def test_closing_during_preload_does_not_create_canvas_or_open_queued_files(self):
         loader = ControlledLoader(auto_finish=False)

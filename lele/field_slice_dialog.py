@@ -2,6 +2,7 @@
 import numpy as np
 from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QComboBox, QDoubleSpinBox, QCheckBox, QLabel, QPushButton, QLineEdit
 from .dialog_policy import QDialog, QFileDialog, QMessageBox
+from .field_mapping import is_esp_field
 from .field_slice import grid_plane_slice, export_slice_csv, display_slice_samples
 from .operations import run_data_task
 from .output_text import LoadCancelled
@@ -62,7 +63,9 @@ class FieldSliceDialog(QDialog):
             ax.clabel(lines,inline=True,fontsize=8,fmt='%.3g')
         ax.set_aspect('equal');ax.set_xlabel('In-plane u (Å)');ax.set_ylabel('In-plane v (Å)')
         ax.set_title(self.volume.label or 'Scalar field')
-        self.figure.colorbar(mesh,ax=ax,label=self.volume.unit or 'source-file units')
+        length = .5 if is_esp_field(self.volume) else 1.
+        self.figure.colorbar(mesh, ax=ax, label=self.volume.unit or 'source-file units',
+                             shrink=length, aspect=20*length)
         origin=', '.join(f'{x:.5g}' for x in section.origin)
         self.note.setText(f'Slice origin (Å): ({origin}); grid index {section.sample_index:.5g}. '
             f'Sample min {lo:.6g}; max {hi:.6g}; mean {section.mean:.6g}.\n'

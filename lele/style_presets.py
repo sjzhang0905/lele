@@ -8,12 +8,16 @@ from __future__ import annotations
 
 from collections import OrderedDict
 from copy import deepcopy
+from functools import lru_cache
 import re
+
+from .lighting import DEFAULT_HIGHLIGHT_BRIGHTNESS, DEFAULT_HIGHLIGHT_SIZE
+from .render_options import WHITE_BACKGROUND
 
 STYLE_KEYS = (
     'style', 'atom_scale', 'bond_scale', 'background', 'bonds',
     'atom_palette', 'bond_palette', 'surface_finish', 'element_colors',
-    'space_filling_radii', 'space_filling_scale', 'highlight_size',
+    'space_filling_radii', 'space_filling_scale', 'highlight_size', 'highlight_brightness',
 )
 
 STYLE_MODES = ('Ball and stick', 'Space filling', 'Sticks', 'Wireframe', 'Polyhedral')
@@ -39,14 +43,15 @@ DEFAULT_ELEMENT_COLORS = {
 
 
 def _preset(style='Ball and stick', atom_scale=.45, bond_scale=.05,
-            background='#FFFFFF', bonds=True, atom_palette='Default',
+            background=WHITE_BACKGROUND, bonds=True, atom_palette='Default',
             bond_palette='Element', surface_finish='Glossy',
             space_filling_radii='Atomic', space_filling_scale=1.):
     return dict(style=style, atom_scale=atom_scale, bond_scale=bond_scale,
                 background=background, bonds=bonds, atom_palette=atom_palette,
                 bond_palette=bond_palette, surface_finish=surface_finish,
                 element_colors={}, space_filling_radii=space_filling_radii,
-                space_filling_scale=space_filling_scale, highlight_size=50.)
+                space_filling_scale=space_filling_scale, highlight_size=DEFAULT_HIGHLIGHT_SIZE,
+                highlight_brightness=DEFAULT_HIGHLIGHT_BRIGHTNESS)
 
 
 BUILTIN_PRESETS = OrderedDict([
@@ -58,7 +63,7 @@ BUILTIN_PRESETS = OrderedDict([
     ('Coordination polyhedra (VESTA inspired)', _preset(style='Polyhedral', atom_scale=.28,
                                        bond_scale=.05, bonds=False, background='#FFFFFF', surface_finish='Matte')),
     ('Soft pastel', _preset(atom_scale=.67, bond_scale=.11,
-                            background='#EDF2FA', atom_palette='Pastel',
+                            atom_palette='Pastel',
                             bond_palette='Neutral gray', surface_finish='Matte')),
     ('Dark presentation', _preset(atom_scale=.75, bond_scale=.14,
                                   background='#141B29', surface_finish='Glossy')),
@@ -67,8 +72,7 @@ BUILTIN_PRESETS = OrderedDict([
                                  bond_palette='Neutral gray', surface_finish='Matte')),
     ('Space filling (VESTA)', _preset(style='Space filling', atom_scale=1.0,
                                    bond_scale=.11, bonds=False, background='#FFFFFF')),
-    ('Stick model', _preset(style='Sticks', atom_scale=.50,
-                            bond_scale=.17, background='#FAFAFB')),
+    ('Stick model', _preset(style='Sticks', atom_scale=.50, bond_scale=.17)),
     ('Thin wireframe', _preset(style='Wireframe', atom_scale=.60,
                                bond_scale=.038, background='#FFFFFF')),
 ])
@@ -81,14 +85,15 @@ def snapshot(options):
 
 def validate_preset(values):
     """Validate a saved user preset before it is applied to render options."""
-    optional = {'element_colors', 'space_filling_radii', 'space_filling_scale', 'highlight_size'}
+    optional = {'element_colors', 'space_filling_radii', 'space_filling_scale', 'highlight_size', 'highlight_brightness'}
     if not isinstance(values, dict) or not all(k in values for k in STYLE_KEYS if k not in optional):
         raise ValueError('Incomplete style preset')
     # v0.8.0 files predate per-preset element colours.
     normalized = {k: values[k] for k in STYLE_KEYS if k not in optional}
     normalized['space_filling_radii'] = values.get('space_filling_radii', 'Atomic')
     normalized['space_filling_scale'] = values.get('space_filling_scale', 1.)
-    normalized['highlight_size'] = values.get('highlight_size', 50.)
+    normalized['highlight_size'] = values.get('highlight_size', DEFAULT_HIGHLIGHT_SIZE)
+    normalized['highlight_brightness'] = values.get('highlight_brightness', DEFAULT_HIGHLIGHT_BRIGHTNESS)
     if normalized['space_filling_radii'] not in ('Atomic', 'Ionic', 'van der Waals'):
         raise ValueError('Invalid VESTA radius type')
     colors = values.get('element_colors', {})
@@ -111,7 +116,8 @@ def validate_preset(values):
     if normalized['surface_finish'] not in SURFACE_FINISHES:
         raise ValueError('Unsupported surface finish')
     for key, lo, hi in (('atom_scale', .20, 1.8), ('space_filling_scale', .20, 1.8),
-                        ('bond_scale', .03, .35), ('highlight_size', 0., 100.)):
+                        ('bond_scale', .03, .35), ('highlight_size', 0., 100.),
+                        ('highlight_brightness', 0., 100.)):
         value = normalized[key]
         if isinstance(value, bool) or not isinstance(value, (int, float)) or not lo <= value <= hi:
             raise ValueError(f'Invalid {key}')
@@ -133,6 +139,7 @@ def apply_preset(options, values):
         setattr(options, key, value)
 
 
+@lru_cache(maxsize=1024)
 def mix_color(hex_color, white_share):
     """Return a pastel shade; input color is left unchanged."""
     raw = hex_color.lstrip('#')

@@ -50,7 +50,7 @@ def selected_rows(w):
 
 def test_ctrl_g_populates_expanded_coordinate_rows_and_independent_ids(gui):
     w = prepare(gui)
-    w.fragment_btn.click()
+    w.fragment_action.trigger()
     assert w.atom_table.rowCount() == 8
     assert len(w.frame.symbols) == len(w.renderer.displayed_atoms()) == 8
     np.testing.assert_allclose(w.frame.cell, np.diag([20, 10, 10]))
@@ -88,7 +88,7 @@ def test_auto_expansion_undo_restores_frame_volume_energy_and_other_frame(gui):
     w = prepare(gui, volume=volume)
     original = w.frame.clone()
     other_frame = w.doc.frames[1]
-    w.fragment_btn.click()
+    w.fragment_action.trigger()
     assert w.doc.modified and w.frame.energy_ev is None
     assert w.doc.volume is None and w.renderer.volume is None
     assert w.frame.info['converter_charge'] == 2
@@ -107,11 +107,11 @@ def test_auto_expansion_undo_restores_frame_volume_energy_and_other_frame(gui):
 
 def test_repeated_ctrl_g_does_not_grow_an_already_complete_fragment(gui):
     w = prepare(gui)
-    w.fragment_btn.click()
+    w.fragment_action.trigger()
     assert len(w.frame.symbols) == 8
     before = w.frame.clone()
     selected = set(w.selection)
-    w.fragment_btn.click()
+    w.fragment_action.trigger()
     assert w.frame.symbols == before.symbols
     np.testing.assert_array_equal(w.frame.positions, before.positions)
     assert set(w.selection) == selected and len(w.undo_stack) == 1
@@ -119,10 +119,10 @@ def test_repeated_ctrl_g_does_not_grow_an_already_complete_fragment(gui):
 
 def test_invert_delete_and_undo_keep_only_selected_complete_molecule(gui):
     w = prepare(gui)
-    w.fragment_btn.click()
+    w.fragment_action.trigger()
     fragment = w.frame.positions[w.selection].copy()
-    w.invert_btn.click()
-    w.delete_btn.click()
+    w.invert_action.trigger()
+    w.delete_action.trigger()
     assert len(w.frame.symbols) == w.atom_table.rowCount() == 3
     assert set(w.frame.symbols) == {'O', 'H'}
     actual = sorted(map(tuple, w.frame.positions))
@@ -138,7 +138,7 @@ def test_fragment_inside_cell_keeps_geometry_and_creates_no_undo(gui):
                    np.eye(3) * 10, (True,) * 3, -12.)
     gui.attach(source)
     gui.select([0])
-    gui.window.fragment_btn.click()
+    gui.window.fragment_action.trigger()
     assert gui.window.selection == [0, 1, 2]
     assert gui.window.doc.frames[0] is source
     assert gui.window.undo_stack == []

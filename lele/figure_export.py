@@ -2,7 +2,7 @@
 
 Import only from plotting windows: Matplotlib and Qt remain deferred at startup.
 """
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from io import BytesIO
 from pathlib import Path
 import os
@@ -48,6 +48,29 @@ def default_figure_path(parent, default_stem=None):
 
 
 @contextmanager
+def _figure_background(figure, use_white):
+    """Apply an opaque white page and plotting area only for this export."""
+    from .render_options import WHITE_BACKGROUND
+    with ExitStack() as restore:
+        restore.callback(figure.canvas.draw_idle)
+        if use_white:
+            page = figure.patch
+            restore.callback(page.set_visible, page.get_visible())
+            restore.callback(page.set_alpha, page.get_alpha())
+            page.set_visible(True)
+            page.set_alpha(1.)
+            for axis in figure.axes:
+                patch = axis.patch
+                color = patch.get_facecolor()
+                if patch.get_visible() and color[3]:
+                    restore.callback(patch.set_facecolor, color)
+                    patch.set_facecolor(WHITE_BACKGROUND)
+            yield dict(facecolor=WHITE_BACKGROUND, edgecolor=WHITE_BACKGROUND, transparent=False)
+        else:
+            yield dict(facecolor=figure.get_facecolor(), edgecolor=figure.get_edgecolor(), transparent=False)
+
+
+@contextmanager
 def _figure_size(figure, settings):
     old_size = figure.get_size_inches().copy()
     old_dpi = figure.dpi
@@ -59,7 +82,6 @@ def _figure_size(figure, settings):
     finally:
         figure.set_size_inches(old_size, forward=False)
         figure.set_dpi(old_dpi)
-        figure.canvas.draw_idle()
 
 
 def export_figure(path, figure, settings=None):
@@ -83,12 +105,14 @@ def export_figure(path, figure, settings=None):
     os.close(descriptor)
     temporary = Path(name)
     try:
-        with rc_context({'svg.fonttype': 'none', 'savefig.bbox': None}):
+        white = settings is None or settings.white_background
+        with (rc_context({'svg.fonttype': 'none', 'savefig.bbox': None}),
+              _figure_background(figure, white) as background_args):
             if suffix in VECTOR_FORMATS:
-                figure.savefig(temporary, format=suffix[1:], bbox_inches=None)
+                figure.savefig(temporary, format=suffix[1:], bbox_inches=None, **background_args)
             else:
                 with _figure_size(figure, settings) as dpi, BytesIO() as buffer:
-                    figure.savefig(buffer, format='png', dpi=dpi, bbox_inches=None)
+                    figure.savefig(buffer, format='png', dpi=dpi, bbox_inches=None, **background_args)
                     buffer.seek(0)
                     with Image.open(buffer) as source:
                         result = source.convert('RGB' if suffix in {'.jpg', '.jpeg'} else 'RGBA')
@@ -99,7 +123,8 @@ def export_figure(path, figure, settings=None):
                             result = resized
                         if settings.cropped:
                             from .png_export import crop_background
-                            background = tuple(round(255 * v) for v in figure.get_facecolor()[:3])
+                            background = ((255, 255, 255) if white else
+                                          tuple(round(255 * v) for v in figure.get_facecolor()[:3]))
                             cropped = crop_background(result, background)
                             result.close()
                             result = cropped

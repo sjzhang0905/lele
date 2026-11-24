@@ -30,8 +30,8 @@ def test_orca_button_curve_and_frequency_reference_use_current_document(gui):
     w = gui.window
     gui.addCleanup(lambda: [dialog.close() for dialog in list(w._analysis_windows)])
     w._open_path_now(EXAMPLE)
-    assert not w._analysis_windows and w.orbital_btn.isEnabled()
-    w.orbital_btn.click();dialog, = w._analysis_windows
+    assert not w._analysis_windows and w.orbital_action.isEnabled()
+    w.orbital_action.trigger();dialog, = w._analysis_windows
     assert isinstance(dialog, OrbitalDialog) and dialog.summary.rowCount() == 2
     assert dialog.summary.item(0,1).text() == '1'
     curve = w.show_energy_curve();curve.scan_only.setChecked(False);curve.canvas.draw()

@@ -13,3 +13,13 @@ global-exclude __pycache__ *.py[cod]
 
 recursive-include lele/native *.cpp *.dll *.so
 recursive-include verification/v4.0.0 *.md *.json *.xml
+recursive-include verification/v4.0.1 *.md *.xml
+recursive-include verification/v4.1.0 *.md *.xml
+recursive-include verification/v4.1.1 *.md *.xml *.png
+recursive-include verification/v4.2.0 *.md *.xml
+recursive-include verification/v4.2.1 *.md *.xml *.png
+recursive-include verification/v4.2.2 *.md *.xml
+recursive-include verification/v4.2.3 *.md *.json *.xml *.POSCAR
+recursive-include verification/v4.3.0 *.md *.xml
+recursive-include verification/v4.3.1 *.md *.xml *.json
+recursive-include verification/scientific LICENSE *.md *.json *.py *.xyz *.xsf

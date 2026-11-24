@@ -7,6 +7,7 @@ before a waiting workflow resumes. Read-only windows use ordinary show().
 """
 from hashlib import blake2b
 from pathlib import Path
+import sys
 
 from PySide6.QtCore import Qt, QEvent, QEventLoop, QObject, QTimer
 from PySide6.QtGui import QColor
@@ -107,7 +108,7 @@ def _frame_token(frame):
     return (id(frame),tuple(getattr(frame,'symbols',())),
             _array_token(getattr(frame,'positions',None)),_array_token(getattr(frame,'cell',None)),
             tuple(getattr(frame,'pbc',())),
-            tuple((key,repr(info.get(key))) for key in ('atom_source_order','site_occupancies','atom_constraints')),
+            tuple((key,repr(info.get(key))) for key in ('atom_source_order','site_occupancies','fixed_axes','vasp_fixed_axes')),
             tuple(repr(getattr(frame,key,None)) for key in ('bond_added','bond_removed','bond_snapshot','periodic_bond_snapshot')))
 
 
@@ -160,6 +161,8 @@ def _wait(dialog, *, guard=True):
     configure_dialog(dialog)
     parent = dialog.parentWidget()
     owner = owner_window(parent)
+    if getattr(dialog,'independent_files',False) or getattr(parent,'independent_files',False):
+        guard = False
     # Same operation cannot stack recursively while its first call is waiting.
     key = (id(owner),type(dialog),dialog.windowTitle())
     existing = _waiting.get(key)
@@ -285,6 +288,20 @@ class QFileDialog(_QtFileDialog):
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs)
         self.setOption(self.Option.DontUseNativeDialog,True);configure_dialog(self)
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        if sys.platform == 'win32':
+            from .windows_places import WindowsSidebar
+            if not hasattr(self, '_windows_sidebar'):
+                self._windows_sidebar = WindowsSidebar(self)
+            self._windows_sidebar.show()
+
+    def hideEvent(self, event):
+        if hasattr(self, '_windows_sidebar'):
+            self._windows_sidebar.hide()
+        super().hideEvent(event)
+
     def exec(self):return _wait(self)
     exec_ = exec
     @classmethod

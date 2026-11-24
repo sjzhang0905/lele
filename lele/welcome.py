@@ -9,8 +9,8 @@ from PySide6.QtGui import QColor, QGuiApplication, QPainter, QPalette, QPixmap, 
 from PySide6.QtWidgets import (QGridLayout, QLabel,
                                QScrollArea, QSizePolicy, QVBoxLayout, QWidget)
 
-from . import APP_CONTACT_EMAIL, APP_FULL_NAME, APP_NAME, APP_REPOSITORY_URL, __version__
-from . import APP_CONTACT_EMAIL_SECONDARY
+from . import (APP_CONTACT_EMAIL, APP_CONTACT_EMAIL_SECONDARY, APP_FULL_NAME, APP_MANUAL_URL,
+               APP_NAME, APP_REPOSITORY_URL, __version__)
 
 
 POSE_INTERVAL_MS = 800
@@ -35,6 +35,9 @@ SHORTCUT_GROUPS = (
     ('Atoms & fragments', (
         ('Ctrl+A', 'Select all atoms'),
         ('Ctrl+I', 'Invert atom selection'),
+        ('Ctrl+F', 'Fix selected atoms'),
+        ('Ctrl+Shift+F', 'Clear fixed axes on selected atoms'),
+        ('Ctrl+Alt+F', 'Select fully fixed atoms'),
         ('Delete', 'Delete selected atoms'),
         ('Ctrl+G', 'Select connected fragments'),
         ('1–9', 'Select numbered fragment (canvas)'),
@@ -164,7 +167,7 @@ class WelcomePage(QScrollArea):
             QLabel#appName { color: #373145; font-size: 52px; font-weight: 700; }
             QLabel#appFullName { font-size: 17px; }
             QLabel#version { color: #85818D; font-size: 12px; }
-            QLabel#contactEmail, QLabel#repositoryUrl { font-size: 12px; }
+            QLabel#contactEmail, QLabel#repositoryUrl, QLabel#manualUrl { font-size: 12px; }
             QLabel#parrotCaption { color: #8B819B; font-size: 12px; }
             QLabel#sectionTitle { font-size: 17px; font-weight: 600; }
             QLabel#groupTitle { color: #77678F; font-size: 13px; font-weight: 600; }
@@ -207,6 +210,14 @@ class WelcomePage(QScrollArea):
         self.repository_label.setOpenExternalLinks(True)
         self.repository_label.setAccessibleName('Source repository: ' + APP_REPOSITORY_URL)
         outer.addWidget(self.repository_label)
+        self.manual_label = QLabel(f'<a style="color: #77678F;" href="{APP_MANUAL_URL}">LELE Manual</a>')
+        self.manual_label.setObjectName('manualUrl')
+        self.manual_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.manual_label.setTextInteractionFlags(self.repository_label.textInteractionFlags())
+        self.manual_label.setOpenExternalLinks(True)
+        self.manual_label.setAccessibleName('LELE Manual')
+        self.manual_label.setToolTip(APP_MANUAL_URL)
+        outer.addWidget(self.manual_label)
 
         self.parrot_walk = ParrotWalk()
         outer.addWidget(self.parrot_walk)

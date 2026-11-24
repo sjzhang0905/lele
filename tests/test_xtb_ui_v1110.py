@@ -22,8 +22,8 @@ def attach(gui,path):
 
 def test_frontiers_open_only_on_button_click_and_keep_source_labels_and_units(gui):
     w,d=attach(gui,EXAMPLES/'synthetic_xtb_v1110.out')
-    assert not w._analysis_windows and w.orbital_btn.isEnabled()
-    w.orbital_btn.click();dialog=w._analysis_windows[-1]
+    assert not w._analysis_windows and w.orbital_action.isEnabled()
+    w.orbital_action.trigger();dialog=w._analysis_windows[-1]
     assert dialog.unit.currentText()=='eV'
     assert dialog.summary.item(0,1).text()=='2' and dialog.summary.item(0,3).text()=='3'
     assert float(dialog.summary.item(0,5).text())==1.632683
@@ -76,7 +76,7 @@ def test_gxtb_channel_rows_and_missing_initial_eigenvalues_are_explicit(gui):
 
 def test_raw_trajectory_exposes_energy_and_playback_without_inventing_orbitals(gui):
     w,d=attach(gui,EXAMPLES/'synthetic_xtb_v1110.xtbopt.log')
-    assert not w.orbital_btn.isEnabled() and w.frame_spin.maximum()==3
+    assert not w.orbital_action.isEnabled() and w.frame_spin.maximum()==3
     w._step_next();assert w.frame_index==1
     curve=w.show_energy_curve()
     assert len(curve.points())==3 and curve.energy_axes.get_xlabel()=='Trajectory record'

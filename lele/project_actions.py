@@ -88,7 +88,16 @@ class ProjectActions:
 
     def _load_project_path(self, path):
         from .project_file import load_project
-        try:state = run_data_task(self,'Opening project',lambda:load_project(path),cancellable=True)
+        def read_state():
+            from .core import prepare_view_neighbors
+            state = load_project(path)
+            entry = state['documents'][state.get('current_document', 0)]
+            frames = entry['document'].frames
+            if frames:
+                prepare_view_neighbors(frames[entry.get('frame_index', 0)])
+            return state
+
+        try:state = run_data_task(self,'Opening project',read_state,cancellable=True)
         except LoadCancelled:return False
         except (ValueError, TypeError, OSError) as exc:
             QMessageBox.warning(self, 'Could not open project', str(exc));return False
@@ -102,8 +111,11 @@ class ProjectActions:
                 document.path = Path(path).resolve().parent/name
             document.project_original_path = document.project_original_path or original
             preset = entry.get('preset', CUSTOM_KEY)
-            if self.preset_combo.findData(preset) < 0:preset = CUSTOM_KEY
-            view = DocumentView(document, entry['options'], entry.get('custom_style', {}), preset,
+            custom = entry.get('custom_style', {})
+            if self.preset_combo.findData(preset) < 0:
+                from .style_presets import snapshot
+                preset, custom = CUSTOM_KEY, snapshot(entry['options'])
+            view = DocumentView(document, entry['options'], custom, preset,
                 camera_from_data(entry.get('camera')), entry.get('frame_index', 0))
             self._document_views[id(document)] = view
             display_name = entry.get('display_name', '')

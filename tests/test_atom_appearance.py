@@ -64,7 +64,7 @@ class AtomAppearanceRendererTests(unittest.TestCase):
         glyphs = self.glyphs()
         self.assertEqual(sum(a.GetMapper().GetInput().GetNumberOfPoints() for a in glyphs), 2)
         custom = next(a for a in glyphs if a.GetProperty().GetOpacity() < 1)
-        np.testing.assert_allclose(custom.GetProperty().GetColor(), rgb('#ff00aa'))
+        np.testing.assert_allclose(custom.GetProperty().GetDiffuseColor(), rgb('#ff00aa'))
         self.assertAlmostEqual(custom.GetProperty().GetOpacity(), .3)
         self.assertEqual([a.GetInput() for a in self.draw._label_actors], ['2'])
         self.assertAlmostEqual(self.draw._label_actors[0].GetTextProperty().GetOpacity(), .3)
@@ -120,7 +120,7 @@ class AtomAppearanceRendererTests(unittest.TestCase):
         self.assertEqual(sum(a.GetMapper().GetInput().GetNumberOfPoints() for a in glyphs),
                          1 + len(preview.extra_tiles))
         for actor in glyphs:
-            np.testing.assert_allclose(actor.GetProperty().GetColor(), rgb('#12ab34'))
+            np.testing.assert_allclose(actor.GetProperty().GetDiffuseColor(), rgb('#12ab34'))
             self.assertEqual(actor.GetProperty().GetOpacity(), .5)
         with patch.object(self.draw, '_tube_segments') as tube:
             self.draw._periodic_fragment_bonds(frame)

@@ -168,13 +168,13 @@ def test_each_file_restores_camera_colours_and_all_render_controls(gui):
     w.preset_combo.setCurrentIndex(w.preset_combo.findData('Dark presentation'))
     w._set_option('element_colors',{'O':'#123456'})
     w.hbond_check.setChecked(True);w.atom_slider.setValue(82);w.cutoff_slider.setValue(130)
-    w.axes_basis_combo.setCurrentIndex(w.axes_basis_combo.findData('abc'))
-    w.axes_position_combo.setCurrentIndex(w.axes_position_combo.findData('Origin'))
-    w.axes_length_spin.setValue(4.25);w.label_combo.setCurrentText('Index (1..N)')
+    w.coordinate_axes.basis.buttons['abc'].click()
+    w.coordinate_axes.position.buttons['Origin'].click()
+    w.coordinate_axes.length.setValue(4.25);w.label_combo.setCurrentText('Index (1..N)')
     w.label_size_spin.setValue(24);w.label_font_combo.setCurrentText('Times');w.label_bold_check.setChecked(False)
     w.volume_check.setChecked(False);w.iso_spin.setValue(1.25e-5);w.opacity_slider.setValue(35)
     w._set_option('dipole_mode','Total');w._set_option('dipole_scale',.75)
-    w._apply_boundary(True,((0,2),(0,1),(0,1)))
+    w._apply_boundary(((0,2),(0,1),(0,1)))
     w._change_atom_appearance([0],{'color':'#ABCDEF'})
     set_camera(w);a_camera=camera_values(w);a_options=asdict(w.render_options)
     w.files_tree.setCurrentItem(w.files_tree.topLevelItem(1))
@@ -187,13 +187,13 @@ def test_each_file_restores_camera_colours_and_all_render_controls(gui):
     assert camera_values(w)==a_camera and asdict(w.render_options)==a_options
     assert w.renderer.options is w.render_options
     assert w.atom_slider.value()==82 and w.cutoff_slider.value()==130
-    assert w.hbond_check.isChecked() and w.axes_basis_combo.currentData()=='abc'
-    assert w.axes_position_combo.currentData()=='Origin' and w.axes_length_spin.value()==4.25
+    assert w.hbond_check.isChecked() and w.coordinate_axes.basis.buttons['abc'].isChecked()
+    assert w.coordinate_axes.position.buttons['Origin'].isChecked() and w.coordinate_axes.length.value()==4.25
     assert w.label_size_spin.value()==24 and w.label_font_combo.currentText()=='Times'
     assert not w.label_bold_check.isChecked() and not w.volume_check.isChecked()
     assert w.iso_spin.value()==pytest.approx(1.25e-5) and w.opacity_slider.value()==35
     assert w.dipole_panel.mode.currentText()=='Total' and w.dipole_panel.scale.value()==.75
-    assert w.boundary_panel.enabled.isChecked() and w.boundary_panel.bounds()==((0,2),(0,1),(0,1))
+    assert w.render_options.boundary_enabled and w.boundary_panel.bounds()==((0,2),(0,1),(0,1))
     assert docs[0].frames[0].atom_appearance[0].color=='#ABCDEF'
     assert docs[1].frames[0].atom_appearance=={}
     assert w.projection_actions['Perspective'].isChecked()

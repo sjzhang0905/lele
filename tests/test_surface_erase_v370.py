@@ -228,7 +228,17 @@ def test_png_export_keeps_hole_at_higher_resolution(tmp_path):
     export_png(path,window,PngSettings(480,480,2),mesh_items=draw._keepalive)
     pixels=np.asarray(Image.open(path).convert('RGB'))
     assert np.all(pixels[220:260,220:260]>245)
-    blue=pixels[110:130,110:130].astype(int)
-    assert np.all(blue[:,:,2]>blue[:,:,0]+100)
     assert area(draw.field_actors[0].GetMapper().GetInput())==pytest.approx(3.)
+    # A white specular reflection can brighten an intact blue patch. Compare
+    # with the same illuminated plane to test the removed geometry directly.
+    draw.clear()
+    draw.options.volume_hidden_regions=[]
+    draw._volume(volume)
+    control_path=tmp_path/'uncut.png'
+    export_png(control_path,window,PngSettings(480,480,2),mesh_items=draw._keepalive)
+    control=np.asarray(Image.open(control_path).convert('RGB')).astype(int)
+    np.testing.assert_allclose(pixels[110:130,110:130], control[110:130,110:130], atol=2)
+    uncut_center=control[220:260,220:260]
+    assert np.mean(uncut_center[:,:,2]-uncut_center[:,:,0])>20
+    assert area(draw.field_actors[0].GetMapper().GetInput())==pytest.approx(4.)
     window.Finalize()

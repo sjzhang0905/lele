@@ -262,7 +262,7 @@ class _Evaluator:
         if self._periodic is None:
             cell = periodic_basis(frame)
             if cell is None:
-                raise ValueError('Periodic distance selection requires a nondegenerate cell.')
+                raise ValueError('Periodic distance selection requires independent periodic lattice vectors.')
             reduced, _ = _reduced_cell(tuple(cell.ravel()), tuple(frame.pbc))
             periodic = reduced[np.asarray(frame.pbc, dtype=bool)]
             projector = None if all(frame.pbc) else np.linalg.pinv(periodic) @ periodic

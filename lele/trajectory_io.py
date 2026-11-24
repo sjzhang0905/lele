@@ -136,8 +136,19 @@ def xyz_blocks(path, *, plain=False):
             yield source, comment, symbols, positions
 
 
-def read_plain_xyz(path, max_frames=None):
+def _plain_xyz_info(comment):
+    # ASE treats ordinary whitespace-separated words as boolean keys. Preserve
+    # its full parser for quoted/escaped text, blank lines and reserved fields.
+    words = comment.split()
+    if words and all(word.isascii() and word.isalnum()
+                     and word.lower() not in ('uid', 'lattice', 'virial', 'stress') for word in words):
+        return dict.fromkeys(words, 'True')
     from ase.io.extxyz import key_val_str_to_dict
+    return {str(k): str(v)[:180] for k, v in key_val_str_to_dict(comment).items()
+            if isinstance(v, (str, int, float, bool))}
+
+
+def read_plain_xyz(path, max_frames=None):
     from .core import Frame
     frames = []
     from .trajectory_storage import trajectory_store
@@ -145,8 +156,7 @@ def read_plain_xyz(path, max_frames=None):
         for _, comment, symbols, positions in xyz_blocks(path, plain=True):
             if max_frames is not None and len(frames) >= max_frames:
                 raise FrameLimitExceeded(f'Trajectory exceeds {max_frames} frames')
-            info = {str(k): str(v)[:180] for k, v in key_val_str_to_dict(comment).items()
-                    if isinstance(v, (str, int, float, bool))}
+            info = _plain_xyz_info(comment)
             frames.append(Frame(symbols, positions, info=info))
             store.append(frames[-1])
         store.finish(editable=False)

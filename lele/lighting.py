@@ -1,34 +1,47 @@
 """Camera-relative directional lighting for interactive and exported scenes.
 
-Directions follow VMD's four standard lights; initial intensities are balanced
-for LELE's Glossy material. VMD's default colors and light direction facts:
+Directions follow VMD's four standard lights. The front and upper-right
+lights are enabled by default. VMD light directions:
 https://www.ks.uiuc.edu/Research/vmd/doxygen/Scene_8C-source.html
 """
 from math import isfinite
 
 LIGHT_NAMES = ('Front', 'Upper right', 'Rear upper left', 'Lower left')
 DEFAULT_LIGHT_ENABLED = (True, True, False, False)
-DEFAULT_LIGHT_INTENSITIES = (.85, .45, .45, .35)
+DEFAULT_LIGHT_INTENSITIES = (1.15, 1.35, .45, 1.05)
 DEFAULT_LIGHT_POSITIONS = ((-.1, .1, 1.), (1., 2., .5), (-1., 2., -1.), (-1., -1., 0.))
+DEFAULT_HIGHLIGHT_SIZE = 47.
+DEFAULT_HIGHLIGHT_BRIGHTNESS = 47.
 
 _FINISHES = {
-    'Balanced': (.22, .72, .36, 24.),
-    'Glossy': (.17, .70, .78, 60.),
-    'Matte': (.32, .67, .05, 9.),
+    # The middle of each slider retains the original material calibration.
+    'Balanced': (.22, .39, .36, 24.),
+    'Glossy': (.07, .58, .80, 32.),
+    'Matte': (.32, .36, .05, 9.),
 }
 
 
 def apply_surface_finish(prop, options):
     ambient, diffuse, specular, power = _FINISHES.get(options.surface_finish, _FINISHES['Balanced'])
     # Interpolate the Phong exponent logarithmically within VTK's supported
-    # range. The middle position exactly reproduces each material's old finish.
+    # range. The middle position uses each material's calibrated exponent.
     adjustment = (options.highlight_size - 50.) / 50.
     if adjustment < 0:
         power *= (128. / power) ** -adjustment
     else:
         power **= 1. - adjustment
+    # Both halves of the brightness slider stay active. The upper end allows
+    # up to twice the preset strength within VTK's 0..1 material range.
+    brightness = options.highlight_brightness / 50.
+    if brightness <= 1.:
+        specular *= brightness
+    else:
+        specular += (brightness - 1.) * min(specular, 1. - specular)
     prop.SetAmbient(ambient)
     prop.SetDiffuse(diffuse)
+    # vtkProperty.SetColor also sets the specular RGB. A white light must
+    # reflect white even from a dark atom or a saturated cyan density layer.
+    prop.SetSpecularColor(1., 1., 1.)
     prop.SetSpecular(specular)
     prop.SetSpecularPower(power)
 
@@ -50,6 +63,14 @@ def light_settings(options):
            or sum(v*v for v in p) < 1e-12 for p in positions):
         raise ValueError('Each light direction must be a finite, nonzero 3D vector.')
     return enabled, intensities, positions
+
+
+def upgrade_default_lights(options):
+    """Update only the unmodified pre-4.1.1 rig when opening an older project."""
+    previous = ((True, True, False, False), (.85, .45, .45, .35), DEFAULT_LIGHT_POSITIONS)
+    if light_settings(options) == previous:
+        options.light_enabled = DEFAULT_LIGHT_ENABLED
+        options.light_intensities = DEFAULT_LIGHT_INTENSITIES
 
 
 def create_lights(renderer):

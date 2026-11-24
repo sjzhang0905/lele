@@ -52,6 +52,12 @@ def _coordinate_reader():
         return None
 
 
+def preload_readers():
+    """Load the optional native library and resolve its entry points on the import thread."""
+    reader()
+    _coordinate_reader()
+
+
 def coordinate_array(rows, *, labeled=False):
     """Return float64 coordinates and optional two-byte species codes."""
     parse = _coordinate_reader()

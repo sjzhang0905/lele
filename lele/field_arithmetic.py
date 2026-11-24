@@ -47,6 +47,8 @@ def unit_spec(unit):
         'eV': ('potential', 1., 'eV'),
         'Hartree': ('potential', Hartree, 'Hartree'),
         'Ha': ('potential', Hartree, 'Hartree'),
+        'V': ('electrostatic potential', 1., 'V'),
+        'Hartree/e': ('electrostatic potential', Hartree, 'Hartree/e'),
         'dimensionless': ('dimensionless', 1., 'dimensionless'),
         'Å⁻³ᐟ²': ('amplitude', 1., 'Å⁻³ᐟ²'),
         'Bohr⁻³ᐟ²': ('amplitude', 1/Bohr**1.5, 'Bohr⁻³ᐟ²'),

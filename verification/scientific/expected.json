@@ -1,0 +1,1114 @@
+{
+  "slab-zero-c": {
+    "valid_periodic_lattice": true,
+    "minimum_images": [
+      {
+        "pair": [
+          0,
+          1
+        ],
+        "distance_squared": "81/400",
+        "shifts": [
+          [
+            -1,
+            0,
+            0
+          ]
+        ]
+      },
+      {
+        "pair": [
+          0,
+          2
+        ],
+        "distance_squared": "2337/80",
+        "shifts": [
+          [
+            0,
+            -1,
+            0
+          ]
+        ]
+      },
+      {
+        "pair": [
+          1,
+          2
+        ],
+        "distance_squared": "1389/50",
+        "shifts": [
+          [
+            0,
+            -1,
+            0
+          ]
+        ]
+      }
+    ],
+    "neighbors": [
+      [
+        0,
+        1,
+        [
+          -1,
+          0,
+          0
+        ],
+        "81/400"
+      ],
+      [
+        1,
+        0,
+        [
+          1,
+          0,
+          0
+        ],
+        "81/400"
+      ]
+    ],
+    "short_contacts": [
+      {
+        "pair": [
+          0,
+          1
+        ],
+        "distance_squared": "81/400",
+        "shifts": [
+          [
+            -1,
+            0,
+            0
+          ]
+        ]
+      }
+    ],
+    "bonds": [
+      [
+        0,
+        1,
+        [
+          -1,
+          0,
+          0
+        ]
+      ]
+    ],
+    "fragment": {
+      "infinite": false,
+      "images": [
+        [
+          0,
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          1,
+          [
+            -1,
+            0,
+            0
+          ]
+        ]
+      ]
+    }
+  },
+  "slab-dependent-c": {
+    "valid_periodic_lattice": true,
+    "minimum_images": [
+      {
+        "pair": [
+          0,
+          1
+        ],
+        "distance_squared": "81/400",
+        "shifts": [
+          [
+            -1,
+            0,
+            0
+          ]
+        ]
+      },
+      {
+        "pair": [
+          0,
+          2
+        ],
+        "distance_squared": "2337/80",
+        "shifts": [
+          [
+            0,
+            -1,
+            0
+          ]
+        ]
+      },
+      {
+        "pair": [
+          1,
+          2
+        ],
+        "distance_squared": "1389/50",
+        "shifts": [
+          [
+            0,
+            -1,
+            0
+          ]
+        ]
+      }
+    ],
+    "neighbors": [
+      [
+        0,
+        1,
+        [
+          -1,
+          0,
+          0
+        ],
+        "81/400"
+      ],
+      [
+        1,
+        0,
+        [
+          1,
+          0,
+          0
+        ],
+        "81/400"
+      ]
+    ],
+    "short_contacts": [
+      {
+        "pair": [
+          0,
+          1
+        ],
+        "distance_squared": "81/400",
+        "shifts": [
+          [
+            -1,
+            0,
+            0
+          ]
+        ]
+      }
+    ],
+    "bonds": [
+      [
+        0,
+        1,
+        [
+          -1,
+          0,
+          0
+        ]
+      ]
+    ],
+    "fragment": {
+      "infinite": false,
+      "images": [
+        [
+          0,
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          1,
+          [
+            -1,
+            0,
+            0
+          ]
+        ]
+      ]
+    }
+  },
+  "slab-vacuum": {
+    "valid_periodic_lattice": true,
+    "minimum_images": [
+      {
+        "pair": [
+          0,
+          1
+        ],
+        "distance_squared": "81/400",
+        "shifts": [
+          [
+            -1,
+            0,
+            0
+          ]
+        ]
+      },
+      {
+        "pair": [
+          0,
+          2
+        ],
+        "distance_squared": "2337/80",
+        "shifts": [
+          [
+            0,
+            -1,
+            0
+          ]
+        ]
+      },
+      {
+        "pair": [
+          1,
+          2
+        ],
+        "distance_squared": "1389/50",
+        "shifts": [
+          [
+            0,
+            -1,
+            0
+          ]
+        ]
+      }
+    ],
+    "neighbors": [
+      [
+        0,
+        1,
+        [
+          -1,
+          0,
+          0
+        ],
+        "81/400"
+      ],
+      [
+        1,
+        0,
+        [
+          1,
+          0,
+          0
+        ],
+        "81/400"
+      ]
+    ],
+    "short_contacts": [
+      {
+        "pair": [
+          0,
+          1
+        ],
+        "distance_squared": "81/400",
+        "shifts": [
+          [
+            -1,
+            0,
+            0
+          ]
+        ]
+      }
+    ],
+    "bonds": [
+      [
+        0,
+        1,
+        [
+          -1,
+          0,
+          0
+        ]
+      ]
+    ],
+    "fragment": {
+      "infinite": false,
+      "images": [
+        [
+          0,
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          1,
+          [
+            -1,
+            0,
+            0
+          ]
+        ]
+      ]
+    }
+  },
+  "chain-b": {
+    "valid_periodic_lattice": true,
+    "minimum_images": [
+      {
+        "pair": [
+          0,
+          1
+        ],
+        "distance_squared": "7/50",
+        "shifts": [
+          [
+            0,
+            -1,
+            0
+          ]
+        ]
+      },
+      {
+        "pair": [
+          0,
+          2
+        ],
+        "distance_squared": "37/5",
+        "shifts": [
+          [
+            0,
+            0,
+            0
+          ]
+        ]
+      },
+      {
+        "pair": [
+          1,
+          2
+        ],
+        "distance_squared": "437/50",
+        "shifts": [
+          [
+            0,
+            1,
+            0
+          ]
+        ]
+      }
+    ],
+    "neighbors": [
+      [
+        0,
+        1,
+        [
+          0,
+          -1,
+          0
+        ],
+        "7/50"
+      ],
+      [
+        1,
+        0,
+        [
+          0,
+          1,
+          0
+        ],
+        "7/50"
+      ]
+    ],
+    "short_contacts": [
+      {
+        "pair": [
+          0,
+          1
+        ],
+        "distance_squared": "7/50",
+        "shifts": [
+          [
+            0,
+            -1,
+            0
+          ]
+        ]
+      }
+    ],
+    "bonds": [
+      [
+        0,
+        1,
+        [
+          0,
+          -1,
+          0
+        ]
+      ]
+    ],
+    "fragment": {
+      "infinite": false,
+      "images": [
+        [
+          0,
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          1,
+          [
+            0,
+            -1,
+            0
+          ]
+        ]
+      ]
+    }
+  },
+  "skew-xz": {
+    "valid_periodic_lattice": true,
+    "minimum_images": [
+      {
+        "pair": [
+          0,
+          1
+        ],
+        "distance_squared": "397/400",
+        "shifts": [
+          [
+            6,
+            0,
+            -1
+          ]
+        ]
+      },
+      {
+        "pair": [
+          0,
+          2
+        ],
+        "distance_squared": "7281/400",
+        "shifts": [
+          [
+            0,
+            0,
+            0
+          ]
+        ]
+      },
+      {
+        "pair": [
+          1,
+          2
+        ],
+        "distance_squared": "1493/100",
+        "shifts": [
+          [
+            -6,
+            0,
+            1
+          ]
+        ]
+      }
+    ],
+    "neighbors": [
+      [
+        0,
+        1,
+        [
+          6,
+          0,
+          -1
+        ],
+        "397/400"
+      ],
+      [
+        1,
+        0,
+        [
+          -6,
+          0,
+          1
+        ],
+        "397/400"
+      ]
+    ],
+    "short_contacts": [
+      {
+        "pair": [
+          0,
+          1
+        ],
+        "distance_squared": "397/400",
+        "shifts": [
+          [
+            6,
+            0,
+            -1
+          ]
+        ]
+      }
+    ],
+    "bonds": [
+      [
+        0,
+        1,
+        [
+          6,
+          0,
+          -1
+        ]
+      ]
+    ],
+    "fragment": {
+      "infinite": false,
+      "images": [
+        [
+          0,
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          1,
+          [
+            6,
+            0,
+            -1
+          ]
+        ]
+      ]
+    }
+  },
+  "tilted-yz": {
+    "valid_periodic_lattice": true,
+    "minimum_images": [
+      {
+        "pair": [
+          0,
+          1
+        ],
+        "distance_squared": "217/2000",
+        "shifts": [
+          [
+            0,
+            -1,
+            -1
+          ]
+        ]
+      },
+      {
+        "pair": [
+          0,
+          2
+        ],
+        "distance_squared": "16137/2500",
+        "shifts": [
+          [
+            0,
+            0,
+            -1
+          ]
+        ]
+      },
+      {
+        "pair": [
+          1,
+          2
+        ],
+        "distance_squared": "11557/2000",
+        "shifts": [
+          [
+            0,
+            1,
+            0
+          ]
+        ]
+      }
+    ],
+    "neighbors": [
+      [
+        0,
+        1,
+        [
+          0,
+          -1,
+          -1
+        ],
+        "217/2000"
+      ],
+      [
+        1,
+        0,
+        [
+          0,
+          1,
+          1
+        ],
+        "217/2000"
+      ]
+    ],
+    "short_contacts": [
+      {
+        "pair": [
+          0,
+          1
+        ],
+        "distance_squared": "217/2000",
+        "shifts": [
+          [
+            0,
+            -1,
+            -1
+          ]
+        ]
+      }
+    ],
+    "bonds": [
+      [
+        0,
+        1,
+        [
+          0,
+          -1,
+          -1
+        ]
+      ]
+    ],
+    "fragment": {
+      "infinite": false,
+      "images": [
+        [
+          0,
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          1,
+          [
+            0,
+            -1,
+            -1
+          ]
+        ]
+      ]
+    }
+  },
+  "bulk": {
+    "valid_periodic_lattice": true,
+    "minimum_images": [
+      {
+        "pair": [
+          0,
+          1
+        ],
+        "distance_squared": "3733/10000",
+        "shifts": [
+          [
+            -1,
+            -1,
+            -1
+          ]
+        ]
+      },
+      {
+        "pair": [
+          0,
+          2
+        ],
+        "distance_squared": "21",
+        "shifts": [
+          [
+            0,
+            0,
+            -1
+          ]
+        ]
+      },
+      {
+        "pair": [
+          1,
+          2
+        ],
+        "distance_squared": "190533/10000",
+        "shifts": [
+          [
+            1,
+            1,
+            0
+          ]
+        ]
+      }
+    ],
+    "neighbors": [],
+    "short_contacts": [],
+    "bonds": [
+      [
+        0,
+        1,
+        [
+          -1,
+          -1,
+          -1
+        ]
+      ]
+    ],
+    "fragment": {
+      "infinite": false,
+      "images": [
+        [
+          0,
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          1,
+          [
+            -1,
+            -1,
+            -1
+          ]
+        ]
+      ]
+    }
+  },
+  "molecule": {
+    "valid_periodic_lattice": false,
+    "minimum_images": [
+      {
+        "pair": [
+          0,
+          1
+        ],
+        "distance_squared": "81/400",
+        "shifts": [
+          [
+            0,
+            0,
+            0
+          ]
+        ]
+      },
+      {
+        "pair": [
+          0,
+          2
+        ],
+        "distance_squared": "25",
+        "shifts": [
+          [
+            0,
+            0,
+            0
+          ]
+        ]
+      },
+      {
+        "pair": [
+          1,
+          2
+        ],
+        "distance_squared": "8281/400",
+        "shifts": [
+          [
+            0,
+            0,
+            0
+          ]
+        ]
+      }
+    ],
+    "neighbors": [
+      [
+        0,
+        1,
+        [
+          0,
+          0,
+          0
+        ],
+        "81/400"
+      ],
+      [
+        1,
+        0,
+        [
+          0,
+          0,
+          0
+        ],
+        "81/400"
+      ]
+    ],
+    "short_contacts": [
+      {
+        "pair": [
+          0,
+          1
+        ],
+        "distance_squared": "81/400",
+        "shifts": [
+          [
+            0,
+            0,
+            0
+          ]
+        ]
+      }
+    ],
+    "bonds": [
+      [
+        0,
+        1,
+        [
+          0,
+          0,
+          0
+        ]
+      ]
+    ],
+    "fragment": {
+      "infinite": false,
+      "images": [
+        [
+          0,
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          1,
+          [
+            0,
+            0,
+            0
+          ]
+        ]
+      ]
+    }
+  },
+  "dependent-active": {
+    "valid_periodic_lattice": false,
+    "minimum_images": [
+      {
+        "pair": [
+          0,
+          1
+        ],
+        "distance_squared": "12321/400",
+        "shifts": [
+          [
+            0,
+            0,
+            0
+          ]
+        ]
+      }
+    ],
+    "neighbors": [],
+    "short_contacts": [],
+    "bonds": [],
+    "fragment": {
+      "infinite": false,
+      "images": [
+        [
+          0,
+          [
+            0,
+            0,
+            0
+          ]
+        ]
+      ]
+    }
+  },
+  "zero-active": {
+    "valid_periodic_lattice": false,
+    "minimum_images": [
+      {
+        "pair": [
+          0,
+          1
+        ],
+        "distance_squared": "22801/400",
+        "shifts": [
+          [
+            0,
+            0,
+            0
+          ]
+        ]
+      }
+    ],
+    "neighbors": [],
+    "short_contacts": [],
+    "bonds": [],
+    "fragment": {
+      "infinite": false,
+      "images": [
+        [
+          0,
+          [
+            0,
+            0,
+            0
+          ]
+        ]
+      ]
+    }
+  },
+  "infinite-chain": {
+    "valid_periodic_lattice": true,
+    "minimum_images": [],
+    "neighbors": [
+      [
+        0,
+        0,
+        [
+          0,
+          0,
+          -1
+        ],
+        "841/400"
+      ],
+      [
+        0,
+        0,
+        [
+          0,
+          0,
+          1
+        ],
+        "841/400"
+      ]
+    ],
+    "short_contacts": [],
+    "bonds": [
+      [
+        0,
+        0,
+        [
+          0,
+          0,
+          1
+        ]
+      ]
+    ],
+    "fragment": {
+      "infinite": true
+    }
+  },
+  "mic-tie": {
+    "valid_periodic_lattice": true,
+    "minimum_images": [
+      {
+        "pair": [
+          0,
+          1
+        ],
+        "distance_squared": "5",
+        "shifts": [
+          [
+            -1,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ]
+      }
+    ],
+    "neighbors": [
+      [
+        0,
+        1,
+        [
+          -1,
+          0,
+          0
+        ],
+        "5"
+      ],
+      [
+        0,
+        1,
+        [
+          0,
+          0,
+          0
+        ],
+        "5"
+      ],
+      [
+        1,
+        0,
+        [
+          0,
+          0,
+          0
+        ],
+        "5"
+      ],
+      [
+        1,
+        0,
+        [
+          1,
+          0,
+          0
+        ],
+        "5"
+      ]
+    ],
+    "short_contacts": [
+      {
+        "pair": [
+          0,
+          1
+        ],
+        "distance_squared": "5",
+        "shifts": [
+          [
+            -1,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0
+          ]
+        ]
+      }
+    ],
+    "bonds": [],
+    "fragment": {
+      "infinite": false,
+      "images": [
+        [
+          0,
+          [
+            0,
+            0,
+            0
+          ]
+        ]
+      ]
+    }
+  }
+}

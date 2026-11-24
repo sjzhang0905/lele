@@ -33,6 +33,24 @@ def select_field(document, index):
 
 
 class FieldActions:
+    def open_field_pair(self, mode):
+        from pathlib import Path
+        from .field_pair_dialog import FieldPairDialog
+        directory = self.doc.path.parent if self.doc is not None else Path.home()
+        dialog = FieldPairDialog(mode, directory, self)
+        try:
+            if dialog.exec() != QDialog.DialogCode.Accepted or dialog.result_pair is None:
+                return
+            document, layers = dialog.result_pair
+            self._document_views[id(document)] = self._new_document_view(document, surface_layers=layers)
+            self._document_labels[id(document)] = ' + '.join(source.path.name for source in dialog.sources)
+            self._attach_loaded_document(document)
+            warnings = getattr(self.renderer, 'field_warnings', ())
+            if warnings:
+                self.statusBar().showMessage(' '.join(warnings), 12000)
+        finally:
+            dialog.deleteLater()
+
     def _build_field_controls(self, form):
         self.field_combo = PanelComboBox()
         self.field_combo.currentIndexChanged.connect(self._select_field)
@@ -336,7 +354,7 @@ class FieldActions:
             layers=self.render_options.volume_surfaces or basic_surface_layers(self.render_options)
             if self.render_options.volume_signs=='None':
                 note += '\nIsosurfaces hidden (None); the field remains available for slices.'
-            elif not any(layer.get('visible',True) and layer.get('opacity',.65)>0 and
+            elif not any(layer.get('visible',True) and layer.get('opacity',self.render_options.volume_opacity)>0 and
                        (layer.get('dataset',-1)>=0 or lo <= layer['value'] <= hi) for layer in layers):
                 note += '\nNo visible isovalue lies within this field’s range.'
             self.field_note.setText(note)

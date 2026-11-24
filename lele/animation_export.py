@@ -28,6 +28,7 @@ class GifSettings:
     loop: bool = True
     supersample: int = 2
     dither: bool = True
+    white_background: bool = True
 
     def __post_init__(self):
         if self.source not in ('trajectory', 'vibration'):
@@ -78,7 +79,8 @@ def vibration_frames(reference, mode, count, amplitude, cutoff=1.):
         yield mode.preview_frame(reference,tau*i/count,amplitude,cutoff)
 
 
-def write_gif(path, images, delays, *, loop=True, progress=None, cancelled=None, palette=None, dither=True):
+def write_gif(path, images, delays, *, loop=True, progress=None, cancelled=None, palette=None, dither=True,
+              white_index=None):
     """Encode one frame at a time; replace an existing file only on success.
 
     Pillow's documented GIF plugin primitives avoid collecting an entire
@@ -104,6 +106,12 @@ def write_gif(path, images, delays, *, loop=True, progress=None, cancelled=None,
                 rgb=image.convert('RGB')
                 frame = rgb.quantize(palette=palette,dither=Image.Dither.FLOYDSTEINBERG if dither else Image.Dither.NONE) if palette is not None else rgb.quantize(
                     colors=256, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.FLOYDSTEINBERG if dither else Image.Dither.NONE)
+                if white_index is not None:
+                    # Pillow caches near colors together during quantization. Keep
+                    # exactly white input pixels at the reserved palette entry.
+                    import numpy as np
+                    with Image.fromarray(np.all(np.asarray(rgb) == 255, axis=2)) as white:
+                        frame.paste(white_index, mask=white)
                 rgb.close()
                 try:
                     frame.info.clear()
@@ -148,6 +156,9 @@ class _OffscreenScene:
         self.window.AddRenderer(self.scene)
         self.draw = MoleculeRenderer(self.scene)
         self.draw.options = deepcopy(options)
+        if settings.white_background:
+            from .render_options import WHITE_BACKGROUND
+            self.draw.options.background = WHITE_BACKGROUND
         if source_size is not None and source_size[0] > 0:
             self.draw.options.label_font_size = max(1, round(options.label_font_size * settings.width*settings.supersample / source_size[0]))
         self.camera_supplied = camera is not None
@@ -173,10 +184,13 @@ class _OffscreenScene:
             self.draw.dipole_label=dipole_label(self.document,self.draw.options.dipole_source)
         self.draw.set_scene(frame, volume, volumes=(self.document.volumes if self.document is not None and volume is not None else None))
         if self.document is not None:
-            from .annotations import AnnotationRenderer
+            from .annotations import AnnotationRenderer, EspExtremum, extremum_display_transform
             if self.annotation_renderer is None:
                 self.annotation_renderer = AnnotationRenderer(self.scene)
-            self.annotation_renderer.set_annotations(self.document.annotations)
+            items = self.document.annotations
+            transform = (extremum_display_transform(volume, self.draw)
+                         if any(isinstance(item, EspExtremum) for item in items) else None)
+            self.annotation_renderer.set_annotations(items, extremum_transform=transform)
         if self.first and not self.camera_supplied:
             self.scene.ResetCamera()
         self.first = False
@@ -269,7 +283,13 @@ def export_animation_gif(path, document, settings, options, *, camera=None,
             if cancelled is not None and cancelled():raise ExportCancelled()
             sample=renderer.render(frame_at(int(i)),volume);sample.thumbnail((256,144),Image.Resampling.LANCZOS)
             sheet.paste(sample,(0,j*144));sample.close()
-        palette=sheet.quantize(colors=256,method=Image.Quantize.MEDIANCUT);sheet.close()
+        white_index = None
+        palette = sheet.quantize(colors=255 if settings.white_background else 256, method=Image.Quantize.MEDIANCUT)
+        sheet.close()
+        if settings.white_background:
+            colors = palette.getpalette()[:255*3]
+            white_index = len(colors) // 3
+            palette.putpalette(colors + [255, 255, 255])
         def images():
             for i in range(count):
                 if cancelled is not None and cancelled():
@@ -278,7 +298,8 @@ def export_animation_gif(path, document, settings, options, *, camera=None,
                 try:yield image
                 finally:image.close()
 
-        try:write_gif(path, images(), delays, loop=settings.loop, progress=progress, cancelled=cancelled,palette=palette,dither=settings.dither)
+        try:write_gif(path, images(), delays, loop=settings.loop, progress=progress, cancelled=cancelled,
+                      palette=palette, dither=settings.dither, white_index=white_index)
         finally:palette.close()
     finally:
         renderer.close()

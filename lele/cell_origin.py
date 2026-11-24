@@ -1,5 +1,6 @@
 """Display cell origin, independent of stored atom coordinates and lattice."""
 import numpy as np
+from .periodic_geometry import lattice_coordinates
 
 
 def cell_origin(frame):
@@ -7,7 +8,7 @@ def cell_origin(frame):
 
 
 def set_cell_origin(frame, origin):
-    frame.info['cell_origin_fractional'] = (np.asarray(origin) @ np.linalg.inv(frame.cell)).tolist()
+    frame.info['cell_origin_fractional'] = lattice_coordinates(origin, frame.cell, frame.pbc).tolist()
 
 
 def translate_cell_origin(frame, translation):

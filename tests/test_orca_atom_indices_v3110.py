@@ -19,7 +19,7 @@ def test_orca_label_modes_are_global_and_compatible_with_appearance_validation()
     for mode, expected in (
             ('ORCA index (0..N-1)', ['0', '1', '2', '3']),
             ('Element + ORCA index', ['O0', 'H1', 'C2', 'H3'])):
-        assert mode in LABEL_MODES
+        assert (mode in LABEL_MODES) == (mode == 'ORCA index (0..N-1)')
         assert AtomAppearance(label_mode=mode).label_mode == mode
         assert atom_label_texts(symbols, mode) == expected
     assert atom_label_texts(symbols, 'Index (1..N)') == ['1', '2', '3', '4']

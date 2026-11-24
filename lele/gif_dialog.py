@@ -79,6 +79,10 @@ class GifExportDialog(QDialog):
         layout.addWidget(self.loop_check)
         self.quality_check=QCheckBox('High quality: 2× supersampling + Lanczos');self.quality_check.setChecked(True);layout.addWidget(self.quality_check)
         self.dither_check=QCheckBox('Dither GIF colors (shared animation palette)');self.dither_check.setChecked(True);layout.addWidget(self.dither_check)
+        self.white_background_check = QCheckBox('White background')
+        self.white_background_check.setChecked(True)
+        self.white_background_check.setToolTip('Clear this to export the current background color.')
+        layout.addWidget(self.white_background_check)
         self.details_label = QLabel()
         self.details_label.setWordWrap(True)
         layout.addWidget(self.details_label)
@@ -102,7 +106,8 @@ class GifExportDialog(QDialog):
                            last_frame=self.last_spin.value(), stride=self.step_spin.value(),
                            ping_pong=self.ping_pong.isChecked(), cycle_seconds=self.period_spin.value(),
                            amplitude=self.amplitude_spin.value(), loop=self.loop_check.isChecked(),
-                           supersample=2 if self.quality_check.isChecked() else 1,dither=self.dither_check.isChecked())
+                           supersample=2 if self.quality_check.isChecked() else 1,dither=self.dither_check.isChecked(),
+                           white_background=self.white_background_check.isChecked())
 
     def _update(self, *_):
         vibration = self.source_combo.currentData() == 'vibration'

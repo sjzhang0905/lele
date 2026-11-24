@@ -523,11 +523,11 @@ def read_xdatcar(path, max_frames=None, *, store=None):
             if item is not None:
                 if item[1].strip().lower().startswith('selective'):rows.append(item[1])
                 else:pending=item
-            return _xdat_header(rows,0)[:4]
+            return (*_xdat_header(rows,0)[:4], rows[-1].strip().lower().startswith('selective'))
         first=take()
         while first is not None and not first[1].strip():first=take()
         if first is None:raise ValueError('Empty XDATCAR')
-        cell,scale,species,counts=header(first)
+        cell,scale,species,counts,selective=header(first)
         natoms=sum(counts)
         symbols=[s for s,n in zip(species,counts) for _ in range(n)]
         groups=list(zip(species,counts))
@@ -542,7 +542,7 @@ def read_xdatcar(path, max_frames=None, *, store=None):
             match=CONFIG.match(text)
             if match is None:
                 try:
-                    cell,scale,species,counts=header(item)
+                    cell,scale,species,counts,selective=header(item)
                     natoms=sum(counts)
                     symbols=[s for s,n in zip(species,counts) for _ in range(n)]
                     groups=list(zip(species,counts))
@@ -555,9 +555,16 @@ def read_xdatcar(path, max_frames=None, *, store=None):
             # whitespace-separated coordinates in NumPy's C reader.
             rows=coordinate_lines(stream,natoms)
             line_number+=len(rows)
+            info = {'poscar_groups': list(groups)}
             try:
                 if len(rows)!=natoms:raise ValueError('Incomplete coordinate table')
-                if natoms >= 24:
+                if selective:
+                    tokens = [row.split() for row in rows]
+                    numeric = numeric_array([row[:3] for row in tokens])
+                    flags = [[v.upper() for v in row[3:6]] for row in tokens]
+                    if all(len(row) == 3 and all(v in ('T','F') for v in row) for row in flags):
+                        info['vasp_fixed_axes'] = [[v == 'F' for v in row] for row in flags]
+                elif natoms >= 24:
                     from ._cube_native import coordinate_array
                     native = coordinate_array(rows)
                     if native is not None:
@@ -574,8 +581,8 @@ def read_xdatcar(path, max_frames=None, *, store=None):
             if max_frames is not None and len(results.steps)>=max_frames:
                 raise ValueError(f'Trajectory exceeds {max_frames} frames')
             positions=numeric[:,:3]@cell if match[1].lower()=='direct' else numeric[:,:3]*scale
-            frame=(Frame(list(symbols),positions,cell.copy(),(periodic,)*3,
-                         info={'poscar_groups':list(groups)}) if len(symbols)==len(positions) else None)
+            frame=(Frame(list(symbols),positions,cell.copy(),(periodic,)*3,info=info)
+                   if len(symbols)==len(positions) else None)
             if store is not None and frame is not None:
                 store.append(frame)
             results.steps.append(VaspStep(0,source,frame,stage_index=0,cycle=int(match[2])))

@@ -54,6 +54,8 @@ class LoadedDocumentActions:
         if association_role(document):
             menu.addAction('Associate file…', lambda: self._associate_loaded_file(document))
             menu.addSeparator()
+        if self._can_add_esp_extrema(document):
+            menu.addAction('Add ESP extrema…', lambda: self._add_esp_extrema(document))
         menu.addAction('Rename…', lambda: self._rename_loaded_document(document))
         menu.addAction('Remove from loaded files', lambda: self._unload_document(document))
         menu.addSeparator()

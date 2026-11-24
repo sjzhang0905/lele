@@ -1,6 +1,8 @@
 """Integer replica ranges shared by boundary display and real supercells."""
 from itertools import product
 
+ONE_CELL = ((0, 1),) * 3
+
 
 def axis_tiles(count, growth='alternating'):
     if growth not in ('alternating', 'forward'):
