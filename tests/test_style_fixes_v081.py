@@ -59,7 +59,7 @@ class RendererStyleFixTests(unittest.TestCase):
         view.options.unit_cell = False
         frame = Frame(['O', 'H'], [[0, 0, 0], [.97, 0, 0]])
         view.set_scene(frame)
-        np.testing.assert_allclose(view.dynamic[0].GetProperty().GetColor(), rgb('#123456'))
+        np.testing.assert_allclose(view.dynamic[0].GetProperty().GetDiffuseColor(), rgb('#123456'))
         bond = view.dynamic[-1]
         bond.GetMapper().Update()
         colors = bond.GetMapper().GetInput().GetPointData().GetScalars()

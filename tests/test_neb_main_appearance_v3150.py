@@ -103,6 +103,7 @@ def test_apply_and_export_refresh_current_main_appearance(app, tmp_path):
         assert dialog.scene.GetActiveCamera().GetParallelProjection()
         assert dialog.scene.GetActiveCamera().GetParallelScale() == pytest.approx(5.5)
         window.render_options.style = 'Sticks'
+        window.render_options.background = '#162534'
         target = tmp_path / 'neb.png'
         dialog.write_caterpillar_png(target, PngSettings(width=480, height=320))
         assert dialog.options.style == 'Sticks'
@@ -110,6 +111,8 @@ def test_apply_and_export_refresh_current_main_appearance(app, tmp_path):
             assert image.size == (480, 320)
             pixels = np.array(image.convert('RGB'))
             assert np.count_nonzero(np.any(pixels < 240, axis=2)) > 100
+            np.testing.assert_array_equal(pixels[0, 0], [255,255,255])
+        assert dialog.options.background == '#162534'
     finally:
         dialog.close()
         window.close()

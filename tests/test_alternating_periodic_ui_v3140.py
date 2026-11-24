@@ -25,11 +25,11 @@ def test_boundary_counts_alternate_and_manual_ranges_remain_available(gui):
         panel.spins[0][0].setValue(-3);panel.spins[0][1].setValue(1)
         assert panel.bounds()[0]==(-3,1)
         assert panel.spins[0][0].isEnabled()
-        panel.set_values(True,((-2,3),(0,1),(0,1)),False)
+        panel.set_values(((-2,3),(0,1),(0,1)),False)
         assert panel.repeat_spins[0].value()==5 and panel.growth.currentIndex()==0
         assert not panel.preserve.isChecked()
         for bounds in (((-12,13),(0,1),(0,1)),((-100,101),(0,1),(0,1)),((200,205),(0,1),(0,1))):
-            panel.set_values(True,bounds,True)
+            panel.set_values(bounds,True)
             assert panel.bounds()==bounds
         assert panel.growth.currentIndex()==1
     finally:panel.deleteLater()

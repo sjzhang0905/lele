@@ -98,6 +98,47 @@ def refresh_crystal_view_actions(window):
     return enabled
 
 
+def rotation_lattice_axes(frame):
+    """Even an incomplete periodic cell can supply an individual rotation axis."""
+    if frame is None or not any(frame.pbc):
+        return ()
+    return tuple(axis for axis, vector in zip('abc', frame.cell)
+                 if np.isfinite(vector).all() and np.linalg.norm(vector) > 1.e-12)
+
+
+def rotate_window_camera(window, basis, axis, degrees):
+    """Orbit the camera so the structure turns by a right-handed view step."""
+    from .fragment import camera_basis, rotation_about_axis
+
+    if window.frame is None or window.scene is None:
+        return False
+    camera = window.scene.GetActiveCamera()
+    if basis == 'Screen':
+        forward, right, up = camera_basis(camera)
+        direction = {'X': right, 'Y': up, 'Z': -forward}[axis]
+    elif basis == 'Cartesian':
+        direction = np.eye(3)['XYZ'.index(axis)]
+    else:
+        if axis not in rotation_lattice_axes(window.frame):
+            return False
+        direction = window.frame.cell['abc'.index(axis)] @ window.renderer.display_rotation
+
+    focal = np.asarray(camera.GetFocalPoint())
+    position = np.asarray(camera.GetPosition())
+    view_up = np.asarray(camera.GetViewUp())
+    center = window.renderer.atom_center()
+    if center is None:
+        center = focal  # Field-only scenes have no atom centroid.
+    # Orbit both camera points about the displayed centroid, including after a pan.
+    rotation = rotation_about_axis(direction, -degrees)
+    camera.SetFocalPoint(*(center + rotation @ (focal - center)))
+    camera.SetPosition(*(center + rotation @ (position - center)))
+    camera.SetViewUp(*(rotation @ view_up))
+    window.scene.ResetCameraClippingRange()
+    window.vtk.GetRenderWindow().Render()
+    return True
+
+
 def align_window_camera(window, axis, *, fit=True):
     """GUI adapter shared by XYZ and abc actions; never touches source data.
 

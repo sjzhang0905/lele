@@ -43,7 +43,10 @@ class AnnotationActions:
         if self._annotation_manager is None:
             from .annotations import AnnotationRenderer
             self._annotation_manager = AnnotationRenderer(self.scene)
-        self._annotation_manager.set_annotations(items, self._selected_annotation)
+        from .annotations import EspExtremum, extremum_display_transform
+        transform = (extremum_display_transform(doc.volume, self.renderer)
+                     if any(isinstance(a, EspExtremum) for a in items) else None)
+        self._annotation_manager.set_annotations(items, self._selected_annotation, transform)
 
     def _render_annotations(self):
         self._sync_annotations()
@@ -88,10 +91,72 @@ class AnnotationActions:
             return False
         _, document, frame, annotations, selected = item
         self.documents[document].annotations = annotations
-        self.documents[document].modified = True
         self.change_frame(frame, switch_doc=document)
         self._selected_annotation = selected
         self._render_annotations()
+        return True
+
+    def _can_add_esp_extrema(self, document):
+        if not document.frames or not document.volumes:
+            return False
+        from .field_mapping import is_esp_field
+        from .field_pair import TITLES
+        if document.format_name == TITLES['esp']:
+            return True
+        # Manual surface mapping belongs to the clicked file's own view.
+        view = self._document_views.get(id(document))
+        if view is None:
+            return False
+        for layer in view.options.volume_surfaces:
+            mapped = layer.get('map_dataset', -1)
+            if 0 <= mapped < len(document.volumes):
+                source = document.volumes[mapped]
+                surface = layer.get('dataset', -1)
+                if (surface != mapped and (surface >= 0 or document.volume is not source)
+                        and is_esp_field(source)):
+                    return True
+        return False
+
+    def _add_esp_extrema(self, document):
+        from .esp_extrema_dialog import EspExtremaDialog
+        from .color_controls import color_value
+        if self._document_index(document) is None or not self._can_add_esp_extrema(document):
+            return False
+        view = self._document_views.get(id(document))
+        options = view.options if view is not None else self.render_options
+        name = self._document_labels.get(id(document), document.path.name)
+        dialog = EspExtremaDialog(document, name, options.label_color, self)
+        try:
+            if dialog.exec() != QDialog.DialogCode.Accepted or dialog.rows is None:
+                return False
+            return self._place_esp_extrema(document, dialog.rows, dialog.unit.currentData(),
+                                           dialog.height.value(), color_value(dialog.color))
+        finally:
+            dialog.deleteLater()
+
+    def _place_esp_extrema(self, document, rows, unit, height, color):
+        import numpy as np
+        from .annotations import extremum_display_transform
+        from .esp_extrema import make_extremum_labels
+        from .fragment import camera_basis
+        index = self._document_index(document)
+        if self._closing or index is None or not self._can_add_esp_extrema(document):
+            return False
+        if document is not self.doc or self.frame is None or self._active_vibration is not None:
+            view = self._document_views.get(id(document))
+            self.change_frame(view.frame_index if view is not None else 0, switch_doc=index)
+        if document is not self.doc or self.scene is None:
+            return False
+        forward, right, up = camera_basis(self.scene.GetActiveCamera())
+        rotation, _ = extremum_display_transform(document.volume, self.renderer)
+        labels = make_extremum_labels(rows, unit, height, color,
+                                      np.column_stack((right, up, -forward)), rotation)
+        self.cancel_pointer_action()
+        self._record_annotation_undo()
+        document.annotations.extend(labels)
+        self._selected_annotation = None
+        self._render_annotations()
+        self.statusBar().showMessage(f'Added {len(labels)} ESP extrema. Right-click a value to edit its label.', 7000)
         return True
 
     def add_canvas_text(self, _checked=False, *, at=None):
@@ -123,7 +188,6 @@ class AnnotationActions:
         annotation.__post_init__()
         self._record_annotation_undo()
         self.doc.annotations.append(annotation)
-        self.doc.modified = True
         self._selected_annotation = len(self.doc.annotations)-1
         self.selection.clear()
         self._sync_selection_to_table()
@@ -153,7 +217,11 @@ class AnnotationActions:
             return False
         self._selected_annotation = index
         self.selection.clear();self._sync_selection_to_table();self.refresh_scene()
-        self.statusBar().showMessage('Text selected. Alt + middle drag moves; Alt + left rotates; Alt + right rolls.', 5000)
+        from .annotations import EspExtremum
+        message = ('ESP label selected. Alt + middle drag moves the label.'
+                   if isinstance(self.doc.annotations[index], EspExtremum)
+                   else 'Text selected. Alt + middle drag moves; Alt + left rotates; Alt + right rolls.')
+        self.statusBar().showMessage(message, 5000)
         return True
 
     def _clear_annotation_selection(self):
@@ -178,7 +246,7 @@ class AnnotationActions:
             return False
         self._record_annotation_undo()
         self.doc.annotations[index] = dialog.result_annotation()
-        self.doc.modified = True;self._render_annotations()
+        self._render_annotations()
         return True
 
     def delete_canvas_text(self, _checked=False):
@@ -187,7 +255,7 @@ class AnnotationActions:
             return False
         self._record_annotation_undo()
         del self.doc.annotations[index]
-        self.doc.modified = True;self._selected_annotation = None;self._annotation_gesture = None
+        self._selected_annotation = None;self._annotation_gesture = None
         self._render_annotations()
         return True
 
@@ -228,6 +296,10 @@ class AnnotationActions:
             index = self._annotation_pick_index(x, y)
         if index is None or not 0 <= index < len(self.doc.annotations):
             return False
+        from .annotations import EspExtremum
+        if kind != 'pan' and isinstance(self.doc.annotations[index], EspExtremum):
+            self.statusBar().showMessage('ESP labels face the camera. Alt + middle drag moves the label.', 4000)
+            return True
         self._selected_annotation = index
         self.selection.clear();self._sync_selection_to_table()
         self.playback.stop();self.vibration_timer.stop()
@@ -247,16 +319,21 @@ class AnnotationActions:
         if abs(dx) + abs(dy) < 1e-10:
             return True
         from .fragment import screen_translation, screen_rotation
-        from .annotations import transform_annotation
+        from .annotations import EspExtremum, transform_annotation
         if not state['edited']:
             self._record_annotation_undo();state['edited'] = True
         annotation = self.doc.annotations[state['index']]
         camera = self.scene.GetActiveCamera()
         if kind == 'pan':
-            transform_annotation(annotation, translation=screen_translation(camera, dx, dy, self.vtk.height(), annotation.position))
+            anchor = annotation.position
+            basis = None
+            if isinstance(annotation, EspExtremum):
+                basis = self._annotation_manager.extremum_rotation
+                anchor = anchor @ basis + self._annotation_manager.extremum_shift
+            delta = screen_translation(camera, dx, dy, self.vtk.height(), anchor)
+            transform_annotation(annotation, translation=delta if basis is None else delta @ basis.T)
         else:
             transform_annotation(annotation, rotation=screen_rotation(camera, kind, dx, dy))
-        self.doc.modified = True
         self._annotation_manager.update_transform(state['index'])
         self.scene.ResetCameraClippingRange()
         self.vtk.GetRenderWindow().Render()
@@ -266,5 +343,6 @@ class AnnotationActions:
         if self._annotation_gesture is None:
             return False
         self._annotation_gesture = None
-        self.statusBar().showMessage('Text position / orientation updated. Ctrl+Z to undo.', 4000)
+        self.statusBar().showMessage('Text moved. Ctrl+Z to undo.' if kind == 'pan'
+                                     else 'Text rotated. Ctrl+Z to undo.', 4000)
         return True

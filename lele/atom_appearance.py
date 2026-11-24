@@ -5,7 +5,8 @@ from math import isfinite
 
 LABEL_MODES = ('None', 'Element', 'Index (1..N)',
                'Element + index (global)', 'ORCA index (0..N-1)',
-               'Element + ORCA index', 'VESTA (POSCAR groups)')
+               'VESTA (POSCAR groups)')
+LEGACY_ORCA_LABEL = 'Element + ORCA index'
 ATOM_REPRESENTATIONS = ('Global', 'Ball and stick', 'Space filling', 'Sticks', 'Wireframe')
 
 
@@ -26,7 +27,7 @@ class AtomAppearance:
             raise ValueError('Unsupported atom representation')
         if not 0.0 <= self.opacity <= 1.0:
             raise ValueError('Atom opacity must be between 0 and 1')
-        if self.label_mode not in ('Global', 'Custom', *LABEL_MODES):
+        if self.label_mode not in ('Global', 'Custom', LEGACY_ORCA_LABEL, *LABEL_MODES):
             raise ValueError('Unsupported atom label mode')
         if self.color is not None:
             if len(self.color) != 7 or not self.color.startswith('#'):

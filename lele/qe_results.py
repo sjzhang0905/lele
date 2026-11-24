@@ -234,7 +234,26 @@ def read_qe_output(path):
         # this job. One pass keeps long/concatenated outputs linear in size.
         for step in result.steps:
             if step.job_index in failed_jobs:step.converged=False
+    # PWSCF's initial tau table omits if_pos. A consistent, explicitly
+    # printed mask identifies the constraints for this job's atom order.
+    per_job = {}
+    for step in result.steps:
+        geom = step.geometry
+        if geom is None or 'fixed_axes' not in geom.info:
+            continue
+        previous = per_job.setdefault(step.job_index, geom)
+        if previous is not None and (previous.symbols != geom.symbols or previous.info['fixed_axes'] != geom.info['fixed_axes']):
+            per_job[step.job_index] = None
+    if per_job:
+        for step in result.steps:
+            geom, source = step.geometry, per_job.get(step.job_index)
+            if (geom is not None and source is not None and 'fixed_axes' not in geom.info and
+                    'constraint_notes' not in geom.info and geom.symbols == source.symbols):
+                geom.info.update({key: source.info[key] for key in ('fixed_axes','fixed_axes_basis','fixed_axes_source')})
     if len(result.steps)>1:
         a,b=result.steps[-2:]
-        if b.energy_ev is None and b.job_index==a.job_index and same_geometry(a.geometry,b.geometry):a.converged|=b.converged;result.steps.pop()
+        if (b.energy_ev is None and b.job_index==a.job_index and same_geometry(a.geometry,b.geometry)
+                and a.geometry.info.get('fixed_axes') == b.geometry.info.get('fixed_axes')):
+            a.converged |= b.converged
+            result.steps.pop()
     report(len(lines));return result

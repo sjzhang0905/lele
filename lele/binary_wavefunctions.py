@@ -231,7 +231,8 @@ def read_wavecar(path):
                 from ase.io import read
                 atoms=read(companion,format='vasp')
                 if not np.allclose(atoms.cell.array,wave.cell,atol=1.e-5,rtol=1.e-6):continue
-                frames=[Frame(atoms.get_chemical_symbols(),atoms.positions,atoms.cell.array,(True,True,True))]
+                from .formats import _frame_from_ase, _with_poscar_groups
+                frames=[_with_poscar_groups(_frame_from_ase(atoms), companion)]
                 note+=f' Display geometry from adjacent {name}; lattice matches, atomic correspondence is not encoded in WAVECAR.'
                 break
             except (OSError,ValueError,IndexError):continue

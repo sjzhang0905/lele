@@ -6,9 +6,9 @@ from vtkmodules.vtkCommonExecutionModel import vtkAlgorithm
 from vtkmodules.vtkFiltersCore import vtkClipPolyData, vtkContourFilter
 from vtkmodules.vtkFiltersSources import vtkPlaneSource
 from vtkmodules.vtkRenderingCore import vtkActor, vtkPolyDataMapper
-from vtkmodules.vtkRenderingAnnotation import vtkScalarBarActor
 from vtkmodules.util.numpy_support import numpy_to_vtk, vtk_to_numpy
-from .field_mapping import sample_field
+from .field_legend import field_legend
+from .field_mapping import legend_unit, sample_field
 from .plane_field import (plane_grid, field_covered_polygon, plane_color_limits,
                           validate_plane_style)
 from .operations import ui_checkpoint
@@ -101,17 +101,10 @@ def draw_plane_slice(draw,polygon,normal,style,title):
     if style['field_legend'] and style['opacity']>0:
         existing=len(draw.field_scalar_bars)+len(draw.plane_field_bars)
         if existing<4:
-            bar=vtkScalarBarActor();bar.SetLookupTable(lut);bar.SetOrientationToHorizontal()
-            bar.SetTitle(f'{title}: {volume.label or "Field"} [{volume.unit or "source units"}]')
-            bar.SetNumberOfLabels(5);bar.SetLabelFormat('%.3g')
-            bar.SetPosition(.12,.02+existing*.09);bar.SetWidth(.76);bar.SetHeight(.08)
-            bar.SetUnconstrainedFontSize(True)
-            from .renderer import rgb
-            light=np.mean(rgb(draw.options.background))>.5
-            for text in (bar.GetTitleTextProperty(),bar.GetLabelTextProperty()):
-                text.SetColor((.1,.1,.1) if light else (.95,.95,.95));text.SetFontSize(12)
-                text.BoldOff();text.ItalicOff();text.ShadowOff()
-            bar.PickableOff();bar.UseBoundsOff();draw.renderer.AddViewProp(bar)
+            unit = legend_unit(volume.unit)
+            caption = f'{title}: {volume.label or "Field"}' + (f' [{unit}]' if unit else '')
+            bar = field_legend(volume, lut, caption, existing, draw.options.background)
+            draw.renderer.AddViewProp(bar)
             draw.dynamic.append(bar);draw.plane_field_bars.append(bar);draw._keepalive.append(bar)
         else:draw.field_warnings.append('Only the first four field color scales are shown.')
     return actor

@@ -4,7 +4,6 @@ This module stays Qt-only until a camera is actually available after preload.
 """
 from copy import deepcopy
 from dataclasses import dataclass
-from pathlib import Path
 from PySide6.QtCore import QSignalBlocker
 
 
@@ -45,6 +44,41 @@ class DocumentViewActions:
         state = self._document_views.get(id(document))
         return state is not None and state.camera is not None
 
+    def _new_document_view(self, document, surface_layers=None):
+        # Appearance can carry over, but every new file starts with its
+        # own enabled one-cell Boundary rather than another file's range.
+        from .render_options import RenderOptions
+        options = deepcopy(self.render_options)
+        defaults = RenderOptions()
+        options.boundary_enabled = defaults.boundary_enabled
+        options.boundary_bounds = defaults.boundary_bounds
+        options.boundary_preserve_origin = defaults.boundary_preserve_origin
+        options.volume_hidden_regions = []
+        # Dataset references belong to one document. Retain them when
+        # switching back, but never bind them to unrelated newly opened grids.
+        if any(layer.get('dataset', -1) >= 0 or layer.get('map_dataset', -1) >= 0
+               for layer in options.volume_surfaces):
+            options.volume_surfaces = []
+        if (document.format_name == 'XCrySDen XSF' and document.volume is not None
+                and options.volume_iso == defaults.volume_iso and options.volume_signs == 'Both'
+                and not options.volume_surfaces and not options.volume_independent_negative):
+            from .field_mapping import suggested_isovalue
+            from .render_options import MIN_ISOVALUE
+            data = document.volume.data
+            low, high = float(data.min()), float(data.max())
+            level = options.volume_iso
+            if low < high and not (low < level < high or low < -level < high):
+                options.volume_iso = max(MIN_ISOVALUE, abs(suggested_isovalue([low, high], level)))
+        state = DocumentView(document, options,
+                             deepcopy(self._custom_style_state), self.preset_combo.currentData())
+        self._initialize_document_pair_rules(document, state.options)
+        if surface_layers is not None:
+            options.show_volume = True
+            options.volume_signs = "Both"
+            options.volume_surfaces = surface_layers
+            options.lattice_planes = []
+        return state
+
     def _activate_document(self, index):
         document = self.documents[index]
         if document is self._view_document:
@@ -58,33 +92,7 @@ class DocumentViewActions:
         self._remember_document_view()
         state = self._document_views.get(id(document))
         if state is None:
-            # Appearance can carry over, but every new file starts with its
-            # own enabled one-cell Boundary rather than another file's range.
-            from .render_options import RenderOptions
-            options = deepcopy(self.render_options)
-            defaults = RenderOptions()
-            options.boundary_enabled = defaults.boundary_enabled
-            options.boundary_bounds = defaults.boundary_bounds
-            options.boundary_preserve_origin = defaults.boundary_preserve_origin
-            options.volume_hidden_regions = []
-            # Dataset references belong to one document. Retain them when
-            # switching back, but never bind them to unrelated newly opened grids.
-            if any(layer.get('dataset', -1) >= 0 or layer.get('map_dataset', -1) >= 0
-                   for layer in options.volume_surfaces):
-                options.volume_surfaces = []
-            if (document.format_name == 'XCrySDen XSF' and document.volume is not None
-                    and options.volume_iso == defaults.volume_iso and options.volume_signs == 'Both'
-                    and not options.volume_surfaces and not options.volume_independent_negative):
-                from .field_mapping import suggested_isovalue
-                from .render_options import MIN_ISOVALUE
-                data = document.volume.data
-                low, high = float(data.min()), float(data.max())
-                level = options.volume_iso
-                if low < high and not (low < level < high or low < -level < high):
-                    options.volume_iso = max(MIN_ISOVALUE, abs(suggested_isovalue([low, high], level)))
-            state = DocumentView(document, options,
-                                 deepcopy(self._custom_style_state), self.preset_combo.currentData())
-            self._initialize_document_pair_rules(document, state.options)
+            state = self._new_document_view(document)
             self._document_views[id(document)] = state
         self.current_doc = index
         # Widget synchronization can inspect the active frame before the
@@ -120,11 +128,8 @@ class DocumentViewActions:
             (self.cutoff_spin, 'setValue', opts.bond_cutoff),
             (self.hbond_check, 'setChecked', opts.hydrogen_bonds),
             (self.cell_check, 'setChecked', opts.unit_cell),
-            (self.axes_position_combo, 'setCurrentIndex', self.axes_position_combo.findData(opts.axes_position)),
-            (self.axes_basis_combo, 'setCurrentIndex', self.axes_basis_combo.findData(opts.axes_basis)),
-            (self.axes_length_spin, 'setValue', opts.axes_length),
-            (self.label_combo, 'setCurrentText', opts.labels),
-            (self.label_font_combo, 'setCurrentText', opts.label_font),
+            (self.label_combo, 'setCurrentIndex', self.label_combo.findText(opts.labels)),
+            (self.label_font_combo, 'setCurrentIndex', -1 if opts.label_font_file else self.label_font_combo.findText(opts.label_font)),
             (self.label_size_spin, 'setValue', opts.label_font_size),
             (self.label_bold_check, 'setChecked', opts.label_bold),
             (self.volume_check, 'setChecked', opts.show_volume),
@@ -140,10 +145,8 @@ class DocumentViewActions:
                 getattr(widget, method)(value)
         finally:
             del blockers
-        self.custom_font_btn.setText('Font file: ' + Path(opts.label_font_file).name
-                                    if opts.label_font_file else 'Choose TTF/OTF font file…')
-        self.custom_font_btn.setToolTip(opts.label_font_file or 'Choose a TTF/OTF font file')
-        self.boundary_panel.set_values(opts.boundary_enabled, opts.boundary_bounds, opts.boundary_preserve_origin)
+        self.coordinate_axes.set_values(opts)
+        self.boundary_panel.set_values(opts.boundary_bounds, opts.boundary_preserve_origin)
         self.crystal_panel.set_values(opts)
         self.fitted_plane_controls.set_values(opts.fitted_plane_style)
 

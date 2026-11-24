@@ -118,6 +118,13 @@ class Decoder:
             if cls.__name__ == 'RenderOptions' and 'boundary_preserve_origin' not in attributes:
                 # Keep the wrapped display of projects saved before v3.14.
                 result.boundary_preserve_origin = False
+            if cls.__name__ == 'RenderOptions' and not result.boundary_enabled:
+                from .lattice_tiles import ONE_CELL
+                result.boundary_enabled = True
+                result.boundary_bounds = ONE_CELL
+            if cls.__name__ == 'RenderOptions' and 'highlight_brightness' not in attributes:
+                from .lighting import upgrade_default_lights
+                upgrade_default_lights(result)
             for key in extra_fields(cls):object.__setattr__(result, key, self.decode(attributes[key]) if key in attributes else [])
             self.objects.append(result)
         elif kind == 'dict':

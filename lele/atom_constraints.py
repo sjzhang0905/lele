@@ -81,6 +81,58 @@ def _result(flags, basis, source, notes=()):
     return result
 
 
+def constraint_rows(info):
+    """The editable mask is authoritative; older projects may only have VASP flags."""
+    return info.get('fixed_axes', info.get('vasp_fixed_axes'))
+
+
+def fixed_atom_indices(frame):
+    rows = constraint_rows(frame.info)
+    if rows is None:
+        return []
+    if len(rows) != len(frame.symbols):
+        raise ValueError('Fixed-axis records do not match the atom count.')
+    return [i for i, row in enumerate(rows) if len(row) == 3 and all(row)]
+
+
+def edited_constraints(frame, selection, fixed):
+    """Copy on write so trajectory frames, earlier undo states and source flags stay independent."""
+    old = constraint_rows(frame.info)
+    axes = [bool(fixed)] * 3
+    if old is None:
+        rows = [[None] * 3 for _ in frame.symbols]
+    else:
+        if len(old) != len(frame.symbols):
+            raise ValueError('Fixed-axis records do not match the atom count.')
+        rows = list(old)
+    if all(list(rows[i]) == axes for i in selection):
+        return {}
+    for i in selection:
+        rows[i] = axes.copy()
+    basis = frame.info.get('fixed_axes_basis', 'direct' if 'vasp_fixed_axes' in frame.info else 'cartesian')
+    result = dict(fixed_axes=rows, fixed_axes_basis=basis)
+    source = frame.info.get('fixed_axes_source', '')
+    if 'LELE' not in source:
+        result['fixed_axes_source'] = (source + ' / LELE').strip(' /')
+    if 'vasp_fixed_axes' in frame.info:
+        legacy = list(frame.info['vasp_fixed_axes'])
+        for i in selection:
+            legacy[i] = axes.copy()
+        result['vasp_fixed_axes'] = legacy
+    return result
+
+
+def export_fixed_mask(info, count):
+    rows = constraint_rows(info)
+    if rows is None:
+        return None
+    rows = np.asarray(rows, dtype=object)
+    if rows.shape != (count, 3):
+        raise ValueError('Fixed-axis records do not match the atom order.')
+    # Undeclared axes do not create optimization constraints on export.
+    return rows.astype(bool)
+
+
 def _indices(text, count, *, zero=False, symbols=None):
     result = set()
     for value in re.split(r'[\s,]+', text.strip()):
@@ -391,6 +443,9 @@ def attach_document_constraints(document, kind):
             frame.info.update(_result(frame.info['vasp_fixed_axes'],'direct','VASP Selective Dynamics (F=fixed)'))
     input_kinds=('cp2k_in','orca_in','gaussian_in','siesta_in','nwchem_in','qe_in')
     if kind not in input_kinds:
+        if kind in ('cp2k_out','nwchem_out','siesta_out'):
+            from .output_constraints import attach_printed_constraints
+            attach_printed_constraints(document, kind)
         if kind.endswith('_out') or kind in ('xtb_trj','cp2k_xyz','vasp_xdatcar','siesta_ani'):
             note='No verified per-atom fixed-axis record was retained from this output/trajectory; missing flags do not mean free atoms.'
             if any('fixed_axes' not in frame.info for frame in frames) and note not in document.note:

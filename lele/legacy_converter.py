@@ -1235,7 +1235,7 @@ def write_xyz(path: Path, atoms: Atoms, source_name: str) -> None:
             handle.write(f"{symbol:<3s} {pos[0]: .12f} {pos[1]: .12f} {pos[2]: .12f}\n")
 
 
-def write_gjf(path: Path, atoms: Atoms, source_name: str, route: str) -> None:
+def write_gjf(path: Path, atoms: Atoms, source_name: str, route: str, *, fixed_atoms=None, title_note='') -> None:
     route = route.strip() or DEFAULT_GAUSSIAN_ROUTE
     if not route.startswith("#"):
         route = "#p " + route
@@ -1246,10 +1246,15 @@ def write_gjf(path: Path, atoms: Atoms, source_name: str, route: str) -> None:
     with path.open("w", encoding="utf-8", newline="\n") as handle:
         handle.write(f"%chk={path.stem}.chk\n")
         handle.write(route + "\n\n")
-        handle.write(f"Converted from {source_name} by {APP_NAME} {APP_VERSION}\n\n")
+        handle.write(f"Converted from {source_name} by {APP_NAME} {APP_VERSION}\n")
+        if title_note:
+            handle.write(title_note + "\n")
+        handle.write("\n")
         handle.write(f"{charge} {mult}\n")
-        for symbol, pos in zip(atoms.get_chemical_symbols(), atoms.get_positions()):
-            handle.write(f"{symbol:<3s} {pos[0]: .12f} {pos[1]: .12f} {pos[2]: .12f}\n")
+        use_flags = fixed_atoms is not None and any(fixed_atoms)
+        for i, (symbol, pos) in enumerate(zip(atoms.get_chemical_symbols(), atoms.get_positions())):
+            code = (' -1' if fixed_atoms[i] else '  0') if use_flags else ''
+            handle.write(f"{symbol:<3s}{code} {pos[0]: .12f} {pos[1]: .12f} {pos[2]: .12f}\n")
         handle.write("\n")
 
 

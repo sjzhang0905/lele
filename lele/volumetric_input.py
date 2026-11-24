@@ -196,19 +196,19 @@ def _vasp_labels(kind,n):
     return [first]+[f'Charge channel {i+1}' for i in range(1,n)]
 
 
-def read_vasp_volume_document(path,*,max_points=AUTO):
+def read_vasp_volume_document(path,*,max_points=AUTO,kind=None):
     """Read all complete scalar channels, excluding PAW augmentation values.
 
     A malformed/truncated field retains geometry but never presents a partial
     channel as complete. The note explains why fields were unavailable.
     """
     from ase.io.vasp import read_vasp_configuration
-    from .formats import _frame_from_ase
+    from .formats import _frame_from_ase, _with_poscar_groups
     max_points=scalar_limit(max_points)
-    path=Path(path);kind=_kind(path)
+    path=Path(path);kind=kind or _kind(path)
     with open_output_text(path) as stream:
         atoms=read_vasp_configuration(stream)
-        frame=_frame_from_ase(atoms)
+        frame=_with_poscar_groups(_frame_from_ase(atoms), path)
         stream=_FieldStream(stream)
         grids=[]
         try:

@@ -8,7 +8,7 @@ from .dialog_policy import QColorDialog
 
 from .panel_controls import PanelComboBox
 from .color_controls import set_color_swatch
-from .atom_appearance import LABEL_MODES, ATOM_REPRESENTATIONS, appearance
+from .atom_appearance import LABEL_MODES, LEGACY_ORCA_LABEL, ATOM_REPRESENTATIONS, appearance
 
 COMPONENT_ROLE = int(Qt.ItemDataRole.UserRole) + 1
 
@@ -347,6 +347,7 @@ class AtomPanel(QWidget):
             self.size_spin.setValue(styles[0].size_scale)
             if len({style.size_scale for style in styles}) > 1:
                 self.size_spin.lineEdit().clear()
+            self.label_combo.setPlaceholderText('Saved label' if modes == {LEGACY_ORCA_LABEL} else 'Mixed')
             self.label_combo.setCurrentIndex(self.label_combo.findData(styles[0].label_mode) if len(modes) == 1 else -1)
             self.label_text.setEnabled(modes == {'Custom'})
             self.label_text.setText(next(iter(texts)) if len(texts) == 1 else '')

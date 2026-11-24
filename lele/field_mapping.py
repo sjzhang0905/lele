@@ -3,6 +3,7 @@
 Mapping samples the actual isosurface vertices (zero normal offset). It never
 computes ESP or guesses the physical meaning / units of an imported CUBE.
 """
+import re
 import numpy as np
 from copy import deepcopy
 from .core import Volume
@@ -10,6 +11,19 @@ from .output_text import check_load_cancelled, load_progress
 
 PALETTES = ('VMD RWB', 'VMD BWR', 'Red-white-blue', 'Blue-white-red', 'Viridis')
 DEFAULT_PALETTE = 'VMD RWB'
+DEFAULT_ESP_RANGE = (-.03, .03)
+
+
+def is_esp_field(volume):
+    """Recognize an explicitly assigned or named potential in the generic layer editor."""
+    return (volume.provenance.get('pair_role') == 'ESP' or volume.unit in ('V', 'Hartree/e')
+            or bool(re.search(r'(?:^|[^a-z])(?:esp|mep|electrostatic[ _-]+potential)(?:$|[^a-z])',
+                              volume.label or '', re.IGNORECASE)))
+
+
+def legend_unit(unit):
+    label = (unit or '').strip()
+    return '' if label.casefold() in ('source units', 'unknown source units') else label
 
 
 def _finite_range(values):
@@ -148,28 +162,26 @@ def mapping_limits(spec, samples, color_values=None):
     return tuple(map(float, limits))
 
 
-def prepare_field_attachment(target, frame, incoming):
-    """Validate and copy incoming grids into the active document atomically.
+def validate_field_geometry(frame, source, transform, shift, *, periodic):
+    from .site_occupancy import is_disordered
+    if is_disordered(frame) or is_disordered(source):
+        raise ValueError('A scalar field requires its fully specified atomic structure, not mixed or partial occupancies.')
+    if frame.symbols != source.symbols or not np.allclose(
+            source.positions @ transform + shift, frame.positions, atol=2e-4, rtol=0):
+        raise ValueError('Atom order/elements or coordinates differ. Export both fields for the same geometry in the same coordinate frame.')
+    if periodic and not np.allclose(source.cell @ transform, frame.cell, atol=2e-4, rtol=1e-6):
+        raise ValueError('Periodic field lattice does not match the current structure.')
 
-    Atom symbols/order and positions must match in the untransformed source
-    frame. We do not fit/reorder unrelated structures or silently align grids.
-    This operation embeds grid bytes in projects; no source-file dependency.
-    """
+
+def prepare_field_attachment(target, frame, incoming):
+    """Validate and copy incoming grids into the active document atomically."""
     if frame is None or not incoming.frames or not incoming.volumes:
         raise ValueError('Choose an XSF, CUBE or VASP file containing structure and complete scalar grids.')
     if target.modified and target.volume is None:
         raise ValueError('Fields were detached by a structure edit. Undo or reopen the source before importing fields.')
-    source = incoming.frames[0]
-    from .site_occupancy import is_disordered
-    if is_disordered(frame) or is_disordered(source):
-        raise ValueError('A scalar field requires its fully specified atomic structure, not mixed or partial occupancies.')
     transform, shift = (field_transform(target.volume) if target.volume is not None else (np.eye(3),np.zeros(3)))
-    if frame.symbols != source.symbols or not np.allclose(
-            source.positions @ transform + shift, frame.positions, atol=2e-4, rtol=0):
-        raise ValueError('Atom order/elements or coordinates differ. Export both fields for the same geometry in the same coordinate frame.')
-    periodic = [v for v in incoming.volumes if v.periodic]
-    if periodic and not np.allclose(source.cell @ transform, frame.cell, atol=2e-4, rtol=1e-6):
-        raise ValueError('Periodic field lattice does not match the current structure.')
+    validate_field_geometry(frame, incoming.frames[0], transform, shift,
+                            periodic=any(v.periodic for v in incoming.volumes))
     total = sum(v.data.size for v in target.volumes) + sum(v.data.size for v in incoming.volumes)
     from .grid_memory import scalar_limit
     if total > scalar_limit():

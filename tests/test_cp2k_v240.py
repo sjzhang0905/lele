@@ -262,7 +262,7 @@ def test_spectrum_without_structure_has_results_controls_and_paints(gui,tmp_path
     from lele.spectrum_dialog import SpectrumDialog
     w,d=attach(gui,write(tmp_path,TD,'spectra.out'))
     assert w.frame is None and w.results_spectrum_button.isEnabled() and w.results_transition_button.isEnabled()
-    assert not w.energy_curve_action.isEnabled()
+    assert not w.energy_curve_button.isEnabled()
     dialog=SpectrumDialog(d,'UV-Vis',w);gui.addCleanup(dialog.close);dialog.show();gui.app.processEvents()
     assert dialog.table.rowCount()==2 and not dialog.grab().isNull()
     assert dialog.table.item(0,7).text()=='component magnitudes'

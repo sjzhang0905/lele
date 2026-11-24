@@ -57,8 +57,8 @@ class StartupTests(unittest.TestCase):
                 fragmentGestureBegin = Signal(str, float, float)
                 fragmentGestureMove = Signal(str, float, float)
                 fragmentGestureEnd = Signal(str)
-                def __init__(self):
-                    super().__init__()
+                def __init__(self, parent=None):
+                    super().__init__(parent)
                     from vtkmodules.vtkRenderingCore import vtkRenderWindow, vtkRenderWindowInteractor
                     self.window = vtkRenderWindow()
                     self.interactor = vtkRenderWindowInteractor()
@@ -135,7 +135,8 @@ class StartupTests(unittest.TestCase):
                     # initialization, with no user file required to trigger it.
                     for name in ('ase.io', 'ase.neighborlist', 'ase.constraints',
                                  'scipy.spatial', 'PIL.Image', 'lele.orca_results',
-                                 'lele.cp2k_results', 'lele.surface_rendering'):
+                                 'lele.cp2k_results', 'lele.surface_rendering', 'lele.workflow_ui',
+                                 'lele.annotations', 'lele.trajectory_storage', 'vtkmodules.vtkRenderingFreeType'):
                         assert name in sys.modules, name
                     from ase.io.formats import ioformats
                     from lele.legacy_converter import GENERIC_SUFFIX_READERS

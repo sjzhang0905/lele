@@ -90,7 +90,7 @@ class IsosurfaceLayersDialog(QDialog):
         color=QPushButton();set_color_swatch(color, str(layer.get('color','#80E666')), 'Layer color')
         color.clicked.connect(lambda _,b=color:self.pick_color(b))
         opacity=QDoubleSpinBox();opacity.setRange(0,1);opacity.setDecimals(2);opacity.setSingleStep(.05)
-        opacity.setValue(float(layer.get('opacity',.65)))
+        opacity.setValue(float(layer.get('opacity', self.options.volume_opacity)))
         style=QComboBox();style.addItems(['Surface','Wireframe','Points']);style.setCurrentText(layer.get('style','Surface'))
         remove=QPushButton('Remove');remove.clicked.connect(lambda _,b=remove:self.remove_layer(b))
         for col,widget in enumerate((enabled,value,color,opacity,style,remove)):self.table.setCellWidget(row,col,widget)

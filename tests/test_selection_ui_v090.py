@@ -35,8 +35,8 @@ class SelectionWorkflowTests(unittest.TestCase):
             fragmentGestureMove = Signal(str, float, float)
             fragmentGestureEnd = Signal(str)
 
-            def __init__(self):
-                super().__init__()
+            def __init__(self, parent=None):
+                super().__init__(parent)
                 self.window = vtkRenderWindow()
                 self.interactor = vtkRenderWindowInteractor()
                 self.interactor.SetRenderWindow(self.window)
@@ -143,7 +143,7 @@ class SelectionWorkflowTests(unittest.TestCase):
         from lele.atom_appearance import AtomAppearance
         f=Frame(['Si'],[[0,0,0]],np.eye(3)*2.2,(True,)*3,atom_appearance={0:AtomAppearance(opacity=.4)})
         self.attach(f);w=self.window;w.render_options.labels='Index (1..N)'
-        bounds=((0,2),(0,2),(0,1));w._apply_boundary(True,bounds)
+        bounds=((0,2),(0,2),(0,1));w._apply_boundary(bounds)
         self.assertEqual(len(w.renderer.boundary_display.source_indices),18)
         self.assertEqual(len(w.renderer.boundary_display.bonds),33)
         self.assertEqual({a.GetInput() for a in w.renderer._label_actors},{'1'})
@@ -151,10 +151,10 @@ class SelectionWorkflowTests(unittest.TestCase):
         for i,p in w.renderer.displayed_atoms():
             w.scene.SetWorldPoint(*p,1.);w.scene.WorldToDisplay();x,y,_=w.scene.GetDisplayPoint()
             self.assertEqual(w.renderer.pick_index(x,y),0)
-        with patch('lele.restored_actions.QMessageBox.warning') as message:w._apply_boundary(True,((0,0),)*3)
+        with patch('lele.restored_actions.QMessageBox.warning') as message:w._apply_boundary(((0,0),)*3)
         self.assertTrue(message.called);self.assertEqual(w.render_options.boundary_bounds,bounds)
         self.assertIn('Atoms 1',w.summary_label.text());self.assertEqual(w.atom_table.rowCount(),1)
-        w._apply_boundary(False,((0,1),)*3);self.assertTrue(w.apply_supercell((2,2,1)))
+        w._apply_boundary(((0,1),)*3);self.assertTrue(w.apply_supercell((2,2,1)))
         self.assertEqual(len(w.frame.symbols),4);w.undo_edit();self.assertEqual(len(w.frame.symbols),1)
 
     def test_restored_spectrum_raw_table_and_broadened_csv_differ(self):
@@ -789,7 +789,7 @@ class SelectionWorkflowTests(unittest.TestCase):
     def test_invert_complements_selection_and_updates_coordinate_table(self):
         w = self.window
         self.select([0, 2])
-        w.invert_btn.click()
+        w.invert_action.trigger()
         self.assertEqual(w.selection, [1, 3])
         self.assertEqual([i.row() for i in w.atom_table.selectionModel().selectedRows()], [1, 3])
         w.invert_action.trigger()
@@ -813,7 +813,7 @@ class SelectionWorkflowTests(unittest.TestCase):
         self.assertNotRegex(w.summary_label.text(), r'\d+ electrons')
         self.select([0, 2])
         self.assertTrue(w.summary_label.text().startswith('Atoms 4'))
-        w.delete_btn.click()
+        w.delete_action.trigger()
         self.assertEqual(len(w.frame.symbols), 2)
         self.assertEqual(w.frame.bond_added, {(0, 1)})
         self.assertEqual(w.atom_table.rowCount(), 2)
@@ -854,7 +854,8 @@ class SelectionWorkflowTests(unittest.TestCase):
         w.delete_selected_atoms()
         self.assertEqual(w.frame.symbols, [])
         self.assertEqual(w.atom_table.rowCount(), 0)
-        self.assertFalse(w.delete_btn.isEnabled())
+        w.delete_action.trigger()
+        self.assertEqual(w.frame.symbols, [])
         w.align_camera('Z')
         w.undo_edit()
         self.assertEqual(len(w.frame.symbols), 4)

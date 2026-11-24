@@ -9,6 +9,15 @@ from .import_paths import ImportBatch
 ASYNC_THRESHOLD = 4 * 1024 * 1024
 
 
+def load_for_view(filename, **kwargs):
+    from .core import prepare_view_neighbors
+    from .formats import load_document
+    document = load_document(filename, **kwargs)
+    if document.frames:
+        prepare_view_neighbors(document.frames[-1])
+    return document
+
+
 class FileLoader(QThread):
     completed = Signal(object, str, bool)
     progress = Signal(str, object, object)
@@ -24,7 +33,6 @@ class FileLoader(QThread):
         super().requestInterruption()
 
     def run(self):
-        from .formats import load_document
         from .output_text import LoadCancelled
         def report(label,value,total):
             self.progress.emit(label,value,total)
@@ -34,7 +42,7 @@ class FileLoader(QThread):
         try:
             # Readers check cancellation very often. A Python flag avoids a
             # Qt/GIL transition on every source line in a long optimization.
-            document = load_document(self.filename, cancelled=lambda:self._cancelled_flag,
+            document = load_for_view(self.filename, cancelled=lambda:self._cancelled_flag,
                                      progress=report)
         except LoadCancelled:
             self.completed.emit(None, '', True)
@@ -297,6 +305,9 @@ class FileLoadActions:
             # this event-loop gap must append behind it instead of jumping it.
             self._file_load_drain_pending=True
             QTimer.singleShot(0,self,self._drain_file_import_queue)
+        elif not self._vtk_initialized and self.canvas_stack.currentWidget() is self.welcome_page:
+            # A missing file or empty folder can leave the welcome page visible.
+            QTimer.singleShot(0, self, self._prepare_idle_view)
 
     def _cancel_file_imports(self):
         if hasattr(self, '_file_load_queue'):self._file_load_queue.clear()

@@ -55,7 +55,7 @@ def test_structure_and_curve_keep_missing_e0_as_gap_and_csv_blank(gui, tmp_path)
 
 def test_free_energy_only_file_has_no_energy_curve_or_fake_structure(gui, tmp_path):
     w, d = attach(gui, write(tmp_path, 'free energy TOTEN = -10\nfree energy TOTEN = -11\n'))
-    assert w.frame is None and not w.energy_curve_action.isEnabled()
+    assert w.frame is None and not w.energy_curve_button.isEnabled()
     assert 'E0 (σ→0): not printed' in w.results_only_info.toPlainText()
     assert 'TOTEN' not in w.results_only_info.toPlainText()
     overview = w.show_calculation_overview()
@@ -112,5 +112,5 @@ def test_project_with_only_legacy_free_energy_records_opens_without_fallback(gui
     path = tmp_path/'legacy_results.lele'
     save_project(path,dict(documents=[dict(document=d,options=RenderOptions(),frame_index=0)],current_document=0))
     w = gui.window;assert w._load_project_path(path)
-    assert w.frame is None and not w.energy_curve_action.isEnabled()
+    assert w.frame is None and not w.energy_curve_button.isEnabled()
     assert w.doc.calculation_results.jobs[0].energy_ev is None

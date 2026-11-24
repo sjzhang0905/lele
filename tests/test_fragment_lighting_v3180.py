@@ -136,24 +136,38 @@ def test_highlight_slider_updates_materials_in_place_and_survives_projects(gui, 
     w = gui.window
     gui.attach(Frame(['C', 'O'], [[0, 0, 0], [1.25, 0, 0]]))
     props = tuple(w.renderer._finished_properties)
-    assert props and all(prop.GetSpecularPower() == 60 for prop in props)
+    assert w.highlight_slider.value() == 50 - 3*w.highlight_slider.singleStep() == 47
+    assert w.highlight_brightness_slider.value() == 50 - 3*w.highlight_brightness_slider.singleStep() == 47
+    assert props and all(prop.GetSpecularPower() == pytest.approx(32 * 4**.06) for prop in props)
+    assert all(prop.GetSpecular() == pytest.approx(.8*47/50) for prop in props)
+    w.highlight_brightness_slider.setValue(50)
     intensity = [light.GetIntensity() for light in w.renderer._lights]
     with patch.object(w.renderer, 'set_scene', side_effect=AssertionError('rebuilt geometry')):
-        for size, power in [(100, 1.), (0, 128.), (50, 60.)]:
+        for size, power in [(100, 1.), (0, 128.), (50, 32.)]:
             w.highlight_slider.setValue(size)
             assert all(prop.GetSpecularPower() == pytest.approx(power) for prop in props)
-            assert all(prop.GetSpecular() == pytest.approx(.78) for prop in props)
+            assert all(prop.GetSpecular() == pytest.approx(.8) for prop in props)
+        for brightness, strength in [(0, 0.), (25, .4), (50, .8), (75, .9), (100, 1.)]:
+            w.highlight_brightness_slider.setValue(brightness)
+            assert all(prop.GetSpecular() == pytest.approx(strength) for prop in props)
+            assert all(prop.GetSpecularPower() == 32 for prop in props)
+            assert all(prop.GetSpecularColor() == (1., 1., 1.) for prop in props)
         w.finish_combo.setCurrentText('Matte')
         assert all(prop.GetSpecularPower() == 9 for prop in props)
         w.highlight_slider.setValue(77)
     assert intensity == [light.GetIntensity() for light in w.renderer._lights]
     old_preset = snapshot(w.render_options)
     old_preset.pop('highlight_size')
-    assert validate_preset(old_preset)['highlight_size'] == 50.
+    old_preset.pop('highlight_brightness')
+    assert validate_preset(old_preset)['highlight_size'] == 47.
+    assert validate_preset(old_preset)['highlight_brightness'] == 47.
     path = tmp_path / 'highlight.lele'
     save_project(path, dict(documents=[dict(document=w.doc, options=w.render_options)], current_document=0))
-    assert load_project(path)['documents'][0]['options'].highlight_size == 77
+    restored = load_project(path)['documents'][0]['options']
+    assert restored.highlight_size == 77 and restored.highlight_brightness == 100
     from lele.atom_legend import AtomLegend, legend_samples
     legend = AtomLegend(vtkRenderer())
     legend.set_samples(legend_samples(w.renderer), w.render_options)
     assert legend.actors[0].GetProperty().GetSpecularPower() == props[0].GetSpecularPower()
+    assert legend.actors[0].GetProperty().GetSpecular() == props[0].GetSpecular()
+    assert [l.GetIntensity() for l in legend._lights] == intensity

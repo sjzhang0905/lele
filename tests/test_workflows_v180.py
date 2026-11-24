@@ -87,8 +87,8 @@ def test_homo_popup_opens_on_button_click_with_ev_and_two_spin_channels(gui):
     gui.addCleanup(lambda:[dialog.close() for dialog in list(w._analysis_windows)])
     w._open_path_now(EXAMPLE)
     assert not any(isinstance(d,OrbitalDialog) for d in w._analysis_windows)
-    assert w.orbital_btn.isEnabled()
-    w.orbital_btn.click()
+    assert w.orbital_action.isEnabled()
+    w.orbital_action.trigger()
     dialog=next(d for d in w._analysis_windows if isinstance(d,OrbitalDialog))
     assert dialog.unit.currentText()=='eV' and dialog.summary.rowCount()==2
     assert dialog.summary.item(0,1).text()=='5' and dialog.summary.item(0,3).text()=='6'

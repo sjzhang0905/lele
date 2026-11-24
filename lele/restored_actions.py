@@ -48,21 +48,26 @@ class RestoredActions:
         self.renderer.dipole_label=dipole_label(self.doc,source)
         self.dipole_panel.set_vector(self.renderer.dipole_vector,self.render_options.dipole_mode,self.render_options.dipole_scale)
         self.boundary_panel.setEnabled(periodic_basis(self.frame) is not None)
-        self.boundary_panel.set_values(self.render_options.boundary_enabled,self.render_options.boundary_bounds,
+        self.boundary_panel.set_values(self.render_options.boundary_bounds,
                                        self.render_options.boundary_preserve_origin)
 
-    def _apply_boundary(self,enabled,bounds):
-        if self.frame is None:return
-        from .boundary import boundary_view
-        preserve=self.boundary_panel.preserve.isChecked()
-        if enabled:
-            try:boundary_view(self.frame,bounds,self.render_options.bond_cutoff,preserve_origin=preserve)
-            except ValueError as ex:
-                self.boundary_panel.set_values(self.render_options.boundary_enabled,self.render_options.boundary_bounds,
+    def _apply_boundary(self, bounds):
+        if self.frame is None:
+            return
+        from .boundary import BoundaryRangeError, boundary_view
+        from .lattice_tiles import ONE_CELL
+        preserve = self.boundary_panel.preserve.isChecked()
+        bounds = tuple(tuple(pair) for pair in bounds)
+        # One cell is always available, including for structures above the replica budget.
+        if bounds != ONE_CELL:
+            try:
+                boundary_view(self.frame, bounds, self.render_options.bond_cutoff, preserve_origin=preserve)
+            except BoundaryRangeError as exc:
+                self.boundary_panel.set_values(self.render_options.boundary_bounds,
                                                self.render_options.boundary_preserve_origin)
-                QMessageBox.warning(self,'Invalid boundary',str(ex));return
-        self.render_options.boundary_enabled=enabled
-        self.render_options.boundary_bounds=tuple(tuple(v) for v in bounds)
+                QMessageBox.warning(self, 'Invalid boundary', str(exc))
+                return
+        self.render_options.boundary_bounds = bounds
         self.render_options.boundary_preserve_origin=preserve
         self.renderer.periodic_preview=None;self.refresh_scene(reset_camera=not preserve)
 

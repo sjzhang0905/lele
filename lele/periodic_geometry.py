@@ -12,13 +12,45 @@ from itertools import product
 from functools import lru_cache
 import numpy as np
 
-from .core import Frame, canonical_pair, radius
+from .core import Frame, canonical_pair, nearby_pairs, radius
+
+
+@lru_cache(maxsize=128)
+def _independent_rows(cell_values, pbc):
+    rows = np.asarray(cell_values).reshape(3, 3)[np.asarray(pbc, dtype=bool)]
+    return bool(len(rows) and np.linalg.matrix_rank(rows) == len(rows))
+
+
+def valid_periodic_cell(cell, pbc):
+    """Test the numerical rank of the periodic lattice rows."""
+    return _independent_rows(tuple(np.asarray(cell, dtype=float).ravel()), tuple(pbc))
+
+
+def full_cell(cell):
+    """Whether a cell supplies three independent vectors for 3D coordinates."""
+    return valid_periodic_cell(cell, (True, True, True))
 
 
 def periodic_basis(frame: Frame):
-    if not any(frame.pbc) or abs(float(np.linalg.det(frame.cell))) < 1e-9:
+    """Return the original cell when the declared periodic subspace is valid."""
+    if not any(frame.pbc):
         return None
-    return np.asarray(frame.cell, float)
+    cell = np.asarray(frame.cell, dtype=float)
+    return cell if valid_periodic_cell(cell, frame.pbc) else None
+
+
+def lattice_coordinates(positions, cell, pbc):
+    """Use full-cell fractions when available, otherwise projected active fractions."""
+    positions = np.asarray(positions, dtype=float)
+    if full_cell(cell):
+        return positions @ np.linalg.inv(cell)
+    coordinates = np.zeros_like(positions)
+    active = np.asarray(pbc, dtype=bool)
+    if active.any() and valid_periodic_cell(cell, pbc):
+        rows = np.asarray(cell)[active]
+        tolerance = max(rows.shape) * np.finfo(float).eps
+        coordinates[..., active] = positions @ np.linalg.pinv(rows, rcond=tolerance)
+    return coordinates
 
 
 def translations(frame: Frame):
@@ -28,9 +60,19 @@ def translations(frame: Frame):
 
 @lru_cache(maxsize=64)
 def _reduced_cell(cell_values, pbc):
-    """Unimodular reduction preserves the lattice and original shift mapping."""
+    """Reduce the lattice with a temporary completion for missing dimensions."""
     from ase.geometry import minkowski_reduce
     cell = np.asarray(cell_values, dtype=float).reshape(3, 3)
+    if not full_cell(cell):
+        from ase.geometry.cell import complete_cell
+        periodic = np.asarray(pbc, dtype=bool)
+        working = np.zeros_like(cell)
+        working[periodic] = cell[periodic]
+        working = complete_cell(working)
+        # ASE needs an invertible search cell. Preserve source active rows
+        # exactly and use the added vectors only in nonperiodic directions.
+        working[periodic] = cell[periodic]
+        cell = working
     reduced, operation = minkowski_reduce(cell, pbc=pbc)
     return np.asarray(reduced), np.asarray(operation, dtype=int)
 
@@ -44,9 +86,9 @@ def periodic_neighbors(frame, cutoff, positions=None):
     from ase.neighborlist import primitive_neighbor_list
     cell = periodic_basis(frame)
     if cell is None:
-        cell = frame.cell
         pbc = (False, False, False)
-        reduced, operation = cell, np.eye(3, dtype=int)
+        reduced = frame.cell if full_cell(frame.cell) else np.eye(3)
+        operation = np.eye(3, dtype=int)
     else:
         pbc = frame.pbc
         reduced, operation = _reduced_cell(tuple(cell.ravel()), pbc)
@@ -101,9 +143,7 @@ def short_contact_details(frame: Frame, threshold=0.6):
         return []
     cell = periodic_basis(frame)
     if cell is None:
-        from scipy.spatial import cKDTree
-        tree = cKDTree(frame.positions)
-        pairs = tree.query_pairs(float(threshold), output_type='ndarray')
+        pairs = nearby_pairs(frame.positions, float(threshold))
         if not len(pairs):
             return []
         d = np.linalg.norm(frame.positions[pairs[:, 0]] - frame.positions[pairs[:, 1]], axis=1)
@@ -135,7 +175,7 @@ def normalized_positions(frame: Frame):
     cell = periodic_basis(frame)
     if cell is None:
         return frame.positions.copy(), np.zeros((len(frame.symbols), 3), dtype=int)
-    frac = frame.positions @ np.linalg.inv(cell)
+    frac = lattice_coordinates(frame.positions, cell, frame.pbc)
     floors = np.zeros_like(frac, dtype=int)
     for axis, enabled in enumerate(frame.pbc):
         if enabled:

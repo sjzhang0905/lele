@@ -33,7 +33,7 @@ def test_default_style_changes_do_not_modify_custom_colors_or_geometry():
     np.testing.assert_array_equal(frame.positions, before)
     specs = volume_surface_specs(opts)
     assert {s['color'] for s in specs} == {'#80E666', '#00C2FF'}
-    assert all(s['opacity'] == .9 for s in specs)
+    assert all(s['opacity'] == .5 for s in specs)
 
 
 def test_four_camera_lights_two_enabled_switch_without_geometry_rebuild():

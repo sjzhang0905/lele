@@ -27,9 +27,13 @@ class TrajectoryAnalysisActions:
         row = QHBoxLayout()
         self.geometry_curve_button = QPushButton('Geometry curves…')
         self.geometry_curve_button.clicked.connect(self.show_geometry_curves)
-        self.vibration_analysis_button = QPushButton('Find vibrations…')
-        self.vibration_analysis_button.clicked.connect(self.show_vibration_analysis)
-        row.addWidget(self.geometry_curve_button); row.addWidget(self.vibration_analysis_button); layout.addLayout(row)
+        self.energy_curve_button = QPushButton('Energy / RMS curves…')
+        self.energy_curve_button.setToolTip('Energy and maximum/RMS convergence curves')
+        self.energy_curve_button.clicked.connect(self.show_energy_curve)
+        self.energy_curve_button.setEnabled(False)
+        row.addWidget(self.geometry_curve_button)
+        row.addWidget(self.energy_curve_button)
+        layout.addLayout(row)
         self._refresh_trajectory_controls()
 
     def _alignment_enabled(self):
@@ -40,7 +44,7 @@ class TrajectoryAnalysisActions:
         structure = self.frame is not None
         vibr = self.doc is not None and bool(self.doc.vibrations)
         for widget in (self.geometry_curve_button, self.geometry_curve_action): widget.setEnabled(structure)
-        for widget in (self.vibration_analysis_button, self.vibration_analysis_action): widget.setEnabled(vibr)
+        self.vibration_analysis_action.setEnabled(vibr)
         enabled = structure and self._active_vibration is None
         for widget in (self.trajectory_align_check, self.trajectory_align_button, self.alignment_action): widget.setEnabled(enabled)
         with QSignalBlocker(self.trajectory_align_check): self.trajectory_align_check.setChecked(self._alignment_enabled())

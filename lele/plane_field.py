@@ -72,8 +72,8 @@ def fitted_plane_polygon(frame, fitted, *, volume=None, bounds=((0., 1.),)*3,
     translation = np.zeros(3) if translation is None else np.asarray(translation, float)
     center = fitted.center @ rotation+translation
     normal = fitted.normal @ rotation
-    from .periodic_geometry import periodic_basis
-    if periodic_basis(frame) is not None:
+    from .core import valid_lattice
+    if valid_lattice(frame):
         from .cell_origin import cell_origin
         offset=cell_origin(frame) if preserve_cell_origin else np.zeros(3)
         return plane_polygon(frame.cell, normal, center, bounds, translation+offset)

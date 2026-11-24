@@ -19,10 +19,10 @@ def test_selected_label_dropdown_only_changes_selected_atoms_and_supports_undo(g
     gui.select([0,2])
     panel = w.atom_panel
     assert not hasattr(panel, 'show_labels_button')
+    assert panel.label_combo.findData('Element + ORCA index') == -1
     for mode, expected in [('Element',['O','H']),
                            ('Index (1..N)',['1','3']),
                            ('ORCA index (0..N-1)',['0','2']),
-                           ('Element + ORCA index',['O0','H2']),
                            ('Element + index (global)',['O1','H3']),
                            ('None',[])]:
         panel.label_combo.setCurrentIndex(panel.label_combo.findData(mode))
@@ -61,15 +61,15 @@ def test_new_file_starts_enabled_one_cell_and_existing_file_restores_own_range(g
     second=Document(tmp_path/'second.xyz','XYZ',[frame.clone()])
     w._attach_loaded_document(first)
     ranges=((-1,2),(0,2),(0,1))
-    w._apply_boundary(False,ranges)
+    w._apply_boundary(ranges)
     w._attach_loaded_document(second)
     assert w.render_options.boundary_enabled
     assert w.render_options.boundary_bounds == ((0.,1.),)*3
     w._activate_document(0); w.change_frame(0)
-    assert not w.render_options.boundary_enabled and w.render_options.boundary_bounds == ranges
+    assert w.render_options.boundary_enabled and w.render_options.boundary_bounds == ranges
     project=tmp_path/'boundaries.lele'
     w.save_project_to(project); w._load_project_path(project)
-    assert not w.render_options.boundary_enabled and w.render_options.boundary_bounds == ranges
+    assert w.render_options.boundary_enabled and w.render_options.boundary_bounds == ranges
     w._activate_document(1); w.change_frame(0)
     assert w.render_options.boundary_enabled and w.render_options.boundary_bounds == ((0.,1.),)*3
 
@@ -94,7 +94,7 @@ def test_siesta_curve_includes_moves_when_default_final_structure_has_no_energy(
     w.documents=[]; w.current_doc=-1; w.files_tree.clear()
     w._attach_loaded_document(document)
     assert w.frame_index == 3 and w.frame.energy_ev is None
-    assert w.energy_curve_action.isEnabled()
+    assert w.energy_curve_button.isEnabled()
     curve=w.show_energy_curve()
     assert [p['energy_ev'] for p in curve.points()] == [-10.1,-10.2]
     assert 'eV' in curve.energy_axes.get_ylabel()
@@ -108,6 +108,6 @@ def test_siesta_energy_only_tree_uses_ev(gui,tmp_path):
     w=gui.window
     w.documents=[]; w.current_doc=-1; w.files_tree.clear()
     w._attach_loaded_document(load_document(path))
-    assert w.frame is None and w.energy_curve_action.isEnabled()
+    assert w.frame is None and w.energy_curve_button.isEnabled()
     item=w.files_tree.topLevelItem(0).child(0).child(0)
     assert '-10.50000000 eV' in item.text(0)

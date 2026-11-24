@@ -4,9 +4,8 @@ from vtkmodules.vtkCommonCore import vtkPoints
 from vtkmodules.vtkCommonDataModel import vtkPlane, vtkPolyData, vtkCellArray
 from vtkmodules.vtkRenderingCore import vtkActor, vtkPolyDataMapper
 
-from .core import Frame
+from .core import Frame, valid_lattice
 from .atom_appearance import appearance
-from .periodic_geometry import periodic_basis
 from .crystal_planes import prepare_planes, plane_polygon, clip_polygon, inside_cuts
 from .polyhedra import coordination_polyhedra
 from .crystal_settings import POLYHEDRA_KEYS
@@ -40,7 +39,7 @@ class CrystalRendering:
         self.plane_field_actors = [];self.plane_contour_actors = [];self.plane_field_bars = []
         self.polyhedra_extra_atoms = [];self._polyhedra_atoms_frame = None
         self._clipping_suspended = False
-        if self.options.lattice_planes and periodic_basis(self.frame) is not None:
+        if self.options.lattice_planes and valid_lattice(self.frame):
             self.lattice_plane_data, self.crystal_cuts = prepare_planes(
                 self.frame.cell, self.options.lattice_planes, self.display_translation)
             for normal, origin in self.crystal_cuts:

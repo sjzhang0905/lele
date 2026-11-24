@@ -60,10 +60,12 @@ def compact_panel_editors(panel):
         # regular editors and buttons keep their own bounded/natural width.
         form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
     for combo in panel.findChildren(QComboBox):
-        combo.setFixedWidth(COMBO_WIDTH)
+        if combo.minimumWidth() != combo.maximumWidth():
+            combo.setFixedWidth(COMBO_WIDTH)
     for editor in panel.findChildren(QAbstractSpinBox):
-        editor.setFixedWidth(SCIENTIFIC_NUMBER_WIDTH if isinstance(editor, IsovalueSpinBox)
-                             else NUMBER_WIDTH)
+        if editor.minimumWidth() != editor.maximumWidth():
+            editor.setFixedWidth(SCIENTIFIC_NUMBER_WIDTH if isinstance(editor, IsovalueSpinBox)
+                                 else NUMBER_WIDTH)
     for editor in panel.findChildren(QLineEdit):
         # Native spin/combo editors manage their own arrow/clear-button space.
         if not isinstance(editor.parentWidget(), (QAbstractSpinBox, QComboBox)):

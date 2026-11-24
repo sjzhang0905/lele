@@ -88,7 +88,7 @@ def test_A3_periodic_surface_must_follow_boundary(gui,bounds,expected_x):
     frame=Frame(['H'],[[.5,.5,.5]],np.eye(3),(True,)*3)
     gui.attach(frame,volume=vol);w=gui.window
     w.render_options.volume_surfaces=[dict(value=0.,color='#ff0000',opacity=1.,style='Surface',visible=True)]
-    w._apply_boundary(True,bounds)
+    w._apply_boundary(bounds)
     points=field_points(w.renderer)
     np.testing.assert_allclose([points[:,0].min(),points[:,0].max()],expected_x,atol=1e-6)
 

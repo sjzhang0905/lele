@@ -263,7 +263,7 @@ def test_energy_only_ui_curve_csv_and_overview(gui, tmp_path):
     w, d = attach(gui, write(tmp_path, ENERGY + ENERGY.replace('-10.1', '-10.3')))
     assert w.frame is None and w.canvas_stack.currentWidget() is w.results_only_page
     assert not w.play_btn.isEnabled() and not w.gif_action.isEnabled()
-    assert w.energy_curve_action.isEnabled()
+    assert w.energy_curve_button.isEnabled()
     assert 'eV' in w.files_tree.topLevelItem(0).child(0).child(0).text(0)
     curve = w.show_energy_curve()
     assert [x['energy_ev'] for x in curve.points()] == [-10.1, -10.3]
@@ -301,10 +301,10 @@ def test_vasp_frequency_ui_uses_reference_and_source_cell(gui, tmp_path):
 
 def test_xdatcar_ui_navigation_and_results_only_switch(gui, tmp_path):
     w, d = attach(gui, write(tmp_path, XDAT, 'XDATCAR'))
-    assert not w.energy_curve_action.isEnabled() and w.play_btn.isEnabled()
+    assert not w.energy_curve_button.isEnabled() and w.play_btn.isEnabled()
     w._step_next();assert w.frame_index == 1
     w._open_path_now(write(tmp_path, ENERGY, 'OUTCAR_energy'))
     assert w.frame is None and w.canvas_stack.currentWidget() is w.results_only_page
     w.change_frame(1, switch_doc=0)
     assert w.frame is d.frames[1] and w.canvas_stack.currentWidget() is w.structure_page
-    assert not w.energy_curve_action.isEnabled()
+    assert not w.energy_curve_button.isEnabled()

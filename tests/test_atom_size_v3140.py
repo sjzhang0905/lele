@@ -119,7 +119,7 @@ def test_picking_tracks_enlarged_and_reduced_projected_sphere(gui):
 def test_size_survives_delete_undo_and_appearance_undo(gui):
     gui.attach(molecular());w=gui.window
     gui.select([2]);w.atom_panel.size_spin.setValue(2.4)
-    gui.select([0]);w.delete_btn.click()
+    gui.select([0]);w.delete_action.trigger()
     assert len(w.frame.symbols)==2 and appearance(w.frame,1).size_scale==2.4
     w.undo_edit()
     assert len(w.frame.symbols)==3 and appearance(w.frame,2).size_scale==2.4
@@ -154,7 +154,7 @@ def test_supercell_and_boundary_copy_original_size_to_every_displayed_atom(gui):
                  atom_appearance={1:AtomAppearance(size_scale=1.8)})
     expanded=make_supercell(source,(2,1,1))
     assert [appearance(expanded,i).size_scale for i in range(4)]==[1.,1.8,1.,1.8]
-    gui.attach(source);w=gui.window;w._apply_boundary(True,((0,2),(0,1),(0,1)))
+    gui.attach(source);w=gui.window;w._apply_boundary(((0,2),(0,1),(0,1)))
     displayed=w.renderer.displayed_atoms()
     assert len(displayed)==4
     for index,position in displayed:

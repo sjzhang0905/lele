@@ -4,12 +4,20 @@ from itertools import product
 import math
 import numpy as np
 from .core import Frame, unit_cell_edges
-from .periodic_geometry import periodic_basis,normalized_positions,periodic_bonds
+from .periodic_geometry import full_cell, lattice_coordinates, normalized_positions, periodic_basis, periodic_bonds
 from .lattice_tiles import ordered_range
 
 MAX_DISPLAY_ATOMS=50_000
 MAX_CANDIDATE_TILES=4096
 FACE_TOLERANCE=1.e-8
+
+class BoundaryRangeError(ValueError):
+    """A display range cannot be used with this frame."""
+
+
+class BoundaryLimitError(BoundaryRangeError):
+    """The requested periodic display exceeds the supported replica budget."""
+
 
 @dataclass
 class BoundaryView:
@@ -40,17 +48,22 @@ def boundary_view(frame,bounds,cutoff=1.0,*,preserve_origin=False):
     """
     values=np.asarray(bounds,float)
     if values.shape!=(3,2) or not np.isfinite(values).all() or np.any(values[:,1]<=values[:,0]):
-        raise ValueError('Each maximum must be greater than its minimum.')
+        raise BoundaryRangeError('Each maximum must be greater than its minimum.')
     if not np.all(values==np.rint(values)):
-        raise ValueError('Use integer cell ranges; the start is included and the end is excluded.')
+        raise BoundaryRangeError('Use integer cell ranges; the start is included and the end is excluded.')
     limits=values.astype(int)
     cell=periodic_basis(frame)
-    if cell is None:raise ValueError('Boundary needs a valid periodic unit cell.')
+    if cell is None:raise BoundaryRangeError('Boundary needs a valid periodic unit cell.')
+    outline_axes = range(3)
+    if not full_cell(cell):
+        active = np.asarray(frame.pbc, dtype=bool)
+        limits[~active] = (0, 1)
+        outline_axes = np.flatnonzero(active)
     ranges=[ordered_range(int(lo),int(hi)) if preserve_origin else range(int(lo),int(hi)) for lo,hi in limits]
     count=math.prod(len(r) for r in ranges)
-    if count>MAX_CANDIDATE_TILES:raise ValueError('Boundary covers too many cells.')
+    if count>MAX_CANDIDATE_TILES:raise BoundaryLimitError('Boundary covers too many cells.')
     n=len(frame.symbols)
-    if count*n>MAX_DISPLAY_ATOMS:raise ValueError('Boundary exceeds 50,000 display atoms.')
+    if count*n>MAX_DISPLAY_ATOMS:raise BoundaryLimitError('Boundary exceeds 50,000 display atoms.')
     tiles=tuple(product(*ranges))
     phonon=frame.info.get('_qe_phonon_preview')
     graph_frame=frame
@@ -66,7 +79,7 @@ def boundary_view(frame,bounds,cutoff=1.0,*,preserve_origin=False):
     sources=list(np.tile(np.arange(n,dtype=int),count))
     shifts=[tile for tile in tiles for _ in range(n)]
     image_map={(i,tile):k*n+i for k,tile in enumerate(tiles) for i in range(n)}
-    fractional=(base-origin)@np.linalg.inv(cell)
+    fractional = lattice_coordinates(base - origin, cell, frame.pbc)
     for i in range(n):
         choices=[]
         for axis,(lo,hi) in enumerate(limits):
@@ -78,7 +91,7 @@ def boundary_view(frame,bounds,cutoff=1.0,*,preserve_origin=False):
         for tile in product(*choices):
             if (i,tile) in image_map:continue
             if len(sources)>=MAX_DISPLAY_ATOMS:
-                raise ValueError('Boundary including face images exceeds 50,000 display atoms.')
+                raise BoundaryLimitError('Boundary including face images exceeds 50,000 display atoms.')
             image_map[i,tile]=len(sources);sources.append(i);shifts.append(tile)
     sources=np.asarray(sources,dtype=int)
     shifts=np.asarray(shifts,dtype=int).reshape(-1,3)
@@ -110,14 +123,16 @@ def boundary_view(frame,bounds,cutoff=1.0,*,preserve_origin=False):
     # in lattice coordinates, so skew cells retain all internal boundaries.
     grid_edges=set()
     for tile in tiles:
-        for axis in range(3):
-            other=[k for k in range(3) if k!=axis]
-            for u,v in product((0,1),repeat=2):
-                p=list(tile);p[other[0]]+=u;p[other[1]]+=v
+        for axis in outline_axes:
+            other = [k for k in outline_axes if k != axis]
+            for increments in product((0, 1), repeat=len(other)):
+                p = list(tile)
+                for k, increment in zip(other, increments):
+                    p[k] += increment
                 q=p.copy();q[axis]+=1
                 grid_edges.add((tuple(p),tuple(q)))
     lines=[(np.asarray(p)@cell+origin,np.asarray(q)@cell+origin) for p,q in sorted(grid_edges)]
     if len(tiles) == 1:
         offset = np.asarray(tiles[0]) @ cell + origin
-        lines = [(p + offset, q + offset) for p, q in unit_cell_edges(cell)]
+        lines = [(p + offset, q + offset) for p, q in unit_cell_edges(cell, frame.pbc)]
     return BoundaryView(display,sources,shifts.reshape(-1,3),sorted(edges),lines,tiles)

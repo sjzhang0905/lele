@@ -57,7 +57,7 @@ def test_energy_only_page_has_no_frame_coordinates_or_3d_view(gui):
     assert w.frame is None and w.canvas_stack.currentWidget() is w.results_only_page
     assert w.frame_count_label.text()=='No structure' and w.frame_spin.value()==0
     assert w.atom_table.rowCount()==0 and not w.play_btn.isEnabled() and not w.gif_action.isEnabled()
-    assert w.energy_curve_action.isEnabled() and w.results_energy_button.isEnabled()
+    assert w.energy_curve_button.isEnabled() and w.results_energy_button.isEnabled()
     assert 'Total energy:' in w.results_only_info.toPlainText()
     assert 'Atoms:' not in w.info_view.toPlainText()
     group=w.files_tree.topLevelItem(0).child(0)
@@ -79,7 +79,7 @@ def test_energy_only_plot_keeps_all_points_and_never_jumps_to_a_structure(gui):
 def test_structure_only_page_disables_empty_curve_but_keeps_navigation(gui):
     w,d=attach(gui,GEOMETRY)
     assert w.frame is d.frames[0] and w.canvas_stack.currentWidget() is w.structure_page
-    assert not w.energy_curve_action.isEnabled() and not w.orbital_btn.isEnabled()
+    assert not w.energy_curve_button.isEnabled() and not w.orbital_action.isEnabled()
     assert w.show_energy_curve() is None and not w._analysis_windows
     assert not any('Energy:' in line for line in w.info_view.toPlainText().splitlines())
     w._step_next();assert w.frame_index==1
@@ -91,7 +91,7 @@ def test_switching_documents_does_not_reuse_previous_geometry_or_energy(gui):
     w.toggle_play();w._step_next();assert not w.playback.isActive()
     w._open_path_now(GEOMETRY)
     assert w.frame is not None and w.frame.energy_ev is None
-    assert w.canvas_stack.currentWidget() is w.structure_page and not w.energy_curve_action.isEnabled()
+    assert w.canvas_stack.currentWidget() is w.structure_page and not w.energy_curve_button.isEnabled()
 
 
 def test_energy_only_can_load_without_constructing_the_native_canvas(gui):

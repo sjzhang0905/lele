@@ -3,6 +3,36 @@ from .dialog_policy import QDialog, QMessageBox
 
 
 class SelectionActions:
+    def set_selected_atoms_fixed(self, fixed):
+        if self.frame is None or not self.selection or self._text_editor_active() or not self._geometry_edit_allowed():
+            return
+        from .atom_constraints import edited_constraints
+        try:
+            updates = edited_constraints(self.frame, self.selection, fixed)
+        except ValueError as exc:
+            QMessageBox.warning(self, 'Fixed atoms', str(exc))
+            return
+        if updates:
+            self._pause_selection_playback()
+            self._record_fragment_metadata_undo()
+            self.frame.info.update(updates)
+            self._refresh_selection_panels()
+        verb = 'Fixed' if fixed else 'Cleared fixed axes on'
+        self.statusBar().showMessage(f'{verb} {len(self.selection)} selected atom(s) in this frame.', 6000)
+
+    def select_fixed_atoms(self):
+        if self.frame is None or self._text_editor_active():
+            return
+        from .atom_constraints import fixed_atom_indices
+        try:
+            indices = fixed_atom_indices(self.frame)
+        except ValueError as exc:
+            QMessageBox.warning(self, 'Fixed atoms', str(exc))
+            return
+        self._pause_selection_playback()
+        self.select_named_fragment(indices)
+        self.statusBar().showMessage(f'Selected {len(indices)} fully fixed atom(s) in this frame.', 6000)
+
     def select_by_expression(self, text):
         """Evaluate against a captured source selection; commit only on success."""
         from .selection_expression import evaluate_selection_expression
@@ -153,6 +183,9 @@ class SelectionActions:
         self.fragment_panel.set_frame(frame, self.selection, editable=editable)
         self.atoms_selection_panel.set_frame(frame, options=self.render_options)
         self.apply_coordinates_action.setEnabled(bool(editable and frame.symbols))
+        self.fix_atoms_action.setEnabled(bool(editable and self.selection))
+        self.unfix_atoms_action.setEnabled(bool(editable and self.selection))
+        self.select_fixed_action.setEnabled(bool(frame is not None and frame.symbols))
 
     def save_named_fragment(self):
         if self.frame is None or not self.selection or not self._geometry_edit_allowed():

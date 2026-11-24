@@ -1,5 +1,5 @@
 """High-resolution PNG capture of the current scene, with reversible quality changes."""
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass
 from math import ceil
 from pathlib import Path
@@ -16,6 +16,7 @@ class PngSettings:
     height: int
     supersample: int = 2
     cropped: bool = False
+    white_background: bool = True
 
     def __post_init__(self):
         if any(isinstance(v, bool) or not isinstance(v, int) or not 1 <= v <= MAX_OUTPUT_SIDE
@@ -25,6 +26,8 @@ class PngSettings:
             raise ValueError('Choose standard or smooth edges.')
         if not isinstance(self.cropped, bool):
             raise ValueError('Cropped must be enabled or disabled.')
+        if not isinstance(self.white_background, bool):
+            raise ValueError('White background must be enabled or disabled.')
 
     def capture_scale(self, source_size):
         width, height = source_size
@@ -68,6 +71,38 @@ def crop_background(image, background, *, padding=None, tolerance=3):
            min(width, int(columns[-1]) + 1 + padding),
            min(height, int(rows[-1]) + 1 + padding))
     return image.crop(box)
+
+
+@contextmanager
+def print_background(window, use_white):
+    """Render on opaque white and restore the live canvas, including automatic legend text."""
+    with ExitStack() as restore:
+        if use_white:
+            for scene in window.GetRenderers():
+                if not scene.GetDraw():
+                    continue
+                if not scene.GetPreserveColorBuffer():
+                    restore.callback(scene.SetBackground, *scene.GetBackground())
+                    restore.callback(scene.SetBackgroundAlpha, scene.GetBackgroundAlpha())
+                    restore.callback(scene.SetGradientBackground, scene.GetGradientBackground())
+                    restore.callback(scene.SetTexturedBackground, scene.GetTexturedBackground())
+                    scene.SetBackground(1., 1., 1.)
+                    scene.SetBackgroundAlpha(1.)
+                    scene.GradientBackgroundOff()
+                    scene.TexturedBackgroundOff()
+                for actor in scene.GetViewProps():
+                    if actor.IsA('vtkScalarBarActor'):
+                        texts = (actor.GetTitleTextProperty(), actor.GetLabelTextProperty())
+                        color = (.1, .1, .1)
+                    elif actor.GetObjectName() == 'lele-atom-legend-label':
+                        texts = (actor.GetTextProperty(),)
+                        color = (.10, .13, .18)
+                    else:
+                        continue
+                    for text in texts:
+                        restore.callback(text.SetColor, *text.GetColor())
+                        text.SetColor(*color)
+        yield
 
 
 @contextmanager
@@ -291,7 +326,8 @@ def export_png(path, window, settings, *, mesh_items=(), progress=None):
     temporary = None
     image = None
     try:
-        with (smooth_meshes(mesh_items, settings.supersample > 1),
+        with (print_background(window, settings.white_background),
+              smooth_meshes(mesh_items, settings.supersample > 1),
               hidden_coordinate_axes(window, settings.cropped),
               frozen_overlays(window), scaled_annotations(window, scale)):
             report('Rendering high-resolution PNG')

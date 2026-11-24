@@ -455,5 +455,7 @@ def read_orca_results(path):
                 if job.multiplicity is not None:event.reference.info['converter_mult']=job.multiplicity
         if stage is not None:stage.end_line=end
     finish_scan_records(result)
+    from .output_constraints import attach_step_constraints
+    attach_step_constraints(result, 'orca_out', lines)
     progress(len(lines))
     return result

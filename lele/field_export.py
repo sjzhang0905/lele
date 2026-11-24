@@ -24,7 +24,9 @@ def cube_scalar_units(unit):
         return Bohr**1.5, 'Bohr⁻³ᐟ²', 'Orbital amplitude converted from Å⁻³ᐟ² to Bohr⁻³ᐟ².'
     if unit == 'eV':
         return 1/Hartree, 'Hartree', 'Potential converted from eV to Hartree.'
-    if unit == 'dimensionless' or 'Bohr' in unit or unit == 'Hartree':
+    if unit == 'V':
+        return 1/Hartree, 'Hartree/e', 'Electrostatic potential for a positive probe converted from V to Hartree/e.'
+    if unit == 'dimensionless' or 'Bohr' in unit or unit in ('Hartree', 'Hartree/e'):
         return 1., unit, 'Scalar values retained in '+unit+'.'
     return 1., unit or 'unknown source units', 'Scalar units are not recognized; values are preserved, not relabeled as atomic units.'
 

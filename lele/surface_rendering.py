@@ -6,9 +6,9 @@ from vtkmodules.vtkCommonTransforms import vtkTransform
 from vtkmodules.vtkFiltersCore import vtkContourFilter
 from vtkmodules.vtkFiltersGeneral import vtkTransformPolyDataFilter
 from vtkmodules.vtkRenderingCore import vtkActor, vtkPolyDataMapper, vtkColorTransferFunction
-from vtkmodules.vtkRenderingAnnotation import vtkScalarBarActor
 from vtkmodules.util.numpy_support import numpy_to_vtk, vtk_to_numpy
-from .field_mapping import sample_field, mapping_limits, validate_layer_mapping, DEFAULT_PALETTE
+from .field_legend import field_legend
+from .field_mapping import sample_field, mapping_limits, validate_layer_mapping, DEFAULT_PALETTE, legend_unit
 from .output_text import check_load_cancelled
 from .operations import ui_checkpoint
 
@@ -150,12 +150,14 @@ def draw_volume(draw, volume, specs, fields=()):
     boundary=getattr(draw,'boundary_display',None)
     if boundary is not None:
         from .cell_origin import cell_origin
+        from .periodic_geometry import full_cell
         box_origin=(cell_origin(draw.frame) if draw.options.boundary_preserve_origin else np.zeros(3))
         intervals = np.asarray(volume.data.shape)
         if volume.provenance.get('grid_extent') == 'first_to_last_sample':
             intervals = intervals - 1
         extent = intervals[:, None] * volume.voxel_vectors
-        if np.allclose(extent,draw.frame.cell,rtol=1e-6,atol=2e-4):
+        same_box = np.allclose(extent, draw.frame.cell, rtol=1e-6, atol=2e-4)
+        if same_box and (not volume.periodic or full_cell(draw.frame.cell)):
             if volume.periodic:
                 from itertools import product
                 inverse=np.linalg.inv(draw.frame.cell)
@@ -177,6 +179,8 @@ def draw_volume(draw, volume, specs, fields=()):
                 # Repeat the existing finite box with the displayed cells.
                 # Values at opposite faces may differ.
                 tiles=[np.asarray(t)@draw.frame.cell for t in boundary.tiles]
+        elif volume.periodic and same_box:
+            draw.field_warnings.append('Periodic grid repetition requires a full cell.')
         elif volume.periodic:
             draw.field_warnings.append('Periodic grid period differs from the structure cell; field repetition is disabled.')
         elif boundary.tiles != ((0,0,0),):
@@ -288,8 +292,8 @@ def draw_volume(draw, volume, specs, fields=()):
             else:
                 for plane in boundary_clips:mapper.AddClippingPlane(plane)
             prop=actor.GetProperty()
-            # Uniform layer colors also set VTK's specular color. A mapped
-            # surface needs neutral material, or highlights tint the ESP scale.
+            # Mapped fields get their diffuse color from the lookup table.
+            # _finish supplies neutral specular reflections for both paths.
             prop.SetColor((1.,1.,1.) if mapped else rgb(spec['color']))
             prop.SetOpacity(spec['opacity']);draw._finish(prop)
             if spec['style']=='Wireframe':prop.SetRepresentationToWireframe()
@@ -306,17 +310,8 @@ def draw_volume(draw, volume, specs, fields=()):
                 draw.field_warnings.append('Only the first four color scales are shown; disable extra legends in layer settings.')
                 continue
             source=fields[map_index]
-            bar=vtkScalarBarActor();bar.SetLookupTable(lut);bar.SetOrientationToHorizontal()
+            bar = field_legend(source, lut, legend_unit(source.unit),
+                               len(draw.field_scalar_bars), draw.options.background)
             bar._lele_layer_number=spec.get('_layer_number',1)
-            # Keep the physical unit, but omit layer numbers and filenames.
-            bar.SetTitle(source.unit or '')
-            bar.SetNumberOfLabels(5);bar.SetLabelFormat('%.3g')
-            bar.SetPosition(.12,.02+len(draw.field_scalar_bars)*.09);bar.SetWidth(.76);bar.SetHeight(.08)
-            bar.SetUnconstrainedFontSize(True)
-            light=np.mean(rgb(draw.options.background))>.5
-            for text in (bar.GetTitleTextProperty(),bar.GetLabelTextProperty()):
-                text.SetColor((.1,.1,.1) if light else (.95,.95,.95))
-                text.SetFontSize(12);text.BoldOff();text.ItalicOff();text.ShadowOff()
-            bar.PickableOff();bar.UseBoundsOff()
             draw.renderer.AddViewProp(bar);draw.dynamic.append(bar);draw.field_scalar_bars.append(bar)
             draw._keepalive.append((bar,lut))

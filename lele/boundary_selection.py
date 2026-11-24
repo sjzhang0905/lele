@@ -7,6 +7,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from .core import Frame, measure
+from .periodic_geometry import lattice_coordinates
 
 
 @dataclass(frozen=True)
@@ -46,8 +47,8 @@ def toggle_atom_image(window, index, world_position=None):
         renderer = window.renderer
         point = ((np.asarray(world_position) - renderer.display_translation)
                  @ renderer.display_rotation.T)
-        shift = tuple(int(x) for x in np.rint(
-            (point - frame.positions[index]) @ np.linalg.inv(frame.cell)))
+        fractions = lattice_coordinates(point - frame.positions[index], frame.cell, frame.pbc)
+        shift = tuple(int(x) for x in np.rint(fractions))
     item = AtomImage(int(index), shift)
     if item in records:
         records.remove(item)

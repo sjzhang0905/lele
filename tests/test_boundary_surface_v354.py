@@ -63,7 +63,7 @@ def test_ordinary_cube_boundary_apply_updates_both_signs_and_custom_layers(gui, 
     w.field_signs.setCurrentText('Both')
     assert len(w.renderer.field_actors) == 2
     # Exercise the actual panel signal, not only the renderer options.
-    w.boundary_panel.set_values(True, ((0, 2), (0, 2), (0, 1)))
+    w.boundary_panel.set_values(((0, 2), (0, 2), (0, 1)))
     w.boundary_panel.apply.click()
     assert len(w.renderer.boundary_display.tiles) == 4
     assert len(w.renderer.field_actors) == 8

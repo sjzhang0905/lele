@@ -170,7 +170,7 @@ def test_atom_transparency_editor_immediately_updates_connected_bonds(gui, bound
     w.render_options.axes_position = 'Off'
     w.render_options.unit_cell = False
     if boundary:
-        w._apply_boundary(True, ((0, 2), (0, 1), (0, 1)))
+        w._apply_boundary(((0, 2), (0, 1), (0, 1)))
     gui.select([1])
     w.atom_panel.transparency_spin.setValue(65)
     assert np.isclose(w.frame.atom_appearance[1].opacity, .35)
@@ -190,7 +190,7 @@ def test_boundary_panel_repeats_whole_cells_without_changing_source(gui):
     frame = Frame(['Si'], [[0, 0, 0]], np.eye(3) * 2.2, (True,) * 3)
     gui.attach(frame)
     w = gui.window
-    w.boundary_panel.enabled.setChecked(True)
+    w.boundary_panel.growth.setCurrentIndex(1)
     w.boundary_panel.spins[0][1].setValue(2)
     w.boundary_panel.spins[1][1].setValue(2)
     w.boundary_panel.apply.click()
@@ -202,4 +202,4 @@ def test_boundary_panel_repeats_whole_cells_without_changing_source(gui):
     assert set(view.source_indices) == {0}
     assert np.max(view.frame.positions[:,2]) == 2.2
     assert w.atom_table.rowCount() == 1 and w.doc.frames[0] is frame
-    assert '4 cells' in w.boundary_panel.count.text()
+    assert w.boundary_panel.bounds() == ((0, 2), (0, 2), (0, 1))

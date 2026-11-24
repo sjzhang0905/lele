@@ -8,12 +8,11 @@ from __future__ import annotations
 
 import sys
 import traceback
-import json
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from . import APP_NAME, APP_FULL_NAME, APP_TITLE, __version__
-from .settings import read_style_presets
+from .settings import read_style_presets, update_style_preset
 
 from PySide6.QtCore import Qt, QTimer, QSignalBlocker, QStandardPaths, QEvent, QElapsedTimer
 from PySide6.QtWidgets import (
@@ -21,7 +20,7 @@ from PySide6.QtWidgets import (
     QSplitter, QTreeWidget, QTreeWidgetItem, QLabel,
     QSlider, QCheckBox, QDoubleSpinBox, QPushButton, QSpinBox,
     QGroupBox, QFormLayout, QTabWidget, QTableWidget, QTableWidgetItem,
-    QScrollArea, QPlainTextEdit, QAbstractItemView,
+    QScrollArea, QPlainTextEdit, QAbstractItemView, QToolButton, QStyle,
     QLineEdit, QTextEdit, QAbstractSpinBox, QStackedWidget, QHeaderView, QMenu, QMenuBar, QSizePolicy,
 )
 from PySide6.QtGui import QAction, QActionGroup, QKeySequence, QColor, QIcon, QPalette
@@ -130,7 +129,9 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         self._startup_paint_seen = set()
         self._startup_paint_targets = [
             self.welcome_page.title_label, self.welcome_page.full_name_label,
-            self.welcome_page.version_label, self.welcome_page.parrot_walk,
+            self.welcome_page.version_label, self.welcome_page.contact_label,
+            self.welcome_page.repository_label, self.welcome_page.manual_label,
+            self.welcome_page.parrot_walk,
             *self.welcome_page.shortcut_groups,
         ]
         for widget in self._startup_paint_targets:
@@ -145,6 +146,10 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
             self._queue_summary_alignment()
         if watched is getattr(self, '_coordinate_viewport', None) and event.type() == QEvent.Type.Resize:
             self._trajectory_table_visible()
+        if watched is getattr(self, 'lower_splitter', None) and event.type() == QEvent.Type.Resize:
+            other_tabs = self.tabs.minimumSizeHint().width() + self.selection_tabs.minimumWidth()
+            available = event.size().width() - other_tabs - 2 * watched.handleWidth()
+            self.bottom_control_tabs.setMinimumWidth(max(0, min(self._control_row_width, available)))
         measurement=getattr(self,'measurement_value',None)
         if (measurement is not None and watched in (measurement,measurement.lineEdit())
                 and event.type()==QEvent.Type.FocusIn and hasattr(self,'playback')):
@@ -171,28 +176,68 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         if self._closing or self._backend_state in ('loading', 'initializing', 'ready'):
             return
         self._backend_state = 'loading'
+        self._graphics_error = ''
         self.statusBar().showMessage('Loading components… You can choose a file while loading.')
         loader = get_backend_loader()
         if self._backend_loader is not loader:
             self._backend_loader = loader
+            loader.graphics_ready.connect(self._graphics_ready, Qt.ConnectionType.QueuedConnection)
             loader.finished.connect(self._backend_loaded, Qt.ConnectionType.QueuedConnection)
+        if self._pending_open_paths:
+            loader.prioritize_file()
         if loader.loaded:
             self._backend_loaded()
+        elif loader.graphics_loaded:
+            self._graphics_ready()
         else:
             loader.ensure_started()
 
-    def _backend_loaded(self):
-        if self._closing or self._backend_state == 'ready':
+    def _graphics_ready(self):
+        if self._closing or self._backend_state != 'loading':
             return
-        error = self._backend_loader.error
+        if self._pending_open_paths:
+            self._backend_loaded()
+        else:
+            self._prepare_idle_view()
+
+    def _prepare_idle_view(self):
+        # The reader worker can continue importing while the GUI thread prepares
+        # OpenGL. If a file is waiting, let its own scene initialize the canvas.
+        if (self._closing or self._idle_view_attempted or self._vtk_initialized or self._pending_open_paths
+                or self.canvas_stack.currentWidget() is not self.welcome_page
+                or getattr(self, '_file_load_active', None) or getattr(self, '_file_batch_active', None)
+                or getattr(self, '_file_load_sync_active', False) or getattr(self, '_file_load_queue', ())):
+            return
+        if self.vtk is None:
+            try:
+                self._ensure_3d_view()
+            except Exception:
+                self._graphics_error = traceback.format_exc()
+                return
+        self._idle_view_attempted = True
+        try:
+            self._warm_up_3d_view()
+        except Exception:
+            # Some drivers only initialize when their native canvas is visible.
+            # Retry through change_frame() with the user's actual structure.
+            self._vtk_initialized = False
+            import logging
+            logging.getLogger(__name__).debug('Hidden canvas warmup failed', exc_info=True)
+
+    def _backend_loaded(self):
+        if self._closing or self._backend_state != 'loading':
+            return
+        error = self._backend_loader.error or self._graphics_error
         if not error:
             try:
                 # Cached imports are now cheap; all QWidget/VTK construction
                 # happens here, on the GUI thread.
                 self._backend_state = 'initializing'
                 self.statusBar().showMessage('Preparing the 3D view…')
-                self._ensure_3d_view()
-                self._warm_up_3d_view()
+                if self.vtk is None:
+                    self._ensure_3d_view()
+                if not self._pending_open_paths:
+                    self._prepare_idle_view()
             except Exception:
                 error = traceback.format_exc()
         if error:
@@ -205,35 +250,30 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         self._backend_state = 'ready'
         self.statusBar().showMessage('Ready. Open a calculation input/output file or a structure.')
         pending, self._pending_open_paths = self._pending_open_paths, []
-        for filename in pending:
-            if self._closing:
-                break
-            self._open_or_queue_file(filename)
+        if pending:
+            # Transfer the entire FIFO before a fast parser enters a nested Qt loop.
+            self._file_load_queue = getattr(self, '_file_load_queue', [])
+            self._file_load_queue.extend(pending)
+            self._drain_file_import_queue()
 
     def _warm_up_3d_view(self):
         """Prepare the native context and common pipelines before the first file.
 
         This runs on the GUI thread after the welcome page has painted and the
-        import worker has finished. The tiny temporary scene never becomes a
+        rendering modules have loaded. The tiny temporary scene never becomes a
         document or replaces the visible welcome page or the user's settings.
         """
         if not self._vtk_initialized:
             self.vtk.Initialize()
             self._vtk_initialized = True
-        import numpy as np
-        from .core import Frame, Volume
-        from .render_options import RenderOptions
+        from .core import Frame
         from .renderer import rgb
         options = self.renderer.options
         try:
-            self.renderer.options = RenderOptions(labels='Element', axes_position='Origin',
-                                                  volume_iso=.25, volume_opacity=.5)
-            frame = Frame(['O', 'H', 'H'], [[2., 2., 2.], [2.96, 2., 2.], [1.76, 2.92, 2.]],
-                          np.eye(3)*6., (True, True, True))
-            grid = np.indices((5, 5, 5), dtype=float) - 2.
-            density = np.exp(-np.sum(grid*grid, axis=0))
-            volume = Volume(density, np.zeros(3), np.eye(3))
-            self.renderer.set_scene(frame, volume, reset_camera=True)
+            self.renderer.options = RenderOptions()
+            frame = Frame(['O', 'H', 'H'], [[0., 0., 0.], [.96, 0., 0.], [-.24, .92, 0.]],
+                          bond_snapshot=frozenset({(0, 1), (0, 2)}))
+            self.renderer.set_scene(frame, reset_camera=True)
             self.axes_widget.SetOrientationMarker(self.renderer.make_corner_marker(frame))
             self.axes_widget.SetEnabled(1)
             self.renderer.attach_corner_labels(self.axes_widget.GetRenderer())
@@ -269,6 +309,7 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         self._analysis_windows = []
         self.vtk = self.scene = self.renderer = self.axes_widget = None
         self._vtk_initialized = False
+        self._idle_view_attempted = False
         self._plane_fit = None
         self._plane_context = None
         self._active_vibration = None
@@ -303,11 +344,19 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         self.edit_menu = self.menuBar().addMenu('&Edit')
         self._action(self.edit_menu, 'Undo edit', self.undo_edit, 'Ctrl+Z')
         self.edit_menu.addSeparator()
-        self._action(self.edit_menu, 'Select connected fragment(s)', self.select_connected_fragment, 'Ctrl+G')
+        self.fragment_action = self._action(self.edit_menu, 'Select connected fragment(s)', self.select_connected_fragment, 'Ctrl+G')
         self.select_all_action = self._action(self.edit_menu, 'Select all atoms', self.select_all_atoms, 'Ctrl+A')
         self.invert_action = self._action(
             self.edit_menu, 'Invert atom selection', self.invert_selection, 'Ctrl+I')
         self._action(self.edit_menu, 'Clear selection', self.clear_selection)
+        self.fix_atoms_action = self._action(self.edit_menu, 'Fix selected atoms',
+            lambda: self.set_selected_atoms_fixed(True), 'Ctrl+F')
+        self.unfix_atoms_action = self._action(self.edit_menu, 'Clear fixed axes on selected atoms',
+            lambda: self.set_selected_atoms_fixed(False), 'Ctrl+Shift+F')
+        self.select_fixed_action = self._action(self.edit_menu, 'Select fully fixed atoms',
+            self.select_fixed_atoms, 'Ctrl+Alt+F')
+        for action in (self.fix_atoms_action, self.unfix_atoms_action, self.select_fixed_action):
+            action.setEnabled(False)
         self.delete_action = self._action(
             self.edit_menu, 'Delete selected atoms', self._delete_shortcut, 'Delete')
         self.edit_menu.addSeparator()
@@ -350,6 +399,7 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         self.atom_legend_action=self._action(self.view_menu,'Atom legend…',self.show_atom_legend)
         self._action(self.view_menu, 'Fit to window', lambda: self.reset_camera())
         self._action(self.view_menu, 'Isometry', self.isometric_view)
+        rotation_menu = self.view_menu.addMenu('Rotate by 45°')
         self.view_menu.addSeparator()
         self.axis_actions = {}
         for axis in ('X', 'Y', 'Z'):
@@ -376,13 +426,16 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         self.projection_actions['Orthographic'].setChecked(True)
 
         self.analysis_menu = self.menuBar().addMenu('&Analysis')
+        self.esp_action = self._action(self.analysis_menu, 'Electrostatic potential (ESP)…',
+            lambda: self.open_field_pair('esp'))
+        self.electron_hole_action = self._action(self.analysis_menu, 'Electron–hole distribution…',
+            lambda: self.open_field_pair('electron_hole'))
         self._action(self.analysis_menu, 'Calculation overview…', self.show_calculation_overview)
-        self._action(self.analysis_menu, 'HOMO / LUMO and orbital energies…', self.show_orbital_energies)
+        self.orbital_action = self._action(self.analysis_menu, 'HOMO / LUMO and orbital energies…', self.show_orbital_energies)
+        self.orbital_action.setEnabled(False)
         self._action(self.analysis_menu, 'Excited-state transitions…', self.show_transition_results)
         self.nmr_action=self._action(self.analysis_menu,'NMR spectrum / shielding table…',self.show_nmr_results)
         self.nmr_action.setEnabled(False)
-        self.energy_curve_action=self._action(self.analysis_menu, 'Energy / maximum-RMS convergence curves…', self.show_energy_curve)
-        self.energy_curve_action.setEnabled(False)
         self.scan_action = self._action(self.analysis_menu, 'ORCA scan curve…', self.show_scan_curve)
         self.scan_action.setEnabled(False)
         self._action(self.analysis_menu, 'Vibrational frequencies', self.show_frequencies)
@@ -396,6 +449,8 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         self.goat_action=self._action(self.analysis_menu,'GOAT conformer ensemble…',self.show_goat_results)
         self.soc_action=self._action(self.analysis_menu,'Spin–orbit coupling (SOC)…',self.show_soc_results)
         self.hessian_action=self._action(self.analysis_menu,'Hessian history…',self.show_hessian_results)
+        for action in (self.neb_action, self.goat_action, self.soc_action, self.hessian_action):
+            action.setEnabled(False)
         self.help_menu = self.menuBar().addMenu('&Help')
         self._action(self.help_menu, 'Help and shortcuts…', self.help_dialog)
         self._action(self.help_menu, 'Atom selection syntax…', self.show_selection_expression_help)
@@ -459,20 +514,11 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         fps_line.addWidget(self.frame_count_label, 1)
         left.addLayout(fps_line)
         self._install_trajectory_controls(left)
-        self.orbital_btn = QPushButton('HOMO / LUMO…')
-        self.orbital_btn.setToolTip('Open the printed orbital energies and HOMO–LUMO gaps.')
-        self.orbital_btn.setEnabled(False)
-        self.orbital_btn.clicked.connect(self.show_orbital_energies)
-        left.addWidget(self.orbital_btn)
         self.scan_curve_button = QPushButton('Scan curve…')
         self.scan_curve_button.setToolTip('Plot one final energy per scan point; inspect all scanned coordinates.')
         self.scan_curve_button.clicked.connect(self.show_scan_curve)
         self.scan_curve_button.setEnabled(False)
         left.addWidget(self.scan_curve_button)
-        self.orca_results_btn=QPushButton('NEB / GOAT / SOC…')
-        result_menu=QMenu(self.orca_results_btn)
-        for action in (self.neb_action,self.goat_action,self.soc_action,self.hessian_action):result_menu.addAction(action)
-        self.orca_results_btn.setMenu(result_menu);self.orca_results_btn.setEnabled(False);left.addWidget(self.orca_results_btn)
         self.vibration_controls = VibrationControls()
         self.vibration_controls.playRequested.connect(self.toggle_vibration)
         self.vibration_controls.stopRequested.connect(self.stop_vibration)
@@ -496,8 +542,13 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         centre.addWidget(self.welcome_page)
         self.structure_page = QSplitter(Qt.Orientation.Vertical)
         centre.addWidget(self.structure_page)
-        self.results_only_page=QWidget()
-        results_layout=QVBoxLayout(self.results_only_page);results_layout.setContentsMargins(28,24,28,24)
+        self.results_only_page = QScrollArea()
+        self.results_only_page.setMinimumWidth(420)
+        self.results_only_page.setWidgetResizable(True)
+        self.results_only_page.setFrameShape(QScrollArea.Shape.NoFrame)
+        results_body = QWidget()
+        self.results_only_page.setWidget(results_body)
+        results_layout=QVBoxLayout(results_body);results_layout.setContentsMargins(28,24,28,24)
         self.results_only_title=QLabel('Calculation results')
         title_font=self.results_only_title.font();title_font.setPointSize(20);title_font.setBold(True)
         self.results_only_title.setFont(title_font);results_layout.addWidget(self.results_only_title)
@@ -548,6 +599,8 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         self.info_view = ResultsText()
         self.tabs.addTab(self.info_view, 'Results / info')
         lower_panel = QWidget()
+        # The settings can scroll on narrow desktops without widening the main window.
+        lower_panel.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         lower_layout = QVBoxLayout(lower_panel)
         lower_layout.setContentsMargins(0, 0, 0, 0)
         lower_layout.setSpacing(4)
@@ -555,7 +608,6 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         self.lower_splitter.setChildrenCollapsible(False)
         self.bottom_control_tabs = QTabWidget()
         self.bottom_control_tabs.setDocumentMode(True)
-        self.bottom_control_tabs.setMinimumWidth(270)
         self.bottom_control_tabs.tabBar().setUsesScrollButtons(True)
         self.lower_splitter.addWidget(self.bottom_control_tabs)
         self.lower_splitter.addWidget(self.tabs)
@@ -573,7 +625,6 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         self.selection_tabs.addTab(self.atoms_selection_panel, 'Atoms selection')
         self.atoms_selection_panel.selectionRequested.connect(self.select_named_fragment)
         self.atoms_selection_panel.expressionRequested.connect(self.select_by_expression)
-        self.atoms_selection_panel.syntaxHelpRequested.connect(self.show_selection_expression_help)
         self.atoms_selection_panel.editingStarted.connect(self._pause_selection_playback)
         self.fragment_panel.saveRequested.connect(self.save_named_fragment)
         self.fragment_panel.deleteRequested.connect(self.delete_named_fragment)
@@ -677,10 +728,13 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
             return layout
 
         display_outer = control_page('Style')
+        display_outer.setContentsMargins(4, 12, 4, 10)
         group = QGroupBox('3D drawing')
         form = QFormLayout(group)
+        form.setContentsMargins(5, 9, 5, 9)
         self._custom_style_state = snapshot(self.render_options)
         self.preset_combo = PanelComboBox()
+        self.preset_combo.setMinimumWidth(60)
         self.preset_combo.setToolTip('Choose a complete appearance profile. Structure data and bond cutoffs are unchanged.')
         self.preset_combo.addItem('Custom (manual)', CUSTOM_KEY)
         for name in BUILTIN_PRESETS:
@@ -689,14 +743,23 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
             self.preset_combo.addItem(f'My style: {name}', name)
         self.preset_combo.setCurrentIndex(self.preset_combo.findData('Classic ball and stick'))
         self.preset_combo.currentIndexChanged.connect(self._choose_style_preset)
-        form.addRow('Preset', self.preset_combo)
-        save_style = QPushButton('Save current appearance as preset…')
+        preset_row = QHBoxLayout()
+        preset_row.setSpacing(4)
+        preset_row.addWidget(QLabel('Preset'))
+        preset_row.addWidget(self.preset_combo)
+        save_style = QToolButton()
+        save_style.setText('Save…')
+        save_style.setToolTip('Save current appearance as preset…')
         save_style.clicked.connect(self._save_style_preset)
-        form.addRow(save_style)
-        preset_help = QLabel('Presets change appearance only; coordinates, bond '
-                             'cutoff, labels and cell settings stay unchanged.')
-        preset_help.setWordWrap(True)
-        form.addRow(preset_help)
+        self.delete_style_button = QToolButton()
+        self.delete_style_button.setText('Delete…')
+        self.delete_style_button.setToolTip('Delete saved preset…')
+        self.delete_style_button.setEnabled(bool(self._user_style_presets))
+        self.delete_style_button.clicked.connect(self._delete_style_preset)
+        preset_row.addWidget(save_style)
+        preset_row.addWidget(self.delete_style_button)
+        preset_row.addStretch(1)
+        form.addRow(preset_row)
         self.style_combo = PanelComboBox()
         self.style_combo.addItems(STYLE_MODES)
         self.style_combo.currentTextChanged.connect(lambda s: self._set_option('style', s))
@@ -741,6 +804,13 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         self.highlight_slider.setToolTip('Left narrows the light spots. Right broadens them. The midpoint restores the material default.')
         self.highlight_slider.valueChanged.connect(lambda value: self._set_option('highlight_size', value))
         form.addRow('Highlight size', self.highlight_slider)
+        self.highlight_brightness_slider = QSlider(Qt.Orientation.Horizontal)
+        self.highlight_brightness_slider.setRange(0, 100)
+        self.highlight_brightness_slider.setValue(round(self.render_options.highlight_brightness))
+        self.highlight_brightness_slider.setAccessibleName('Highlight brightness')
+        self.highlight_brightness_slider.setToolTip('Adjust the strength of the white reflections. The midpoint uses the material default.')
+        self.highlight_brightness_slider.valueChanged.connect(lambda value: self._set_option('highlight_brightness', value))
+        form.addRow('Highlight brightness', self.highlight_brightness_slider)
         self.bond_model_combo = PanelComboBox()
         self.bond_model_combo.addItems(['Chemcraft pair ranges', 'Covalent radii'])
         self.bond_model_combo.setToolTip('Ordinary-bond limits from Chemcraft b816bt. Explicit element-pair rules override these limits. Hydrogen bonds are controlled separately.')
@@ -766,10 +836,6 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         self.hbond_check.setChecked(False)
         self.hbond_check.toggled.connect(lambda v: self._set_option('hydrogen_bonds', v))
         form.addRow(self.hbond_check)
-        bond_help = QLabel('Geometric N/O/F-H...N/O/F candidates only; '
-                           'not part of the covalent fragment graph.')
-        bond_help.setWordWrap(True)
-        form.addRow(bond_help)
         manual_bond_help = QLabel('Ctrl+H draws/removes a manual dashed link '
                                   'between two selected atoms.')
         manual_bond_help.setWordWrap(True)
@@ -787,43 +853,17 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         self.bg_btn = QPushButton('Background color…')
         self.bg_btn.clicked.connect(self.pick_background)
         form.addRow('Background color', self.bg_btn)
-        dark_btn = QPushButton('Dark background')
-        dark_btn.clicked.connect(lambda: self._set_option('background', '#131824'))
-        form.addRow(dark_btn)
-        light_btn = QPushButton('Light background')
-        light_btn.clicked.connect(lambda: self._set_option('background', '#FFFFFF'))
-        form.addRow(light_btn)
         display_outer.addWidget(group)
         display_outer.addStretch(1)
 
         axes_outer = control_page('Axes')
-        axis_group = QGroupBox('Coordinate axes')
-        axis_form = QFormLayout(axis_group)
-        self.axes_position_combo = PanelComboBox()
-        self.axes_position_combo.addItem('Hidden', 'Off')
-        self.axes_position_combo.addItem('Bottom-left (VESTA style)', 'Corner')
-        self.axes_position_combo.addItem('World origin (0, 0, 0)', 'Origin')
-        self.axes_position_combo.setCurrentIndex(1)
-        self.axes_position_combo.currentIndexChanged.connect(
-            lambda _: self._set_option('axes_position', self.axes_position_combo.currentData()))
-        axis_form.addRow('Position', self.axes_position_combo)
-        self.axes_basis_combo = PanelComboBox()
-        self.axes_basis_combo.addItem('Automatic (periodic abc / molecular XYZ)', 'Auto')
-        self.axes_basis_combo.addItem('XYZ (Cartesian)', 'XYZ')
-        self.axes_basis_combo.addItem('abc (cell vectors)', 'abc')
-        self.axes_basis_combo.currentIndexChanged.connect(
-            lambda _: self._set_option('axes_basis', self.axes_basis_combo.currentData()))
-        axis_form.addRow('Axes type', self.axes_basis_combo)
-        self.axes_length_spin = QDoubleSpinBox()
-        self.axes_length_spin.setRange(.1, 1000.)
-        self.axes_length_spin.setDecimals(2)
-        self.axes_length_spin.setValue(2.5)
-        self.axes_length_spin.setSingleStep(.5)
-        self.axes_length_spin.valueChanged.connect(lambda v: self._set_option('axes_length', v))
-        axis_form.addRow('XYZ length (Å)', self.axes_length_spin)
-        axis_form.addRow(QLabel('abc uses true lattice vectors at the origin.\n'
-                                'Bottom-left arrows retain directions, not lengths.'))
-        axes_outer.addWidget(axis_group)
+        from .view_rotation_controls import ViewRotationControls
+        self.rotation_controls = ViewRotationControls(rotation_menu, self.rotate_view_step)
+        axes_outer.addWidget(self.rotation_controls)
+        from .axis_controls import CoordinateAxesControls
+        self.coordinate_axes = CoordinateAxesControls(self.render_options)
+        self.coordinate_axes.optionChanged.connect(self._set_option)
+        axes_outer.addWidget(self.coordinate_axes)
         axes_outer.addStretch(1)
 
         labels_outer = control_page('Labels')
@@ -831,27 +871,34 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         labels_form = QFormLayout(labels_group)
         self.label_combo = PanelComboBox()
         self.label_combo.addItems(LABEL_MODES)
+        self.label_combo.setPlaceholderText('Saved label')
         self.label_combo.currentTextChanged.connect(lambda v: self._set_option('labels', v))
         labels_form.addRow('Atom labels', self.label_combo)
         self.label_font_combo = PanelComboBox()
         self.label_font_combo.addItems(['Arial', 'Courier', 'Times'])
+        self.label_font_combo.setPlaceholderText('Saved font')
         self.label_font_combo.currentTextChanged.connect(self._set_standard_label_font)
         labels_form.addRow('Label font', self.label_font_combo)
-        self.custom_font_btn = QPushButton('Choose TTF/OTF font file…')
-        self.custom_font_btn.clicked.connect(self._select_label_font_file)
-        labels_form.addRow(self.custom_font_btn)
         self.label_size_spin = QSpinBox()
         self.label_size_spin.setRange(8, 72)
         self.label_size_spin.setValue(15)
         self.label_size_spin.valueChanged.connect(lambda n: self._set_option('label_font_size', n))
-        labels_form.addRow('Label size (pt)', self.label_size_spin)
+        label_row = QHBoxLayout()
+        label_row.setSpacing(4)
+        label_row.addWidget(QLabel('Size (pt)'))
+        self.label_size_spin.setAccessibleName('Label size (pt)')
+        self.label_size_spin.setFixedWidth(self.label_size_spin.sizeHint().width())
+        label_row.addWidget(self.label_size_spin)
         self.label_bold_check = QCheckBox('Bold text')
         self.label_bold_check.setChecked(True)
         self.label_bold_check.toggled.connect(lambda v: self._set_option('label_bold', v))
-        labels_form.addRow(self.label_bold_check)
+        label_row.addWidget(self.label_bold_check)
         self.label_color_btn = QPushButton('Label text color…')
         self.label_color_btn.clicked.connect(self.pick_label_colour)
-        labels_form.addRow('Label text color', self.label_color_btn)
+        label_row.addWidget(QLabel('Color'))
+        label_row.addWidget(self.label_color_btn)
+        label_row.addStretch(1)
+        labels_form.addRow(label_row)
 
         labels_outer.addWidget(labels_group)
         labels_outer.addStretch(1)
@@ -896,34 +943,8 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
             field_label.setWordWrap(True)
 
         edit_outer = control_page('Edit')
-        measurements = QGroupBox('Geometry / atom selection')
+        measurements = QWidget()
         m_layout = QVBoxLayout(measurements)
-        selection_help = QLabel('Click atoms to select; right-click an atom to edit its element, occupancy or index.\n'
-                                'Ctrl+B toggles selected bonds.\n'
-                                'Ctrl+H toggles a selected hydrogen bond (dashed).\n'
-                                'Ctrl+G selects complete connected fragment(s).\n'
-                                'Canvas: Ctrl+1–9 saves/replaces a fragment; 1–9 selects it; Shift+1–9 adds atoms.\n'
-                                'Alt+left drag: rotate fragment in 3D.\n'
-                                'Alt+right drag: roll about the fragment’s geometric center.\n'
-                                'Alt+middle drag: move fragment in screen plane.\n'
-                                'Without Alt, mouse gestures control the camera.')
-        selection_help.setWordWrap(True)
-        m_layout.addWidget(selection_help)
-        self.selected_label = QLabel('No atoms selected')
-        self.selected_label.setWordWrap(True)
-        m_layout.addWidget(self.selected_label)
-        clear_btn = QPushButton('Clear selection')
-        clear_btn.clicked.connect(self.clear_selection)
-        m_layout.addWidget(clear_btn)
-        self.invert_btn = QPushButton('Invert selection  (Ctrl+I)')
-        self.invert_btn.clicked.connect(self.invert_selection)
-        m_layout.addWidget(self.invert_btn)
-        self.delete_btn = QPushButton('Delete selected atoms  (Delete)')
-        self.delete_btn.clicked.connect(self.delete_selected_atoms)
-        m_layout.addWidget(self.delete_btn)
-        self.fragment_btn = QPushButton('Select connected fragment(s)  (Ctrl+G)')
-        self.fragment_btn.clicked.connect(self.select_connected_fragment)
-        m_layout.addWidget(self.fragment_btn)
         self.mirror_btn = QPushButton('Mirror selected fragment…')
         self.mirror_btn.clicked.connect(self.mirror_selected_fragment)
         self.mirror_btn.setEnabled(False)
@@ -946,19 +967,6 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         self.charge_spin.valueChanged.connect(self._set_net_charge)
         charge_row.addWidget(self.charge_spin)
         m_layout.addLayout(charge_row)
-        fragment_help = QLabel('Cross-cell fragments automatically build a real supercell.\n'
-                               'Coordinates and Ctrl+I include all new atoms; Ctrl+Z restores the original.\n'
-                               'Infinite crystal networks cannot be fully selected.')
-        fragment_help.setWordWrap(True)
-        m_layout.addWidget(fragment_help)
-        self.toggle_bonds_btn = QPushButton('Toggle bonds within selection  (Ctrl+B)')
-        self.toggle_bonds_btn.clicked.connect(self.toggle_bonds)
-        m_layout.addWidget(self.toggle_bonds_btn)
-        self.toggle_hbond_btn = QPushButton('Toggle hydrogen bond  (Ctrl+H)')
-        self.toggle_hbond_btn.setToolTip('Select two atoms, usually H and its acceptor. '
-                                        'Dashed links are independent of ordinary bonds; Ctrl+Z undoes changes.')
-        self.toggle_hbond_btn.clicked.connect(self.toggle_hydrogen_bonds)
-        m_layout.addWidget(self.toggle_hbond_btn)
         self.origin_btn = QPushButton('Move selected atom to (0, 0, 0)')
         self.origin_btn.clicked.connect(self.move_selected_to_origin)
         m_layout.addWidget(self.origin_btn)
@@ -1025,15 +1033,12 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         edit_outer.addStretch(1)
 
         self._set_frame_controls_enabled(False)
-        self.toggle_bonds_btn.setEnabled(False)
-        self.toggle_hbond_btn.setEnabled(False)
         self.toggle_hbond_action.setEnabled(False)
-        self.fragment_btn.setEnabled(False)
+        self.fragment_action.setEnabled(False)
+        self.invert_action.setEnabled(False)
         self.origin_btn.setEnabled(False)
         self.align_btn.setEnabled(False)
         self.reorient_btn.setEnabled(False)
-        self.invert_btn.setEnabled(False)
-        self.delete_btn.setEnabled(False)
         self._install_restored_controls()
         self._install_crystal_controls()
         self._init_document_views()
@@ -1042,6 +1047,13 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         self._sync_color_controls()
         compact_panel_sliders(sidebar_tabs, self.bottom_control_tabs)
         compact_panel_editors(self.bottom_control_tabs)
+        # Keep each lower control row accessible when the splitter is narrowed.
+        pages = [self.bottom_control_tabs.widget(i) for i in range(self.bottom_control_tabs.count())]
+        control_width = max(page.widget().minimumSizeHint().width() + 2 * page.frameWidth()
+                            + page.verticalScrollBar().sizeHint().width() for page in pages)
+        tab_border = self.style().pixelMetric(QStyle.PixelMetric.PM_DefaultFrameWidth)
+        self._control_row_width = control_width + 2 * tab_border
+        self.lower_splitter.installEventFilter(self)
         self._coordinate_viewport = self.atom_table.viewport()
         self._coordinate_viewport.installEventFilter(self)
         self.atom_table.verticalScrollBar().valueChanged.connect(self._trajectory_table_visible)
@@ -1064,7 +1076,9 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         from .interaction import InteractiveVTKView
         from .renderer import MoleculeRenderer
 
-        self.vtk = InteractiveVTKView()
+        # QVTK binds its native window ID in the constructor. Give it its final
+        # parent immediately so warming and the first visible draw share that ID.
+        self.vtk = InteractiveVTKView(self.structure_page)
         self.scene = vtkRenderer()
         self.scene.SetBackground(1.0, 1.0, 1.0)
         self.vtk.GetRenderWindow().AddRenderer(self.scene)
@@ -1140,6 +1154,11 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
             return
         if self._backend_state != 'ready':
             self._pending_open_paths.append(filename)
+            if self._backend_loader is not None:
+                self._backend_loader.prioritize_file()
+                if self._backend_state == 'loading' and self._backend_loader.graphics_loaded:
+                    # Do not wait for an unrelated optional import to finish.
+                    QTimer.singleShot(0, self, self._backend_loaded)
             if self._backend_state == 'failed':
                 self._start_backend_loading()
             elif self._startup_painted and self._backend_state == 'waiting':
@@ -1152,8 +1171,8 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         if Path(filename).suffix.lower() == '.lele':
             return self._load_project_path(filename)
         try:
-            from .formats import load_document
-            new_doc = run_data_task(self,'Loading '+Path(filename).name,lambda:load_document(filename),cancellable=True)
+            from .file_loading import load_for_view
+            new_doc = run_data_task(self,'Loading '+Path(filename).name,lambda:load_for_view(filename),cancellable=True)
             if not self._closing:
                 self._attach_loaded_document(new_doc)
         except LoadCancelled:return
@@ -1333,9 +1352,10 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         self._refresh_element_choices()
         from .core import valid_lattice
         has_cell = valid_lattice(frame)
-        self.axes_basis_combo.model().item(self.axes_basis_combo.findData('abc')).setEnabled(has_cell)
-        if not has_cell and self.axes_basis_combo.currentData() == 'abc':
-            self.axes_basis_combo.setCurrentIndex(self.axes_basis_combo.findData('XYZ'))
+        self.coordinate_axes.basis.buttons['abc'].setEnabled(has_cell)
+        if not has_cell and self.render_options.axes_basis == 'abc':
+            self.render_options.axes_basis = 'XYZ'
+            self.coordinate_axes.basis.set_value('XYZ')
         self._set_frame_controls_enabled(len(sequence) > 1)
         self.play_btn.setEnabled(len(sequence) > 1)
         self.refresh_scene(reset_camera=reset_camera)
@@ -1794,8 +1814,10 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         available = any(document.frames for document in self.documents)
         self.convert_all_action.setEnabled(available and not self._batch_exporting)
         self.export_png_all_action.setEnabled(available and not self._batch_exporting)
-        from .camera_views import refresh_crystal_view_actions
-        refresh_crystal_view_actions(self)
+        from .camera_views import refresh_crystal_view_actions, rotation_lattice_axes
+        has_lattice = refresh_crystal_view_actions(self)
+        self.rotation_controls.set_available(self.frame is not None,
+                                             ('a', 'b', 'c') if has_lattice else rotation_lattice_axes(self.frame))
         from .stm import can_simulate_stm
         from .core import valid_lattice
         self.stm_action.setEnabled(self.doc is not None and can_simulate_stm(self.doc))
@@ -1806,16 +1828,16 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         self._refresh_field_controls()
         self._prepare_analysis_scene()
         self._update_fitted_plane()
-        self.orbital_btn.setEnabled(bool(self.doc is not None and self.doc.calculation_results
+        self.orbital_action.setEnabled(bool(self.doc is not None and self.doc.calculation_results
                                         and self.doc.calculation_results.orbitals))
-        self.results_orbital_button.setEnabled(self.orbital_btn.isEnabled())
+        self.results_orbital_button.setEnabled(self.orbital_action.isEnabled())
         self.results_spectrum_button.setEnabled(bool(self.doc is not None and self.doc.electronic_spectra))
         self.results_transition_button.setEnabled(self.results_spectrum_button.isEnabled())
         self.nmr_action.setEnabled(bool(self.doc is not None and self.doc.nmr_results))
         self.results_nmr_button.setEnabled(self.nmr_action.isEnabled())
         from .result_availability import has_curve_data
         available=has_curve_data(self.doc)
-        self.energy_curve_action.setEnabled(available);self.results_energy_button.setEnabled(available)
+        self.energy_curve_button.setEnabled(available);self.results_energy_button.setEnabled(available)
         doc=self.doc
         scan_available = bool(doc is not None and doc.calculation_results is not None
                               and getattr(doc.calculation_results, 'scans', []))
@@ -1826,16 +1848,15 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
                                  (self.soc_action,doc is not None and bool(doc.soc_results)),
                                  (self.hessian_action,doc is not None and doc.calculation_results is not None and bool(doc.calculation_results.hessians))):
             action.setEnabled(bool(available))
-        self.orca_results_btn.setEnabled(any(a.isEnabled() for a in (self.neb_action,self.goat_action,self.soc_action,self.hessian_action)))
         if self.frame is None:
             self.supercell_action.setEnabled(False)
             self._refresh_atom_panel()
             self._refresh_crystal_controls()
             self._sync_annotations()
             return
-        from .core import valid_lattice
-        self.supercell_action.setEnabled(bool(self.frame.symbols) and any(self.frame.pbc)
-            and valid_lattice(self.frame) and self._active_vibration is None)
+        from .periodic_geometry import periodic_basis
+        self.supercell_action.setEnabled(bool(self.frame.symbols) and periodic_basis(self.frame) is not None
+            and self._active_vibration is None)
         self.render_options.show_volume = bool(self.volume_check.isChecked())
         self._refresh_properties()
         self.renderer.selected = list(self.selection)
@@ -1854,13 +1875,17 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
             preview = getattr(self, '_rotation_preview', None)
             if preview is not None:
                 scene_frame = preview.frame_for_scene(scene_frame)
-            try:self.renderer.set_scene(scene_frame, self.doc.volume, reset_camera=False, volumes=self.doc.volumes)
-            except ValueError as ex:
-                if not self.render_options.boundary_enabled:raise
-                self.render_options.boundary_enabled=False
-                self.boundary_panel.set_values(False,self.render_options.boundary_bounds)
-                self.renderer.set_scene(scene_frame,self.doc.volume,reset_camera=False,volumes=self.doc.volumes)
-                self.statusBar().showMessage('Boundary disabled for this frame: '+str(ex),7000)
+            from .boundary import BoundaryRangeError
+            from .lattice_tiles import ONE_CELL
+            try:
+                self.renderer.set_scene(scene_frame, self.doc.volume, reset_camera=False, volumes=self.doc.volumes)
+            except BoundaryRangeError as exc:
+                if self.render_options.boundary_bounds == ONE_CELL:
+                    raise
+                self.render_options.boundary_bounds = ONE_CELL
+                self.boundary_panel.set_values(ONE_CELL)
+                self.renderer.set_scene(scene_frame, self.doc.volume, reset_camera=False, volumes=self.doc.volumes)
+                self.statusBar().showMessage(f'Showing one cell. {exc}', 7000)
         self._refresh_isosurface_style_controls()
         if self.renderer.field_warnings:
             self.field_note.setText(self.field_note.text()+'\n'+'\n'.join(dict.fromkeys(self.renderer.field_warnings)))
@@ -1871,8 +1896,6 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         self.vtk.GetRenderWindow().Render()
         self._refresh_measurement()
         self._refresh_atom_panel()
-        display=self.renderer.boundary_display
-        self.boundary_panel.count.setText(f'{len(display.tiles)} cells · {len(display.source_indices)} displayed atoms · {len(self.frame.symbols)} source atoms' if display is not None else f'{len(self.frame.symbols)} source atoms')
 
     def _refresh_atom_panel(self):
         if self.frame is None or self.renderer is None:
@@ -2014,19 +2037,7 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
 
     def _set_standard_label_font(self, text):
         self.render_options.label_font_file = ''
-        self.custom_font_btn.setText('Choose TTF/OTF font file…')
-        self.custom_font_btn.setToolTip('Choose a TTF/OTF font file')
         self._set_option('label_font', text)
-
-    def _select_label_font_file(self):
-        path, _ = QFileDialog.getOpenFileName(
-            self, 'Select font file (not bundled into EXE)', '',
-            'Font files (*.ttf *.otf);;All files (*)')
-        if path:
-            self.render_options.label_font_file = path
-            self.custom_font_btn.setText('Font file: ' + Path(path).name)
-            self.custom_font_btn.setToolTip(path)
-            self.refresh_scene()
 
     def pick_label_colour(self):
         picked = QColorDialog.getColor(QColor(self.render_options.label_color),
@@ -2047,7 +2058,8 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         opts = self.render_options
         controls = [self.style_combo, self.atom_slider, self.bond_slider,
                     self.atom_palette_combo, self.bond_palette_combo,
-                    self.finish_combo, self.highlight_slider, self.bond_check, self.sf_radii_combo]
+                    self.finish_combo, self.highlight_slider, self.highlight_brightness_slider,
+                    self.bond_check, self.sf_radii_combo]
         blockers = [QSignalBlocker(widget) for widget in controls]
         try:
             self.style_combo.setCurrentText(opts.style)
@@ -2060,6 +2072,7 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
             self.bond_palette_combo.setCurrentText(opts.bond_palette)
             self.finish_combo.setCurrentText(opts.surface_finish)
             self.highlight_slider.setValue(round(opts.highlight_size))
+            self.highlight_brightness_slider.setValue(round(opts.highlight_brightness))
             self.bond_check.setChecked(opts.bonds)
         finally:
             del blockers
@@ -2107,20 +2120,47 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
                                           f'Replace saved preset "{name}"?')
             if result != QMessageBox.StandardButton.Yes:
                 return
-        self._user_style_presets[name] = snapshot(self.render_options)
+        values = snapshot(self.render_options)
         try:
-            path = self._style_storage_path()
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(json.dumps(self._user_style_presets, indent=2), encoding='utf-8')
-        except OSError as exc:
+            update_style_preset(self._style_storage_path(), name, values)
+        except (OSError, ValueError) as exc:
             QMessageBox.warning(self, 'Save failed', str(exc))
             return
+        self._user_style_presets[name] = values
+        self.delete_style_button.setEnabled(True)
         index = self.preset_combo.findData(name)
         if index < 0:
             self.preset_combo.addItem(f'My style: {name}', name)
             index = self.preset_combo.findData(name)
         self.preset_combo.setCurrentIndex(index)
         self.statusBar().showMessage(f'Saved display preset: {name}', 3500)
+
+    def _delete_style_preset(self):
+        names = list(self._user_style_presets)
+        if not names:
+            return
+        active = self.preset_combo.currentData()
+        name, ok = QInputDialog.getItem(self, 'Delete saved preset', 'Choose a preset to delete:',
+                                        names, names.index(active) if active in names else 0, False)
+        if not ok or name not in self._user_style_presets:
+            return
+        try:
+            update_style_preset(self._style_storage_path(), name, None)
+        except (OSError, ValueError) as exc:
+            QMessageBox.warning(self, 'Delete failed', str(exc))
+            return
+        del self._user_style_presets[name]
+        for view in self._document_views.values():
+            if view.preset == name:
+                view.preset = CUSTOM_KEY
+                view.custom_style = snapshot(view.options)
+        with QSignalBlocker(self.preset_combo):
+            if self.preset_combo.currentData() == name:
+                self._custom_style_state = snapshot(self.render_options)
+                self.preset_combo.setCurrentIndex(self.preset_combo.findData(CUSTOM_KEY))
+            self.preset_combo.removeItem(self.preset_combo.findData(name))
+        self.delete_style_button.setEnabled(bool(self._user_style_presets))
+        self.statusBar().showMessage(f'Deleted display preset: {name}', 3500)
 
     def _set_option(self, option, value):
         previous=getattr(self.render_options,option)
@@ -2133,7 +2173,7 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
                 self.preset_combo.setCurrentIndex(self.preset_combo.findData(CUSTOM_KEY))
         if option in ('background', 'label_color', 'element_colors', 'atom_palette'):
             self._sync_color_controls()
-        if option in ('highlight_size', 'surface_finish'):
+        if option in ('highlight_size', 'highlight_brightness', 'surface_finish'):
             if self.renderer is not None and self.frame is not None:
                 self.renderer.refresh_surface_finish()
                 self.vtk.GetRenderWindow().Render()
@@ -2271,10 +2311,8 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         frame = self.frame
         n = len(self.selection)
         editable = frame is not None and self._active_vibration is None and not self._alignment_enabled()
-        self.toggle_bonds_btn.setEnabled(editable and n >= 2)
-        self.toggle_hbond_btn.setEnabled(editable and n == 2)
         self.toggle_hbond_action.setEnabled(editable and n == 2)
-        self.fragment_btn.setEnabled(frame is not None and n > 0)
+        self.fragment_action.setEnabled(frame is not None and n > 0)
         self.mirror_action.setEnabled(editable and n > 0)
         self.mirror_btn.setEnabled(self.mirror_action.isEnabled())
         self.origin_btn.setEnabled(editable and n == 1)
@@ -2288,29 +2326,23 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         from .core import valid_lattice
         vacuum_ok=editable and any(frame.pbc) and valid_lattice(frame) if frame is not None else False
         self.vacuum_action.setEnabled(vacuum_ok);self.vacuum_btn.setEnabled(vacuum_ok)
-        self.invert_btn.setEnabled(frame is not None and bool(frame.symbols))
-        self.delete_btn.setEnabled(editable and n > 0)
+        self.invert_action.setEnabled(frame is not None and bool(frame.symbols))
         self.measurement_label.clear()
         self.measurement_value.hide();self.measurement_set.hide()
         self._measurement_context=None;self._measurement_pending=False
         self.footer_row.setVisible(frame is not None)
         self._status_message_changed(self.statusBar().currentMessage())
         if frame is None or not self.selection:
-            self.selected_label.setText('No atoms selected')
             return
         from .boundary_selection import selected_images, image_label, image_measurement, image_editable
         images = selected_images(self)
         atoms = [image_label(frame, item) for item in images]
         measurement_count = len(images)
         measurement_editable = editable and image_editable(images)
-        label = f'{measurement_count} selected: ' + ' — '.join(atoms[:12])
-        if measurement_count > 12:
-            label += f' … (+{measurement_count - 12} more)'
         if 2 <= measurement_count <= 4:
             try:
                 quantity, value = image_measurement(frame, images)
                 units = 'Å' if quantity == 'distance' else '°'
-                label += f'\n{quantity}: {value:.4f} {units}'
                 name = {'distance': 'Bond length', 'angle': 'Bond angle', 'dihedral': 'Dihedral'}[quantity]
                 self.measurement_label.setText(f'{name}  {"—".join(atoms)}')
                 self.measurement_label.setToolTip('Index (1-based), [a,b,c] lattice image: ' + ' — '.join(atoms))
@@ -2330,7 +2362,6 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
                 self._measurement_context=(id(self.doc),self.frame_index,tuple(self.selection))
             except (ValueError, IndexError):
                 self.measurement_label.setText('Selected geometry undefined')
-        self.selected_label.setText(label)
 
     def _status_message_changed(self,text):
         label=self.status_message_label
@@ -3045,6 +3076,10 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         self.scene.ResetCameraClippingRange()
         self.vtk.GetRenderWindow().Render()
 
+    def rotate_view_step(self, basis, axis, angle):
+        from .camera_views import rotate_window_camera
+        return rotate_window_camera(self, basis, axis, angle)
+
     def align_camera(self, axis):
         if axis in ('a', 'b', 'c'):
             from .camera_views import align_window_camera
@@ -3398,6 +3433,8 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
             'Align plane to XY rotates all atoms and the cell; optional Z translation.\n'
             'Ctrl+A selects all atoms; box selection always adds atoms and Ctrl+Z undoes the last addition.\n'
             'Ctrl+I inverts selection; Delete removes selected atoms; Ctrl+Z restores them.\n'
+            'Ctrl+F fixes selected atoms on all axes. Ctrl+Shift+F clears their fixed axes. '
+            'Ctrl+Alt+F selects fully fixed atoms in the current frame.\n'
             'Edit > Build supercell repeats the current periodic frame and enlarges the unit cell.\n'
             'Axes default to periodic abc or molecular XYZ; explicit XYZ/abc and hidden/corner/world-origin modes remain available.\n'
             'Labels are centred on their atoms with global (1-based), ORCA (0-based) or POSCAR-group numbering.\n'
@@ -3467,6 +3504,8 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         self.vibration_timer.stop()
         if self.axes_widget is not None and self.axes_widget.GetEnabled():
             self.axes_widget.SetEnabled(0)
+        if getattr(self, '_annotation_manager', None) is not None:
+            self._annotation_manager.clear()
         if self.vtk is not None:
             self.vtk.GetRenderWindow().Finalize()
             self.vtk.TerminateApp()

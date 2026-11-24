@@ -66,8 +66,8 @@ class CrystalActions:
         has_atoms = frame is not None and bool(frame.symbols)
         periodic = False
         if has_atoms:
-            from .periodic_geometry import periodic_basis
-            periodic = periodic_basis(frame) is not None
+            from .core import valid_lattice
+            periodic = valid_lattice(frame)
         self.crystal_panel.planes.setEnabled(periodic)
         self.crystal_panel.polyhedra.setEnabled(has_atoms)
         self.crystal_panel.rules.setEnabled(has_atoms)
@@ -97,8 +97,8 @@ class CrystalActions:
         panel = self.crystal_panel.planes
         if self.frame is None:
             panel.info.setText('Open a periodic structure to define Miller planes.');return
-        from .periodic_geometry import periodic_basis
-        if periodic_basis(self.frame) is None:
+        from .core import valid_lattice
+        if not valid_lattice(self.frame):
             panel.info.setText('Miller planes require a periodic structure with a valid cell.');return
         p = panel.selected_plane()
         if p is None:
