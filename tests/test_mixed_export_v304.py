@@ -123,7 +123,6 @@ def test_all_vacant_export_leaves_existing_file_intact(tmp_path):
 @pytest.mark.parametrize('choice,filename',[('XYZ (.xyz)','out.xyz'),('Gaussian GJF (.gjf)','out.gjf'),
     ('POSCAR Direct (POSCAR)','POSCAR_direct'),('POSCAR Cartesian (POSCAR)','POSCAR_cartesian')])
 def test_gui_confirmation_exports_maximum_elements_only_in_copy(gui,tmp_path,choice,filename):
-    from lele.dialog_policy import QMessageBox
     gui.attach(normal());w=gui.window
     assert w.apply_atom_species(0,{'Ni':.6,'Fe':.3})
     source=w.frame;before=deepcopy(source.info);undo_count=len(w.undo_stack)
@@ -131,7 +130,7 @@ def test_gui_confirmation_exports_maximum_elements_only_in_copy(gui,tmp_path,cho
     with patch('lele.app.QInputDialog.getItem',return_value=(choice,True)), \
          patch('lele.structure_edit_dialogs.confirm_maximum_occupancy_export',return_value=True) as confirm, \
          patch('lele.app.QFileDialog.getSaveFileName',return_value=(str(path),'')), \
-         patch('lele.app.QMessageBox.question',return_value=QMessageBox.StandardButton.No), \
+         patch('lele.structure_edit_dialogs.choose_poscar_grouping',return_value=False), \
          patch('lele.app.QMessageBox.warning') as warning:
         w.export_dialog()
     confirm.assert_called_once_with(w);warning.assert_not_called()

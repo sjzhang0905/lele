@@ -150,14 +150,14 @@ def test_alignment_uses_surviving_high_index_scaffold_after_low_index_deletion()
 
 @pytest.mark.parametrize('target',['poscar-direct','poscar-cartesian'])
 @pytest.mark.parametrize('operation',['swap_o','swap_c','split_and_restore'])
-def test_duplicate_block_boundaries_and_axis_flags_survive_reordering_and_projects(tmp_path,target,operation):
+def test_adjacent_export_combines_duplicate_blocks_and_keeps_flags_after_project_reload(tmp_path,target,operation):
     source=tmp_path/'POSCAR';source.write_text(POSCAR);f=load_document(source).frames[0]
     if operation=='swap_o':reorder_atoms(f,[0,1,3,2])
     if operation=='swap_c':reorder_atoms(f,[1,0,2,3])
     if operation=='split_and_restore':reorder_atoms(f,[0,2,1,3]);reorder_atoms(f,[0,2,1,3])
     f=project(tmp_path,f)['document'].frames[0]
     out=tmp_path/'edited.POSCAR';export_frame(f,out,target);lines=out.read_text().splitlines()
-    assert lines[5].split()==['C','C','O'] and lines[6].split()==['1','1','2']
+    assert lines[5].split()==['C','O'] and lines[6].split()==['2','2']
     g=load_document(out).frames[0]
     assert g.info['vasp_fixed_axes']==f.info['vasp_fixed_axes']
     np.testing.assert_allclose(g.positions,f.positions,atol=1.e-12)
@@ -169,7 +169,7 @@ def test_pasted_and_replicated_poscar_blocks_remain_distinct(tmp_path):
     assert f.info['poscar_groups']==[('C',1),('C',1),('O',2),('O',1)]
     f=make_supercell(f,(2,1,1),wrap=False);reorder_atoms(f,list(range(10)))
     out=tmp_path/'supercell.POSCAR';export_frame(f,out,'poscar-cartesian')
-    assert load_document(out).frames[0].info['poscar_groups']==[('C',1),('C',1),('O',2),('O',1)]*2
+    assert load_document(out).frames[0].info['poscar_groups']==[('C',2),('O',2),('O',1),('C',2),('O',3)]
 
 
 def test_live_monitors_survive_unrelated_deletion_paste_and_undo(gui):

@@ -16,8 +16,9 @@ def test_curve_entry_navigation_and_editable_coordinates(gui, tmp_path):
     w = gui.window
     w.documents = []; w.current_doc = -1; w.files_tree.clear()
     w._attach_loaded_document(doc)
-    assert w.scan_action.isEnabled() and w.scan_curve_button.isEnabled()
-    curve = w.show_scan_curve()
+    assert w.scan_curve_button.isEnabled()
+    w.scan_curve_button.click()
+    curve = w._analysis_windows[-1]
     try:
         point = result.scans[0].points[0]
         curve.navigate(point)
@@ -35,9 +36,9 @@ def test_curve_entry_navigation_and_editable_coordinates(gui, tmp_path):
         w.selection_panel.copy_coordinates_button.click()
         rows = gui.app.clipboard().text().splitlines()
         assert [row.split()[0] for row in rows] == ['C', 'H']
-        assert w.rotate_axis_action.isEnabled() and not w.dihedral_action.isEnabled()
+        assert w.rotate_axis_btn.isEnabled() and not w.dihedral_btn.isEnabled()
         gui.select([0, 1, 2, 3])
-        assert w.dihedral_action.isEnabled()
+        assert w.dihedral_btn.isEnabled()
     finally:
         curve.close(); gui.app.processEvents()
 

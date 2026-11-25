@@ -1,5 +1,26 @@
 # 更新记录 / Changelog
 
+## 4.5.0 · 2026-11-25
+
+- 新保存的 `.lele` 项目为 UTF-8 JSON 文本。坐标、晶胞矢量、场网格及轨道系数以数值写入，复数按实部和虚部成对保存。用文本编辑器搜索 `"name": "positions"`，后面的 `values` 按原子列出 Cartesian 坐标（Å）。修改后可以重新打开。打开旧版二进制项目后，使用 **File → Save project as…** 可另存为文本。
+- **Field → Planar slice…**、**Edit 标签页 → Fit selected plane** 和 **Edit 菜单 → Crystal tools… → HKL planes** 可设 1–100 个等高值，默认 7 个。开启等高线后，通过 **Contour levels** 调整数量，通过 **Show contour values** 控制是否在线上标注数值。等高值均匀分布在切面的取值范围内，开启固定色标后只使用与色标重叠的范围。每个 HKL 平面和拟合平面的设置随项目保存。
+- 镜像、绕选中轴旋转、设定二面角、重设原点和坐标轴、修改真空层、拟合及对齐平面从 **Edit** 标签页操作。**Axes** 保留三种基底下的 ±45° 旋转，**Atoms** 保留框选按钮和 Ctrl+Shift+B 快捷键。**Files** 提供扫描曲线、几何参数曲线、轨迹对齐、振动模式和已有 NEB 路径。配位多面体分析位于 **Crystal tools… → Polyhedra**。主菜单已移除这些重复入口。
+- Save projects as editable UTF-8 JSON and open earlier ZIP/NPY projects directly. Set contour levels and value labels for grid, Miller and fitted planes. Common editing, viewing and analysis operations now have one tab entry apiece.
+
+[项目格式、切面与菜单验证](verification/v4.5.0/README.md)
+
+## 4.4.0 · 2026-11-24
+
+- Current selection 的 Free X/Y/Z 与 POSCAR 的 Selective dynamics 标记一致。T 表示放开，F 表示固定，— 表示该方向约束未知。面板注明 Direct 或 Cartesian 基底。
+- 导出 Direct 或 Cartesian POSCAR 时，**Merge all** 按元素首次出现的次序合并原有原子，**Merge adjacent** 只合并相邻同元素。新增原子统一排在原有原子之后，按当前相对次序单独分组。分三次给 Fe₃O₄ 添加 O、O、H，两种方式都导出 `Fe O O H` 和 `3 4 2 1`。
+- Field 页通过 **Select orbital…** 选择 FCHK、Molden 的分子轨道。弹窗按文件提供的自旋通道列出轨道编号、占据数和能量。WAVECAR 的 **Select band…** 在同一弹窗中按自旋和 k 点列出能带。可点击行或输入编号定位。
+- **Fit selected plane** 使用带余量的矩形覆盖结构、显示晶胞及当前场网格的投影。有限网格内按场值着色，矩形的其余部分使用平面底色。
+
+- Use POSCAR-style mobility flags in Current selection. Group original and added atoms separately on POSCAR export, including after editing atom indices or restoring a project.
+- Choose molecular orbitals and WAVECAR bands in a spin-resolved table with k-point coordinates when available. Fitted planes have rectangular bounds in 3D and finite-field colors cover only the sampled region.
+
+[导出、轨道选择与拟合面验证](verification/v4.4.0/README.md)
+
 ## 4.3.1 · 2026-11-24
 
 - 中英文 README 精简为项目简介、手册、安装和项目链接。历版更新及相关验证资料集中在本文件。

@@ -14,10 +14,21 @@ def wave_document(tmp_path, *, coeff_count=1):
 
 
 def test_wavecar_selection_generation_and_labels(gui,tmp_path):
+    from lele.orbital_picker import OrbitalPicker
     w=gui.window;document=wave_document(tmp_path);w._attach_loaded_document(document)
     assert w.wavecar_generate.isEnabled()
-    assert w.wavecar_spin.count()==2 and w.wavecar_kpoint.count()==2
-    w.wavecar_spin.setCurrentIndex(1);w.wavecar_kpoint.setCurrentIndex(1);w.wavecar_band.setValue(2)
+    def pick(dialog):
+        assert dialog.spins.count()==2 and dialog.kpoints.count()==2
+        dialog.spins.setCurrentIndex(1)
+        dialog.kpoints.setCurrentIndex(1)
+        assert dialog.kpoints.currentText().startswith('2   (')
+        dialog.number.setValue(2)
+        assert dialog.table.currentIndex().row()==1
+        assert dialog.model.data(dialog.model.index(1,2))=='3'
+        return dialog.DialogCode.Accepted
+    with patch.object(OrbitalPicker,'exec',pick):
+        w.mo_select.click()
+    assert w.mo_selected.text()=='Spin 2 · k 2 · band 2'
     assert 'Energy 3 eV' in w.wavecar_state.text()
     for kind in ('density','real','imag'):
         w.wavecar_kind.setCurrentIndex(w.wavecar_kind.findData(kind))

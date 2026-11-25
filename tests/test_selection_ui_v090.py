@@ -697,7 +697,7 @@ class SelectionWorkflowTests(unittest.TestCase):
             self.assertIsNone(w.renderer.fitted_plane)
             self.assertFalse(w.plane_align_btn.isEnabled())
             fit.assert_called_once()
-            w.fit_plane_action.trigger()
+            w.fit_plane_btn.click()
             self.assertEqual(fit.call_count, 2)
             self.assertIsNotNone(w.renderer.fitted_plane)
         self.select([0, 1])

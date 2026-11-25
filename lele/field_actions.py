@@ -1,7 +1,7 @@
 """Volumetric field selection and explicit molecular-orbital evaluation."""
 from PySide6.QtCore import QSignalBlocker
 from .panel_controls import PanelComboBox
-from PySide6.QtWidgets import QLabel, QDoubleSpinBox, QPushButton, QHBoxLayout, QVBoxLayout, QGroupBox, QFormLayout, QSpinBox, QCheckBox
+from PySide6.QtWidgets import QLabel, QDoubleSpinBox, QPushButton, QHBoxLayout, QVBoxLayout, QGroupBox, QFormLayout, QCheckBox
 from .dialog_policy import QMessageBox, QColorDialog, QDialog
 from .operations import run_data_task
 from .output_text import LoadCancelled
@@ -67,14 +67,18 @@ class FieldActions:
         self.field_signs.currentTextChanged.connect(lambda value: self._set_option('volume_signs', value))
         form.addRow('Isosurface signs', self.field_signs)
         self._build_isosurface_style_controls(form)
-        self.mo_combo = PanelComboBox(); form.addRow('Molecular orbital', self.mo_combo)
+        self.mo_select = QPushButton('Select orbital…')
+        self.mo_select.clicked.connect(self._choose_orbital)
+        self.mo_selected = QLabel()
+        self.mo_selected.setWordWrap(True)
+        form.addRow(self.mo_select, self.mo_selected)
         self.mo_spacing = QDoubleSpinBox(); self.mo_spacing.setRange(.08, 1.)
         self.mo_spacing.setDecimals(2); self.mo_spacing.setSingleStep(.05); self.mo_spacing.setValue(.25)
         self.mo_spacing.setSuffix(' Å'); form.addRow('Grid spacing', self.mo_spacing)
         self.mo_generate = QPushButton('Calculate orbital grid')
-        self.mo_generate.setToolTip('Evaluate the stored wavefunction on a grid. This is not a new electronic-structure calculation.')
         self.mo_generate.clicked.connect(self._generate_orbital_grid); form.addRow(self.mo_generate)
         self._field_document = None
+        self._orbital_choice = None
         self._build_wavecar_controls(form)
 
     def _build_isosurface_style_controls(self, form):
@@ -361,27 +365,48 @@ class FieldActions:
         wf = None if doc is None else doc.wavefunction
         if wf is not None and (not hasattr(wf, "evaluate_orbital") or not hasattr(wf, "orbitals")):
             wf = None
+        wave = None if doc is None else doc.wavecar
         if doc is not self._field_document:
             self._field_document = doc
-            self.mo_combo.clear()
-            if wf is not None:
-                for channel, number, occupation, energy in wf.orbitals:
-                    energy_text = '' if energy is None else f' · {energy:.5g} eV'
-                    self.mo_combo.addItem(f'{channel} MO {number} · occ {occupation:g}{energy_text}', (channel, number))
-                # A useful initial orbital is the highest occupied entry.
-                occupied = [i for i, row in enumerate(wf.orbitals) if row[2] > 1e-8]
-                if occupied: self.mo_combo.setCurrentIndex(occupied[-1])
-        enabled = wf is not None and getattr(wf, "can_evaluate", True) and self.mo_combo.count() > 0 and not doc.modified
-        self.mo_combo.setEnabled(wf is not None)
+            view = getattr(self, '_document_views', {}).get(id(doc))
+            self._orbital_choice = getattr(view, 'field_orbital', None)
+            if self._orbital_choice is None and (wf is not None or wave is not None):
+                from .orbital_picker import initial_choice
+                self._orbital_choice = initial_choice(wf, wave)
+        choice = self._orbital_choice
+        self.mo_select.setText('Select band…' if wave is not None else 'Select orbital…')
+        self.mo_select.setEnabled(choice is not None)
+        self.mo_selected.setText(choice.label() if choice is not None else '')
+        enabled = wf is not None and getattr(wf, "can_evaluate", True) and choice is not None and not doc.modified
         self.mo_generate.setEnabled(enabled)
         self.mo_spacing.setEnabled(enabled)
         if wf is not None and not getattr(wf, "can_evaluate", True):
             self.mo_generate.setToolTip(getattr(wf, "unsupported_reason", "Orbital evaluation is unavailable for this basis."))
         elif wf is not None and doc.modified:
             self.mo_generate.setToolTip('Reopen the source before evaluating orbitals: stored coefficients refer to the original geometry.')
+        else:
+            self.mo_generate.setToolTip('Evaluate the selected stored molecular orbital on a grid.')
 
         self._refresh_isosurface_style_controls()
         self._refresh_wavecar_controls()
+
+    def _choose_orbital(self):
+        document = self.doc
+        if document is None or self._orbital_choice is None:
+            return
+        from .orbital_picker import OrbitalPicker
+        dialog = OrbitalPicker(document, self._orbital_choice, self)
+        try:
+            if dialog.exec() != QDialog.DialogCode.Accepted or self.doc is not document:
+                return
+            self._orbital_choice = dialog.choice()
+            view = getattr(self, '_document_views', {}).get(id(document))
+            if view is not None:
+                view.field_orbital = self._orbital_choice
+            self.mo_selected.setText(self._orbital_choice.label())
+            self._wavecar_state_changed()
+        finally:
+            dialog.deleteLater()
 
     def _select_field(self, index):
         if self.doc is None or index < 0 or self.doc.volume is None:
@@ -394,9 +419,9 @@ class FieldActions:
         if doc is None or doc.wavefunction is None or doc.modified:
             return
         if not getattr(doc.wavefunction, "can_evaluate", True): return
-        selection = self.mo_combo.currentData()
-        if selection is None: return
-        channel, number = selection
+        choice = self._orbital_choice
+        if choice is None or choice.kpoint is not None: return
+        channel, number = choice.spin, choice.number
         first_field = doc.volume is None
         spacing = self.mo_spacing.value()
         try:
@@ -417,10 +442,6 @@ class FieldActions:
     def _build_wavecar_controls(self, form):
         self.wavecar_group = QGroupBox('VASP WAVECAR pseudo-wavefunction')
         layout = QFormLayout(self.wavecar_group)
-        self.wavecar_spin = PanelComboBox(); layout.addRow('Spin channel', self.wavecar_spin)
-        self.wavecar_kpoint = PanelComboBox(); layout.addRow('k-point', self.wavecar_kpoint)
-        self.wavecar_band = QSpinBox(); self.wavecar_band.setMinimum(1)
-        layout.addRow('Band (1-based)', self.wavecar_band)
         self.wavecar_kind = PanelComboBox()
         self.wavecar_kind.addItem('Single-band density |ψ|²', 'density')
         self.wavecar_kind.addItem('Real part Re ψ', 'real')
@@ -435,26 +456,12 @@ class FieldActions:
         self.wavecar_warning.setWordWrap(True); layout.addRow(self.wavecar_warning)
         self.wavecar_generate = QPushButton('Reconstruct WAVECAR field')
         self.wavecar_generate.clicked.connect(self._generate_wavecar_grid); layout.addRow(self.wavecar_generate)
-        self.wavecar_spin.currentIndexChanged.connect(self._wavecar_spin_changed)
-        self.wavecar_kpoint.currentIndexChanged.connect(self._wavecar_state_changed)
-        self.wavecar_band.valueChanged.connect(self._wavecar_state_changed)
-        self._wavecar_document = None
         self.wavecar_group.hide(); form.addRow(self.wavecar_group)
 
     def _refresh_wavecar_controls(self):
         doc = self.doc
         wave = None if doc is None else getattr(doc, 'wavecar', None)
         self.wavecar_group.setVisible(wave is not None)
-        if doc is not self._wavecar_document:
-            self._wavecar_document = doc
-            with QSignalBlocker(self.wavecar_spin), QSignalBlocker(self.wavecar_band):
-                self.wavecar_spin.clear()
-                self.wavecar_band.setRange(1, wave.nbands if wave is not None else 1)
-                if wave is not None:
-                    for spin in range(wave.spins):
-                        self.wavecar_spin.addItem(f'Spin {spin+1}', spin)
-                self.wavecar_band.setValue(1)
-            self._wavecar_spin_changed()
         if wave is None:
             self.wavecar_generate.setEnabled(False)
             return
@@ -471,24 +478,12 @@ class FieldActions:
             self.wavecar_generate.setToolTip('Reconstruct the selected stored state on an FFT grid. Unsupported layouts are checked before display.')
         self._wavecar_state_changed()
 
-    def _wavecar_spin_changed(self, *_):
-        wave = None if self.doc is None else getattr(self.doc, 'wavecar', None)
-        previous = max(0, self.wavecar_kpoint.currentIndex())
-        with QSignalBlocker(self.wavecar_kpoint):
-            self.wavecar_kpoint.clear()
-            if wave is not None and self.wavecar_spin.currentIndex() >= 0:
-                spin = self.wavecar_spin.currentData()
-                for index, point in enumerate(wave.kpoints[spin]):
-                    self.wavecar_kpoint.addItem(f'{index+1}: '+', '.join(f'{x:.6g}' for x in point), index)
-                self.wavecar_kpoint.setCurrentIndex(min(previous, wave.nkpoints-1))
-        self._wavecar_state_changed()
-
     def _wavecar_state_changed(self, *_):
         wave = None if self.doc is None else getattr(self.doc, 'wavecar', None)
-        if wave is None or self.wavecar_spin.currentIndex() < 0 or self.wavecar_kpoint.currentIndex() < 0:
+        choice = self._orbital_choice
+        if wave is None or choice is None or choice.kpoint is None:
             self.wavecar_state.setText(''); return
-        spin = self.wavecar_spin.currentData(); kpoint = self.wavecar_kpoint.currentData()
-        band = self.wavecar_band.value()-1
+        spin, kpoint, band = choice.spin, choice.kpoint, choice.number - 1
         self.wavecar_state.setText(
             f'Energy {wave.energies[spin,kpoint,band]:.8g} eV · '
             f'raw occupation weight {wave.occupations[spin,kpoint,band]:.6g}\n'
@@ -503,9 +498,10 @@ class FieldActions:
         if wave is None or doc.modified or not doc.frames or not getattr(wave, "reconstruction_supported", False):
             return
         first_field = doc.volume is None
-        spin = self.wavecar_spin.currentData(); kpoint = self.wavecar_kpoint.currentData()
-        band = self.wavecar_band.value()-1; kind = self.wavecar_kind.currentData()
-        if spin is None or kpoint is None: return
+        choice = self._orbital_choice
+        if choice is None or choice.kpoint is None: return
+        spin, kpoint, band = choice.spin, choice.kpoint, choice.number - 1
+        kind = self.wavecar_kind.currentData()
         try:
             volume = run_data_task(self, 'Reconstructing WAVECAR pseudo-wavefunction',
                 lambda: wave.volume(spin=spin, kpoint=kpoint, band=band, kind=kind), cancellable=True)

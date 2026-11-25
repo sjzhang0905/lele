@@ -390,9 +390,8 @@ def _load_complete_document(filename, max_frames):
 def export_frame(frame: Frame, filename: str | Path, target: str, box_size: float = 30.0, *, occupancy_policy='error', merge_same_elements=False):
     """Write one structure; optional POSCAR grouping never changes the source.
 
-    ``merge_same_elements`` affects POSCAR only. It groups elements in their
-    first-appearance order after maximum-occupancy projection when requested.
-    False preserves the current atom order and declared duplicate POSCAR blocks.
+    For POSCAR, merge all original atoms of each element or only adjacent
+    equal elements. New atoms always follow in their own consecutive runs.
     """
     from ase import Atoms
 
@@ -408,9 +407,9 @@ def export_frame(frame: Frame, filename: str | Path, target: str, box_size: floa
         frame=maximum_occupancy_frame(frame)
         occupancy_notices.append('Export copy uses the highest-occupancy element at each site with full occupancy; '
                                  f'{original_count-len(frame.symbols)} completely vacant site(s) omitted. Source occupancies unchanged.')
-    if merge_same_elements and target in ('poscar-direct','poscar-cartesian'):
+    if target in ('poscar-direct','poscar-cartesian'):
         from .poscar_export import grouped_poscar_frame
-        frame = grouped_poscar_frame(frame)
+        frame = grouped_poscar_frame(frame, merge_same_elements=merge_same_elements)
     atoms = Atoms(symbols=frame.symbols, positions=frame.positions.copy(),
                   cell=frame.cell.copy(), pbc=frame.pbc)
     if 'site_occupancies' in frame.info:

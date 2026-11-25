@@ -367,23 +367,6 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         self.edit_menu.addSeparator()
         self.supercell_action = self._action(self.edit_menu, 'Build supercell…', self.build_supercell)
         self.supercell_action.setEnabled(False)
-        self.reorient_action=self._action(self.edit_menu,'Reorient complete structure / crystal…',self.configure_coordinate_reorientation)
-        self.reorient_action.setEnabled(False)
-        self.rotate_axis_action = self._action(self.edit_menu, 'Rotate about selected axis…', self.rotate_about_selected_axis)
-        self.rotate_axis_action.setEnabled(False)
-        self.mirror_action = self._action(self.edit_menu, 'Mirror selected fragment…', self.mirror_selected_fragment)
-        self.mirror_action.setEnabled(False)
-        self.dihedral_action = self._action(self.edit_menu, 'Set selected dihedral…', self.set_selected_dihedral)
-        self.dihedral_action.setEnabled(False)
-        self.vacuum_action=self._action(self.edit_menu,'Modify slab vacuum…',self.configure_vacuum)
-        self.vacuum_action.setEnabled(False)
-        self.edit_menu.addSeparator()
-        self.fit_plane_action = self._action(
-            self.edit_menu, 'Fit selected plane', self.fit_selected_plane)
-        self.fit_plane_action.setEnabled(False)
-        self.align_plane_action = self._action(
-            self.edit_menu, 'Align fitted plane to XY', self.align_selected_plane)
-        self.align_plane_action.setEnabled(False)
 
         self.view_menu = self.menuBar().addMenu('&View')
         lighting_menu = self.view_menu.addMenu('Lighting')
@@ -399,7 +382,6 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         self.atom_legend_action=self._action(self.view_menu,'Atom legend…',self.show_atom_legend)
         self._action(self.view_menu, 'Fit to window', lambda: self.reset_camera())
         self._action(self.view_menu, 'Isometry', self.isometric_view)
-        rotation_menu = self.view_menu.addMenu('Rotate by 45°')
         self.view_menu.addSeparator()
         self.axis_actions = {}
         for axis in ('X', 'Y', 'Z'):
@@ -436,11 +418,7 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         self._action(self.analysis_menu, 'Excited-state transitions…', self.show_transition_results)
         self.nmr_action=self._action(self.analysis_menu,'NMR spectrum / shielding table…',self.show_nmr_results)
         self.nmr_action.setEnabled(False)
-        self.scan_action = self._action(self.analysis_menu, 'ORCA scan curve…', self.show_scan_curve)
-        self.scan_action.setEnabled(False)
-        self._action(self.analysis_menu, 'Vibrational frequencies', self.show_frequencies)
         self.qe_reference_action=self._action(self.analysis_menu,'Assign QE phonon reference…',self.assign_qe_phonon_reference)
-        self.neb_action=self._action(self.analysis_menu,'NEB / NEB-TS paths…',self.show_neb_results)
         self.vasp_neb_action=self._action(self.analysis_menu,'VASP NEB from loaded outputs…',self.show_vasp_neb)
         self.stm_action = self._action(self.analysis_menu, 'STM from VASP PARCHG…', self.show_stm)
         self.xrd_action = self._action(self.analysis_menu, 'Simulate powder XRD…', self.show_xrd)
@@ -449,7 +427,7 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         self.goat_action=self._action(self.analysis_menu,'GOAT conformer ensemble…',self.show_goat_results)
         self.soc_action=self._action(self.analysis_menu,'Spin–orbit coupling (SOC)…',self.show_soc_results)
         self.hessian_action=self._action(self.analysis_menu,'Hessian history…',self.show_hessian_results)
-        for action in (self.neb_action, self.goat_action, self.soc_action, self.hessian_action):
+        for action in (self.goat_action, self.soc_action, self.hessian_action):
             action.setEnabled(False)
         self.help_menu = self.menuBar().addMenu('&Help')
         self._action(self.help_menu, 'Help and shortcuts…', self.help_dialog)
@@ -858,7 +836,7 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
 
         axes_outer = control_page('Axes')
         from .view_rotation_controls import ViewRotationControls
-        self.rotation_controls = ViewRotationControls(rotation_menu, self.rotate_view_step)
+        self.rotation_controls = ViewRotationControls(self.rotate_view_step)
         axes_outer.addWidget(self.rotation_controls)
         from .axis_controls import CoordinateAxesControls
         self.coordinate_axes = CoordinateAxesControls(self.render_options)
@@ -1205,21 +1183,22 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
             self._lazy_tree_connected=True
         from .workflow_ui import populate_tree, populate_energy_steps
         populate_energy_steps(self, index, new_doc, head)
-        if not new_doc.frames:
-            head.setExpanded(True)
-            return
-        if populate_tree(self,index,new_doc,head):return
+        if new_doc.frames and populate_tree(self,index,new_doc,head):return
+        if not new_doc.frames and new_doc.neb_runs:
+            group = QTreeWidgetItem(['NEB / NEB-TS paths'])
+            group.setData(0, Qt.ItemDataRole.UserRole, (index, 'analysis', 'neb'))
+            head.addChild(group)
         geometry_parent = head
-        if new_doc.vibrations:
+        if new_doc.vibrations and new_doc.frames:
             label = ('Frequency calculation structures' if new_doc.calculation_results is not None
                      and new_doc.calculation_results.program == 'VASP' else 'Geometry / optimization')
             geometry_parent = QTreeWidgetItem([f'{label} ({len(new_doc.frames)} frames)'])
             geometry_parent.setData(0, Qt.ItemDataRole.UserRole, (index, len(new_doc.frames) - 1))
             head.addChild(geometry_parent)
-        if len(new_doc.frames) > 1 or new_doc.vibrations:
+        if len(new_doc.frames) > 1 or (new_doc.frames and new_doc.vibrations):
             from .workflow_ui import add_frame_items
             add_frame_items(self,index,new_doc,geometry_parent,range(len(new_doc.frames)))
-        else:
+        elif new_doc.frames:
             self._frame_tree_items[index, 0] = head
         for analysis_index, analysis in enumerate(new_doc.vibrations):
             imaginary = sum(mode.imaginary for mode in analysis.modes)
@@ -1248,7 +1227,7 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
                 group.addChild(item)
                 self._vibration_tree_items[index, analysis_index, mode_index] = item
             group.setExpanded(True)
-        head.setExpanded(index == 0 or bool(new_doc.vibrations))
+        head.setExpanded(not new_doc.frames or index == 0 or bool(new_doc.vibrations))
 
     def _tree_current_changed(self, item, _previous):
         # Both a mouse click and Up/Down/Left/Right navigation change the
@@ -1303,6 +1282,13 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         self._refresh_coordinates();self._refresh_element_choices();self._refresh_measurement()
         self.refresh_scene();self._refresh_info();self._update_gif_action()
 
+    def _show_structure_canvas(self):
+        self._ensure_3d_view()
+        self.canvas_stack.setCurrentWidget(self.structure_page)
+        if not self._vtk_initialized:
+            self.vtk.Initialize()
+            self._vtk_initialized = True
+
     @gui_operation('Preparing structure frame')
     def change_frame(self, index, *, switch_doc=None, reset_camera=False):
         self._pending_paste=None
@@ -1318,11 +1304,7 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
             self._show_results_only()
             return
         from .chemical_analysis import known_net_charge
-        self._ensure_3d_view()
-        self.canvas_stack.setCurrentWidget(self.structure_page)
-        if not self._vtk_initialized:
-            self.vtk.Initialize()
-            self._vtk_initialized = True
+        self._show_structure_canvas()
         self.frame_index = max(0, min(int(index), len(doc.frames) - 1))
         self.renderer.periodic_preview = None
         # Keep keyboard navigation, playback, spinbox and mouse clicks in sync.
@@ -1376,6 +1358,11 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         self.select_vibration(self.current_doc, preferred, 0)
 
     def select_vibration(self, doc_index, analysis_index, mode_index, *, autoplay=True):
+        source_doc=self.documents[doc_index]
+        source_analysis=source_doc.vibrations[analysis_index]
+        if not source_analysis.modes:
+            self.statusBar().showMessage('No vibrational modes in this frequency group.', 5000)
+            return
         previous = self._active_vibration
         reference = self._vibration_references.get((doc_index, analysis_index))
         entering_reference = previous is None or previous[:2] != (doc_index, analysis_index)
@@ -1383,8 +1370,6 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         restoring_view = switching_doc and self._has_document_camera(self.documents[doc_index])
         self.playback.stop()
         self.play_btn.setText('Play')
-        source_doc=self.documents[doc_index]
-        source_analysis=source_doc.vibrations[analysis_index]
         reference_index=len(source_doc.frames)-1
         if source_analysis.stage_index is not None:
             import numpy as np
@@ -1394,6 +1379,8 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
                           np.allclose(f.positions,source_analysis.reference.positions,atol=2.e-6,rtol=0))]
             if matches:reference_index=matches[-1]
         self.change_frame(reference_index, switch_doc=doc_index)
+        if not source_doc.frames:
+            self._show_structure_canvas()
         self._active_vibration = (doc_index, analysis_index, mode_index)
         analysis = self.doc.vibrations[analysis_index]
         mode = analysis.modes[mode_index]
@@ -1841,10 +1828,8 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         doc=self.doc
         scan_available = bool(doc is not None and doc.calculation_results is not None
                               and getattr(doc.calculation_results, 'scans', []))
-        self.scan_action.setEnabled(scan_available)
         self.scan_curve_button.setEnabled(scan_available)
-        for action,available in ((self.neb_action,doc is not None and bool(doc.neb_runs)),
-                                 (self.goat_action,doc is not None and bool(doc.conformer_ensembles)),
+        for action,available in ((self.goat_action,doc is not None and bool(doc.conformer_ensembles)),
                                  (self.soc_action,doc is not None and bool(doc.soc_results)),
                                  (self.hessian_action,doc is not None and doc.calculation_results is not None and bool(doc.calculation_results.hessians))):
             action.setEnabled(bool(available))
@@ -1940,7 +1925,6 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         self.plane_images_check.setEnabled(has_periodic_cell)
         can_fit = frame is not None and len(self.selection) >= 3 and self._active_vibration is None
         self.fit_plane_btn.setEnabled(can_fit)
-        self.fit_plane_action.setEnabled(can_fit)
         if self._plane_fit is not None:
             import numpy as np
             old_frame, positions, cell, nearest_images = self._plane_context
@@ -1962,7 +1946,6 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
                     f'RMS distance: {plane.rms:.5f} Å; max: {plane.max_distance:.5f} Å')
         self.plane_label.setText(text)
         self.plane_align_btn.setEnabled(self._plane_fit is not None)
-        self.align_plane_action.setEnabled(self._plane_fit is not None)
         self.show_plane_check.setEnabled(self._plane_fit is not None)
         if self.renderer is not None:
             self.renderer.fitted_plane = self._plane_fit if self.show_plane_check.isChecked() else None
@@ -2313,19 +2296,15 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         editable = frame is not None and self._active_vibration is None and not self._alignment_enabled()
         self.toggle_hbond_action.setEnabled(editable and n == 2)
         self.fragment_action.setEnabled(frame is not None and n > 0)
-        self.mirror_action.setEnabled(editable and n > 0)
-        self.mirror_btn.setEnabled(self.mirror_action.isEnabled())
+        self.mirror_btn.setEnabled(editable and n > 0)
         self.origin_btn.setEnabled(editable and n == 1)
         self.align_btn.setEnabled(editable and n == 2)
         self.reorient_btn.setEnabled(editable and bool(frame.symbols))
-        self.reorient_action.setEnabled(self.reorient_btn.isEnabled())
-        self.rotate_axis_action.setEnabled(editable and n >= 2)
-        self.rotate_axis_btn.setEnabled(self.rotate_axis_action.isEnabled())
-        self.dihedral_action.setEnabled(editable and n == 4)
-        self.dihedral_btn.setEnabled(self.dihedral_action.isEnabled())
+        self.rotate_axis_btn.setEnabled(editable and n >= 2)
+        self.dihedral_btn.setEnabled(editable and n == 4)
         from .core import valid_lattice
         vacuum_ok=editable and any(frame.pbc) and valid_lattice(frame) if frame is not None else False
-        self.vacuum_action.setEnabled(vacuum_ok);self.vacuum_btn.setEnabled(vacuum_ok)
+        self.vacuum_btn.setEnabled(vacuum_ok)
         self.invert_action.setEnabled(frame is not None and bool(frame.symbols))
         self.measurement_label.clear()
         self.measurement_value.hide();self.measurement_set.hide()
@@ -3364,16 +3343,11 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         path = normalized
         export_options = {'occupancy_policy': occupancy_policy}
         if target in ('poscar-direct', 'poscar-cartesian'):
-            answer = QMessageBox.question(self, 'Merge same elements?',
-                'Group atoms of the same element together in the exported POSCAR?\n\n'
-                'Yes: one block per element, in first-appearance order.\n'
-                'No: preserve the current atom order and existing element blocks.\n'
-                'Only the exported copy is reordered.',
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel,
-                QMessageBox.StandardButton.Yes)
-            if answer not in (QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.No):
+            from .structure_edit_dialogs import choose_poscar_grouping
+            merge = choose_poscar_grouping(self)
+            if merge is None:
                 return
-            export_options['merge_same_elements'] = answer == QMessageBox.StandardButton.Yes
+            export_options['merge_same_elements'] = merge
         try:
             from .formats import export_frame
             frame=self.frame

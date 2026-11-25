@@ -86,9 +86,9 @@ def test_volume_overrides_frozen_graph_and_shared_identity(tmp_path):
     np.testing.assert_array_equal(restored.volume.data, volume.data)
     np.testing.assert_array_equal(rf.info['array'], f.info['array'])
     assert new['documents'][0]['geometry_parameters'][0].value(rf) == 2
-    with zipfile.ZipFile(path) as archive:
-        assert 'manifest.json' in archive.namelist()
-        assert all(n == 'manifest.json' or n.endswith('.npy') for n in archive.namelist())
+    records = json.loads(path.read_text(encoding='utf-8'))
+    assert records[0]['format'] == FORMAT and records[0]['schema'] == SCHEMA
+    assert any('values' in record for record in records)
 
 
 def test_atomic_failure_keeps_previous_project(tmp_path):
@@ -111,7 +111,7 @@ def test_invalid_projects_are_rejected(tmp_path, invalid):
         else:state['documents'][0]['camera'] = {'position':[float('nan'), 0, 0]}
         save_project(path, state)
     else:
-        manifest = dict(format=FORMAT, schema=SCHEMA, root={'ref':0}, nodes=[])
+        manifest = dict(format=FORMAT, schema=1, root={'ref':0}, nodes=[])
         if invalid == 'schema':manifest['schema'] = 999
         elif invalid == 'unknown_class':manifest['nodes'] = [dict(kind='object', type='subprocess:Popen', attributes={})]
         else:manifest['nodes'] = [dict(kind='array', path='arrays/object.npy')]

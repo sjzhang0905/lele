@@ -3,7 +3,8 @@ import numpy as np
 from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QComboBox, QDoubleSpinBox, QCheckBox, QLabel, QPushButton, QLineEdit
 from .dialog_policy import QDialog, QFileDialog, QMessageBox
 from .field_mapping import is_esp_field
-from .field_slice import grid_plane_slice, export_slice_csv, display_slice_samples
+from .field_slice import grid_plane_slice, export_slice_csv, display_slice_samples, contour_levels, contour_labels
+from .plane_field_controls import contour_count_spin
 from .operations import run_data_task
 from .output_text import LoadCancelled
 
@@ -22,8 +23,13 @@ class FieldSliceDialog(QDialog):
         row.addWidget(self.axis)
         self.position=QDoubleSpinBox();self.position.setRange(0,100);self.position.setDecimals(2)
         self.position.setSuffix(' %');self.position.setKeyboardTracking(False);self.position.setValue(50);row.addWidget(QLabel('Position'));row.addWidget(self.position)
-        self.contours=QCheckBox('Contour lines');row.addWidget(self.contours)
         self.symmetric=QCheckBox('Symmetric color range');self.symmetric.setChecked(True);row.addWidget(self.symmetric)
+        contour_row=QHBoxLayout();layout.addLayout(contour_row)
+        self.contours=QCheckBox('Contour lines');contour_row.addWidget(self.contours)
+        self.contour_count=contour_count_spin()
+        contour_row.addWidget(QLabel('Contour levels'));contour_row.addWidget(self.contour_count)
+        self.contour_labels=QCheckBox('Show contour values');self.contour_labels.setChecked(True)
+        contour_row.addWidget(self.contour_labels);contour_row.addStretch()
         ranges=QHBoxLayout();layout.addLayout(ranges)
         self.manual_range=QCheckBox('Fixed color range');ranges.addWidget(self.manual_range)
         self.range_min=QLineEdit('-0.1');self.range_max=QLineEdit('0.1')
@@ -34,11 +40,14 @@ class FieldSliceDialog(QDialog):
         layout.addWidget(NavigationToolbar2QT(self.canvas,self));layout.addWidget(self.canvas,1)
         self.note=QLabel();self.note.setWordWrap(True);layout.addWidget(self.note)
         self.export=QPushButton('Export slice samples CSV…');self.export.clicked.connect(self.export_csv);layout.addWidget(self.export)
-        for signal in (self.axis.currentIndexChanged,self.position.valueChanged,self.contours.toggled,self.symmetric.toggled):
+        for signal in (self.axis.currentIndexChanged,self.position.valueChanged,self.contours.toggled,self.symmetric.toggled,
+                       self.contour_count.valueChanged,self.contour_labels.toggled):
             signal.connect(self.redraw)
         self.redraw()
 
     def redraw(self,*_):
+        self.contour_count.setEnabled(self.contours.isChecked())
+        self.contour_labels.setEnabled(self.contours.isChecked())
         self.figure.clear();self.section=None
         try:section=grid_plane_slice(self.volume,self.axis.currentIndex(),self.position.value()/100)
         except ValueError as exc:
@@ -58,9 +67,12 @@ class FieldSliceDialog(QDialog):
                 self.note.setText('Enter finite color limits with Min < Max.');self.canvas.draw_idle();return
         display_x,display_y,display_values,reduced=display_slice_samples(section)
         mesh=ax.pcolormesh(display_x,display_y,display_values,shading='gouraud',cmap=cmap,vmin=vmin,vmax=vmax)
-        if self.contours.isChecked() and lo<hi:
-            lines=ax.contour(display_x,display_y,display_values,levels=np.linspace(lo,hi,9)[1:-1],colors='black',linewidths=.5)
-            ax.clabel(lines,inline=True,fontsize=8,fmt='%.3g')
+        if self.contours.isChecked():
+            levels=contour_levels(display_values, self.contour_count.value(), (vmin,vmax))
+            if len(levels):
+                lines=ax.contour(display_x,display_y,display_values,levels=levels,colors='black',linewidths=.5)
+                if self.contour_labels.isChecked():
+                    ax.clabel(lines,inline=True,fontsize=8,fmt=contour_labels(levels))
         ax.set_aspect('equal');ax.set_xlabel('In-plane u (Å)');ax.set_ylabel('In-plane v (Å)')
         ax.set_title(self.volume.label or 'Scalar field')
         length = .5 if is_esp_field(self.volume) else 1.

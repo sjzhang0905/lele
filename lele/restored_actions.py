@@ -12,7 +12,7 @@ class RestoredActions:
         self._pending_paste=None
         self.copy_action=self._action(self.edit_menu,'Copy selected atoms',self.copy_selected_atoms,'Ctrl+C')
         self.paste_action=self._action(self.edit_menu,'Paste atoms at next click',self.begin_paste_atoms,'Ctrl+V')
-        self.box_select_action=self._action(self.edit_menu,'Box select atoms',lambda:None,'Ctrl+Shift+B')
+        self.box_select_action=self._action(self,'Box select atoms',lambda:None,'Ctrl+Shift+B')
         self.box_select_action.setCheckable(True);self.box_select_action.toggled.connect(self._set_box_select)
         self._action(self.edit_menu,'Cancel paste / box selection',self.cancel_pointer_action,'Esc')
         self.box_select_button=QPushButton('Box select atoms (Ctrl+Shift+B)');self.box_select_button.setCheckable(True)

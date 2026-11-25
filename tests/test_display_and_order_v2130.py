@@ -129,7 +129,8 @@ def test_project_roundtrip_preserves_auto_defaults_and_explicit_old_display_choi
     saved=entry['options']
     assert (saved.atom_palette,saved.surface_finish,saved.axes_basis)==(opts.atom_palette,opts.surface_finish,opts.axes_basis)
     if old_choice:
-        with zipfile.ZipFile(path) as archive:files={n:archive.read(n) for n in archive.namelist()}
+        from project_archive_v1 import legacy_archive
+        with legacy_archive(path) as archive:files={n:archive.read(n) for n in archive.namelist()}
         manifest=json.loads(files['manifest.json']);manifest['application_version']='2.12.1';files['manifest.json']=json.dumps(manifest).encode()
         with zipfile.ZipFile(path,'w') as archive:
             for n,b in files.items():archive.writestr(n,b)
@@ -186,10 +187,9 @@ def test_explicit_reindex_is_the_current_export_order_instead_of_automatic_sourc
 
 
 def test_gui_export_path_keeps_order_after_multiple_pastes(gui,tmp_path):
-    from PySide6.QtWidgets import QMessageBox
     gui.attach(appended_frame());w=gui.window;out=tmp_path/'gui.POSCAR'
     with patch('lele.app.QInputDialog.getItem',return_value=('POSCAR Cartesian (POSCAR)',True)),patch('lele.app.QFileDialog.getSaveFileName',return_value=(str(out),'')), \
-         patch('lele.app.QMessageBox.question',return_value=QMessageBox.StandardButton.No):
+         patch('lele.structure_edit_dialogs.choose_poscar_grouping',return_value=False):
         w.export_dialog()
     out=tmp_path/'POSCARgui.POSCAR'
     assert read(out,format='vasp').get_chemical_symbols()==w.frame.symbols

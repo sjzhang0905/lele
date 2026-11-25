@@ -4,16 +4,18 @@ Positions are Cartesian Angstrom coordinates. A slice samples the original
 field by trilinear interpolation; no value is inferred outside a finite grid.
 """
 import re
+from itertools import product
 import numpy as np
-from .crystal_planes import plane_polygon, clip_polygon
+from .crystal_planes import clip_polygon
+from .crystal_settings import DEFAULT_CONTOUR_COUNT, MAX_CONTOUR_COUNT, FIELD_STYLE_KEYS
 
 FIELD_PALETTES = ('Auto', 'Blue-white-red', 'Viridis')
-FIELD_STYLE_KEYS = ('field', 'field_palette', 'field_range', 'field_contours', 'field_legend', 'field_resolution')
 
 
 def default_plane_style():
     return dict(field=True, field_palette='Auto', field_range=None,
-                field_contours=False, field_legend=True, field_resolution=256,
+                field_contours=False, field_contour_count=DEFAULT_CONTOUR_COUNT,
+                field_contour_labels=False, field_legend=True, field_resolution=256,
                 opacity=.22, color='#36A8D8')
 
 
@@ -23,7 +25,10 @@ def validate_plane_style(values):
     if style['field_palette'] not in FIELD_PALETTES:raise ValueError('Choose a valid slice color palette.')
     if not isinstance(style['color'], str) or not re.fullmatch(r'#[0-9A-Fa-f]{6}', style['color']):
         raise ValueError('Choose a valid plane color.')
-    for name in ('field', 'field_contours', 'field_legend'):style[name] = bool(style[name])
+    for name in ('field', 'field_contours', 'field_contour_labels', 'field_legend'):style[name] = bool(style[name])
+    count = style['field_contour_count']
+    if type(count) is not int or not 1 <= count <= MAX_CONTOUR_COUNT:
+        raise ValueError(f'Contour levels must be an integer from 1 to {MAX_CONTOUR_COUNT}.')
     if style['field_range'] is not None:
         limits = np.asarray(style['field_range'], float)
         if limits.shape != (2,) or not np.isfinite(limits).all() or limits[0] >= limits[1]:
@@ -65,28 +70,42 @@ def field_covered_polygon(polygon, volume):
     return clip_polygon(polygon, grid_domain_cuts(volume))
 
 
+def uncovered_field_polygons(polygon, volume):
+    """Disjoint uncolored pieces outside the finite grid, on the same plane."""
+    remaining = np.asarray(polygon)
+    for normal, origin in grid_domain_cuts(volume):
+        if len(remaining) < 3:
+            break
+        if np.any((remaining - origin) @ normal < -1.e-8):
+            outside = clip_polygon(remaining, [(-normal, origin)])
+            if len(outside) >= 3:
+                yield outside
+            remaining = clip_polygon(remaining, [(normal, origin)])
+
+
 def fitted_plane_polygon(frame, fitted, *, volume=None, bounds=((0., 1.),)*3,
-                         rotation=None, translation=None,preserve_cell_origin=True):
-    """Full plane/cell or plane/field intersection, rather than selection patch."""
+                         rotation=None, translation=None, preserve_cell_origin=True,
+                         displayed_positions=None):
+    """Rectangle enclosing the projection of the displayed structure, cell and grid."""
     rotation = np.eye(3) if rotation is None else np.asarray(rotation, float)
     translation = np.zeros(3) if translation is None else np.asarray(translation, float)
     center = fitted.center @ rotation+translation
-    normal = fitted.normal @ rotation
-    from .core import valid_lattice
-    if valid_lattice(frame):
+    # Choose axes in the fit's source coordinates so a display rotation
+    # carries all four corners rigidly along with the structure.
+    u, v, _ = plane_axes(fitted.normal)
+    u, v = u @ rotation, v @ rotation
+    points = [fitted.points @ rotation + translation,
+              frame.positions if displayed_positions is None else displayed_positions]
+    from .periodic_geometry import periodic_basis
+    if periodic_basis(frame) is not None:
         from .cell_origin import cell_origin
-        offset=cell_origin(frame) if preserve_cell_origin else np.zeros(3)
-        return plane_polygon(frame.cell, normal, center, bounds, translation+offset)
+        offset = cell_origin(frame) if preserve_cell_origin else np.zeros(3)
+        points.append(np.asarray(list(product(*bounds))) @ frame.cell + translation + offset)
     if volume is not None:
         span = np.asarray(volume.data.shape)-(0 if volume.periodic else 1)
-        cell = span[:, None]*volume.voxel_vectors
-        return plane_polygon(cell, normal, center, translation=volume.origin)
-    # Isolated structures without a field still show the complete projected
-    # structure extent, with a margin; there is no crystal boundary to use.
-    u, v, _ = plane_axes(normal)
-    points = np.asarray(frame.positions)
-    if not len(points):return np.empty((0, 3))
-    uv = (points-center) @ np.stack((u, v), axis=1)
+        corners = np.asarray(list(product((0, 1), repeat=3))) * span
+        points.append(corners @ volume.voxel_vectors + volume.origin)
+    uv = (np.concatenate(points)-center) @ np.stack((u, v), axis=1)
     low, high = uv.min(axis=0), uv.max(axis=0)
     margin = np.maximum((high-low)*.08, .5)
     low -= margin;high += margin

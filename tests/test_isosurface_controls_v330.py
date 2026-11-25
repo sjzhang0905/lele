@@ -82,7 +82,8 @@ def test_layers_project_roundtrip_and_old_defaults(tmp_path):
     state=dict(documents=[dict(document=doc,options=options,frame_index=0)],current_document=0,selection=[])
     file=tmp_path/'layers.lele';save_project(file,state)
     restored=load_project(file)['documents'][0]['options'];assert restored==options
-    with zipfile.ZipFile(file) as z:payload={name:z.read(name) for name in z.namelist()}
+    from project_archive_v1 import legacy_archive
+    with legacy_archive(file) as z:payload={name:z.read(name) for name in z.namelist()}
     manifest=json.loads(payload['manifest.json'])
     added=['volume_independent_negative','volume_negative_iso','volume_positive_color','volume_negative_color',
            'volume_independent_opacity','volume_negative_opacity','volume_representation','volume_line_width',

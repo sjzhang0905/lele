@@ -52,7 +52,7 @@ def test_plain_text_has_aligned_columns_mixed_occupancy_and_all_existing_fields(
             start += width + 2
     assert 'Occ. %' in lines[0] and 'Cartesian X' in lines[0] and 'Direct Z' in lines[0]
     assert 'ORCA index' not in lines[0]
-    assert 'Fixed X' in lines[0]
+    assert 'Free X' in lines[0]
     assert 'Cu' in lines[1] and '75' in lines[1]
     assert 'Fe' in lines[2] and '25' in lines[2]
     assert '-246.91340000' in lines[3]  # Direct coordinates remain unwrapped.

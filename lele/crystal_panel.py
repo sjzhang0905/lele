@@ -4,7 +4,7 @@ from PySide6.QtCore import Signal, Qt
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QFormLayout, QLabel, QCheckBox, QSpinBox, QDoubleSpinBox, QComboBox, QLineEdit, QPushButton, QTableWidget, QTableWidgetItem, QAbstractItemView, QHeaderView, QTabWidget, QScrollArea
 from .dialog_policy import QColorDialog
-from .crystal_settings import PLANE_MODES, POLYHEDRA_KEYS, default_plane
+from .crystal_settings import FIELD_STYLE_KEYS, PLANE_MODES, POLYHEDRA_KEYS, default_plane
 from .color_controls import set_color_swatch
 
 
@@ -124,7 +124,7 @@ class LatticePlanePanel(QWidget):
         if self._loading:return
         index = self.table.currentRow()
         if not 0 <= index < len(self.records):return
-        for key in ('field', 'field_palette', 'field_range', 'field_contours', 'field_legend', 'field_resolution'):
+        for key in FIELD_STYLE_KEYS:
             self.records[index][key] = values[key]
         self.previewChanged.emit()
 

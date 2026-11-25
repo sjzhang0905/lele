@@ -101,7 +101,7 @@ def view_matrix(camera):
 
 
 @pytest.mark.parametrize('parallel', [True, False])
-def test_rotation_menu_and_buttons_turn_about_panned_centroid(gui, parallel):
+def test_rotation_buttons_turn_about_panned_centroid(gui, parallel):
     frame = crystal()
     gui.attach(frame)
     w = gui.window
@@ -117,18 +117,15 @@ def test_rotation_menu_and_buttons_turn_about_panned_centroid(gui, parallel):
     center = frame.positions.mean(axis=0)
     positions, cell = frame.positions.copy(), frame.cell.copy()
     buttons = {b.text(): b for b in controls.findChildren(QToolButton)}
-    cartesian = next(a.menu() for a in controls.menu.actions() if a.text() == 'Cartesian axes')
-    for basis, axes, menu in [('Screen', 'XYZ', controls.menu), ('Cartesian', 'XYZ', cartesian),
-                             ('Lattice', 'abc', controls.lattice_menu)]:
+    for basis, axes in [('Screen', 'XYZ'), ('Cartesian', 'XYZ'), ('Lattice', 'abc')]:
         for i, axis in enumerate(axes):
             direction = {'Screen': original[:3, :3], 'Cartesian': np.eye(3), 'Lattice': cell}[basis][i]
             rot = Rotation.from_rotvec(np.pi/4 * direction / np.linalg.norm(direction)).as_matrix()
             transform = np.eye(4)
             transform[:3, :3] = rot
             transform[:3, 3] = center - rot @ center
-            name = f'Screen {axis}' if basis == 'Screen' else axis
-            action = next(a for a in menu.actions() if a.text() == f'{name}  +45°')
-            action.trigger()
+            controls.axis.setCurrentText(f'{basis} {axis}')
+            buttons['+45°'].click()
             np.testing.assert_allclose(view_matrix(camera), original @ transform, atol=1.e-11)
             assert controls.axis.currentText() == f'{basis} {axis}'
             buttons['−45°'].click()
@@ -148,15 +145,16 @@ def test_rotation_controls_track_current_structure(gui):
     w = gui.window
     controls = w.rotation_controls
     controls.axis.setCurrentText('Lattice b')
-    assert controls.lattice_menu.isEnabled()
+    lattice_b = controls.axis.model().item(controls.axis.currentIndex())
+    assert lattice_b.isEnabled()
     w.change_frame(1)
-    assert controls.menu.isEnabled() and not controls.lattice_menu.isEnabled()
+    assert controls.isEnabled() and not lattice_b.isEnabled()
     assert controls.axis.currentText() == 'Screen X'
     assert not controls.axis.model().item(controls.axis.findText('Lattice b')).isEnabled()
     w.change_frame(0)
-    assert controls.lattice_menu.isEnabled()
+    assert lattice_b.isEnabled()
     w._unload_document(w.doc)
-    assert not controls.isEnabled() and not controls.menu.isEnabled()
+    assert not controls.isEnabled()
 
 
 def test_partial_periodic_cell_and_aligned_lattice_steps(gui):
@@ -168,8 +166,8 @@ def test_partial_periodic_cell_and_aligned_lattice_steps(gui):
     gui.attach(frame)
     w = gui.window
     controls = w.rotation_controls
-    actions = [a for a in controls.lattice_menu.actions() if a.isEnabled()]
-    assert [a.text().split()[0] for a in actions] == ['a', 'a', 'b', 'b']
+    enabled = [axis for axis, index in controls.lattice_choices if controls.axis.model().item(index).isEnabled()]
+    assert enabled == ['a', 'b']
     rotation = np.array([[0., 1, 0], [-1, 0, 0], [0, 0, 1]])
     reference = frame.clone()
     reference.positions = frame.positions @ rotation + [2., -1., .3]
@@ -179,7 +177,8 @@ def test_partial_periodic_cell_and_aligned_lattice_steps(gui):
     w.refresh_scene()
     camera = w.scene.GetActiveCamera()
     before = view_matrix(camera)
-    actions[-1].trigger()
+    controls.axis.setCurrentText('Lattice b')
+    next(b for b in controls.findChildren(QToolButton) if b.text() == '+45°').click()
     after = view_matrix(camera)
     center = reference.positions.mean(axis=0)
     axis = reference.cell[1]

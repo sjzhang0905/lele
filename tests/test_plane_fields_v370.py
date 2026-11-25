@@ -1,5 +1,6 @@
 """Analytical arbitrary-plane sampling, complete extents and native rendering."""
 from copy import deepcopy
+from itertools import product
 import numpy as np
 import pytest
 from vtkmodules.util.numpy_support import vtk_to_numpy
@@ -66,12 +67,24 @@ def test_fitted_extent_is_whole_skew_cell_and_expanded_boundary():
     cell=np.array([[6,0,0],[1.8,7,0],[.7,.2,8.]])
     f=Frame(['H']*3,np.array([[.2,.2,.5],[.25,.2,.5],[.2,.25,.5]])@cell,cell,(True,)*3)
     fit=fit_selection_plane(f,range(3))
-    polygon=fitted_plane_polygon(f,fit,bounds=((-1,2),(0,2),(0,1)))
+    bounds=((-1,2),(0,2),(0,1))
+    polygon=fitted_plane_polygon(f,fit,bounds=bounds)
+    assert_covers_projection(polygon,fit,np.asarray(list(product(*bounds)))@cell)
     frac=polygon@np.linalg.inv(cell)
-    np.testing.assert_allclose([frac[:,0].min(),frac[:,0].max()],[-1,2],atol=1e-12)
-    np.testing.assert_allclose([frac[:,1].min(),frac[:,1].max()],[0,2],atol=1e-12)
     np.testing.assert_allclose(frac[:,2],.5,atol=1e-12)
     assert np.ptp(polygon[:,0])>5*np.ptp(fit.corners[:,0])
+
+
+def assert_covers_projection(polygon, fit, points):
+    assert polygon.shape == (4, 3)
+    a, b = polygon[1] - polygon[0], polygon[3] - polygon[0]
+    assert np.linalg.norm(a) > 0 and np.linalg.norm(b) > 0
+    assert a @ b == pytest.approx(0, abs=1.e-10)
+    np.testing.assert_allclose(polygon[2], polygon[0] + a + b, atol=1.e-10)
+    np.testing.assert_allclose((polygon-fit.center) @ fit.normal, 0, atol=1.e-10)
+    for edge in (a, b):
+        fractions = (points-polygon[0]) @ edge / (edge @ edge)
+        assert 0 < fractions.min() <= fractions.max() < 1
 
 
 def test_isolated_fit_fills_field_box_and_transforms_correctly():
@@ -81,7 +94,8 @@ def test_isolated_fit_fills_field_box_and_transforms_correctly():
     polygon=fitted_plane_polygon(source,fit,volume=volume)
     index=(polygon-volume.origin)@np.linalg.inv(volume.voxel_vectors)
     np.testing.assert_allclose(index[:,2],10,atol=1e-10)
-    np.testing.assert_allclose([index[:,0].min(),index[:,0].max()],[0,24],atol=1e-10)
+    grid_corners=np.asarray(list(product(*[(0,n-1) for n in volume.data.shape])))
+    assert_covers_projection(polygon,fit,grid_corners@volume.voxel_vectors+volume.origin)
     rotation=np.array([[0,1.,0],[-1.,0,0],[0,0,1.]])
     translation=np.array([2.,-1.,3.])
     frame=source.clone();frame.positions=source.positions@rotation+translation
@@ -89,6 +103,44 @@ def test_isolated_fit_fills_field_box_and_transforms_correctly():
     actual=fitted_plane_polygon(frame,fit,volume=shifted,rotation=rotation,translation=translation)
     # Polygon order may start at a different vertex after a rotation.
     for point in polygon@rotation+translation:assert np.min(np.linalg.norm(actual-point,axis=1))<1e-9
+
+
+def test_oblique_rectangle_stays_complete_under_hkl_cut_and_finite_grid():
+    cell = np.eye(3) * 4
+    frame = Frame(['H']*3, [[2.6,1.4,2], [2,2.6,1.4], [1.4,2,2.6]], cell, (True,)*3)
+    fit = fit_selection_plane(frame, range(3))
+    assert len(plane_polygon(cell, fit.normal, fit.center)) == 6
+    volume = Volume(np.indices((4,4,4)).sum(axis=0).astype(float), [.5]*3, np.eye(3))
+    polygon = fitted_plane_polygon(frame, fit, volume=volume)
+    assert_covers_projection(polygon, fit, np.asarray(list(product((0,1), repeat=3))) @ cell)
+    renderer = MoleculeRenderer(vtkRenderer())
+    renderer.fitted_plane = fit
+    renderer.options = RenderOptions(axes_position='Off', show_volume=False,
+        fitted_plane_style={'opacity': .61},
+        lattice_planes=[{**default_plane(), 'hkl': (1,0,0), 'mode': 'Keep above', 'show': False}])
+    renderer.set_scene(frame, volume)
+    assert len(renderer.crystal_cuts) == len(renderer.plane_field_actors) == 1
+    colored = renderer.plane_field_actors[0].GetMapper()
+    assert colored.GetNumberOfClippingPlanes() == 0
+    mesh = colored.GetInput()
+    points = vtk_to_numpy(mesh.GetPoints().GetData())
+    assert points.min() >= .5 - 1.e-7 and points.max() <= 3.5 + 1.e-7
+    np.testing.assert_allclose(vtk_to_numpy(mesh.GetPointData().GetScalars()), (points-.5).sum(axis=1))
+
+    def area(vertices):
+        return abs(np.cross(vertices, np.roll(vertices, -1, axis=0)).sum(axis=0) @ fit.normal) * .5
+
+    plain_area = 0.
+    for actor in renderer.dynamic:
+        if not actor.IsA('vtkActor') or actor.GetProperty().GetOpacity() != .61:
+            continue
+        mapper = actor.GetMapper()
+        if mapper.GetScalarVisibility() or mapper.GetInput().GetNumberOfPolys() != 1:
+            continue
+        assert mapper.GetNumberOfClippingPlanes() == 0
+        plain_area += area(vtk_to_numpy(mapper.GetInput().GetPoints().GetData()))
+    assert plain_area > 0
+    assert plain_area + area(field_covered_polygon(polygon, volume)) == pytest.approx(area(polygon))
 
 
 def test_none_isosurfaces_still_renders_hkl_colors_contours_and_opacity():

@@ -3,11 +3,12 @@ import numpy as np
 from vtkmodules.vtkCommonCore import vtkLookupTable
 from vtkmodules.vtkCommonDataModel import vtkPlane, vtkPolyData
 from vtkmodules.vtkCommonExecutionModel import vtkAlgorithm
-from vtkmodules.vtkFiltersCore import vtkClipPolyData, vtkContourFilter
+from vtkmodules.vtkFiltersCore import vtkClipPolyData, vtkContourFilter, vtkStripper
 from vtkmodules.vtkFiltersSources import vtkPlaneSource
-from vtkmodules.vtkRenderingCore import vtkActor, vtkPolyDataMapper
+from vtkmodules.vtkRenderingCore import vtkActor, vtkBillboardTextActor3D, vtkPolyDataMapper
 from vtkmodules.util.numpy_support import numpy_to_vtk, vtk_to_numpy
 from .field_legend import field_legend
+from .field_slice import contour_levels, contour_labels
 from .field_mapping import legend_unit, sample_field
 from .plane_field import (plane_grid, field_covered_polygon, plane_color_limits,
                           validate_plane_style)
@@ -55,6 +56,52 @@ def slice_lookup(palette,limits):
     lut.Build();return lut
 
 
+def _label_contours(draw, contour, levels, displacement):
+    """Place one screen-facing value halfway along the longest line at each level."""
+    strips = vtkStripper()
+    strips.SetInputConnection(contour.GetOutputPort())
+    strips.JoinContiguousSegmentsOn()
+    strips.Update()
+    data = strips.GetOutput()
+    if not data.GetNumberOfLines():
+        return
+    points = vtk_to_numpy(data.GetPoints().GetData())
+    scalars = vtk_to_numpy(data.GetPointData().GetScalars())
+    offsets = vtk_to_numpy(data.GetLines().GetOffsetsArray())
+    indices = vtk_to_numpy(data.GetLines().GetConnectivityArray())
+    anchors = {}
+    for start, end in zip(offsets[:-1], offsets[1:]):
+        ids = indices[start:end]
+        if len(ids) < 2:
+            continue
+        level = levels[np.argmin(np.abs(levels - scalars[ids[0]]))]
+        line = points[ids]
+        distances = np.linalg.norm(np.diff(line, axis=0), axis=1).cumsum()
+        length = distances[-1]
+        if length <= 0 or (level in anchors and length <= anchors[level][0]):
+            continue
+        i = np.searchsorted(distances, length / 2)
+        before = distances[i-1] if i else 0.
+        fraction = (length / 2 - before) / (distances[i] - before)
+        anchors[level] = length, line[i] + fraction * (line[i+1] - line[i])
+    labels = contour_labels(levels)
+    for level, (_, point) in anchors.items():
+        actor = vtkBillboardTextActor3D()
+        actor.SetObjectName('lele-plane-contour-value')
+        actor.SetInput(labels[level])
+        actor.SetPosition(*(point + displacement))
+        actor.UseBoundsOff()
+        actor.PickableOff()
+        text = actor.GetTextProperty()
+        text.SetFontSize(13)
+        text.SetJustificationToCentered()
+        text.SetVerticalJustificationToCentered()
+        text.SetColor(.08,.08,.08)
+        text.SetBackgroundColor(1.,1.,1.)
+        text.SetBackgroundOpacity(.8)
+        draw._add_actor(actor)
+
+
 def draw_plane_slice(draw,polygon,normal,style,title):
     """Return the colored plane actor; geometry-only fallback belongs to caller."""
     style=validate_plane_style(style);volume=draw.volume
@@ -87,17 +134,21 @@ def draw_plane_slice(draw,polygon,normal,style,title):
     draw._keepalive.append((mesh,mapper,lut))
     if reduced:
         draw.field_warnings.append(f'{title}: slice sampling limited to {style["field_resolution"]} points per axis; increase Slice resolution for finer features.')
-    if style['field_contours'] and float(values.min())<float(values.max()):
+    levels = contour_levels(values, style['field_contour_count'], limits) if style['field_contours'] else ()
+    if len(levels):
         contour=vtkContourFilter();contour.SetInputData(mesh)
-        for i,value in enumerate(np.linspace(*limits,9)[1:-1]):contour.SetValue(i,float(value))
+        for i,value in enumerate(levels):contour.SetValue(i,float(value))
         contour.Update()
         lines=vtkPolyDataMapper();lines.SetInputConnection(contour.GetOutputPort());lines.ScalarVisibilityOff()
         outline=vtkActor();outline.SetMapper(lines);outline.PickableOff()
-        outline.SetPosition(*(np.asarray(normal)/np.linalg.norm(normal)*1e-5))
+        displacement = np.asarray(normal)/np.linalg.norm(normal)*1e-5
+        outline.SetPosition(*displacement)
         outline.GetProperty().SetColor(.10,.10,.10);outline.GetProperty().SetLineWidth(1.)
         outline.GetProperty().SetOpacity(style['opacity']);outline.GetProperty().LightingOff()
         draw._add_actor(outline);draw.plane_contour_actors.append(outline)
         draw._keepalive.append((contour,lines))
+        if style['field_contour_labels']:
+            _label_contours(draw, contour, levels, displacement)
     if style['field_legend'] and style['opacity']>0:
         existing=len(draw.field_scalar_bars)+len(draw.plane_field_bars)
         if existing<4:

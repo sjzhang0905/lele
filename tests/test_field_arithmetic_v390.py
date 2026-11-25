@@ -208,7 +208,8 @@ def test_large_bounded_cube_metadata_roundtrip_and_legacy_project_default(tmp_pa
     assert incoming.volume.provenance == a.volume.provenance
     project = tmp_path/'legacy.lele'
     save_project(project, state_for(a))
-    with zipfile.ZipFile(project) as archive:
+    from project_archive_v1 import legacy_archive
+    with legacy_archive(project) as archive:
         payload = {name: archive.read(name) for name in archive.namelist()}
     manifest = json.loads(payload['manifest.json'])
     for node in manifest['nodes']:
