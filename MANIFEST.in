@@ -3,6 +3,7 @@ include requirements.txt launch_app.py windows_bootstrap.py
 include *.bat .gitignore .gitattributes
 recursive-include examples *
 recursive-include tests *.py
+include tests/fixtures/project_v440.lele
 recursive-include docs *.md *.txt *.patch
 recursive-include tools/performance *.py
 recursive-include verification/v3.5.1 *.json *.xml
@@ -22,4 +23,6 @@ recursive-include verification/v4.2.2 *.md *.xml
 recursive-include verification/v4.2.3 *.md *.json *.xml *.POSCAR
 recursive-include verification/v4.3.0 *.md *.xml
 recursive-include verification/v4.3.1 *.md *.xml *.json
+recursive-include verification/v4.4.0 *.md *.xml
+recursive-include verification/v4.5.0 *.md *.xml
 recursive-include verification/scientific LICENSE *.md *.json *.py *.xyz *.xsf

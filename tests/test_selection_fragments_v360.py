@@ -108,7 +108,7 @@ def test_selection_model_mixed_sites_sorted_ids_and_unwrapped_direct_coordinates
     assert text(model, 0, 'Direct X') == '1.20000000'
     assert text(model, 0, 'Direct Y') == '-0.20000000'
     assert float(text(model, 0, 'Cartesian Z')) == pytest.approx(2.8)
-    assert 'Fixed X' not in model.headers
+    assert 'Free X' not in model.headers
 
 
 def test_selection_fixed_flags_keep_unknown_and_axis_basis_explicit(app):
@@ -117,11 +117,11 @@ def test_selection_fixed_flags_keep_unknown_and_axis_basis_explicit(app):
                   fixed_axes_basis='cartesian')
     model = SelectionTableModel()
     model.set_frame(f, [0, 1, 2])
-    assert [text(model, 0, f'Fixed {axis}') for axis in 'XYZ'] == ['T', 'F', 'T']
-    assert text(model, 1, 'Fixed X') == 'F'
-    assert text(model, 2, 'Fixed Z') == '—'
-    tooltip = model.headerData(model.headers.index('Fixed X'), Qt.Orientation.Horizontal, Qt.ItemDataRole.ToolTipRole)
-    assert 'T = fixed' in tooltip and 'cartesian' in tooltip
+    assert [text(model, 0, f'Free {axis}') for axis in 'XYZ'] == ['F', 'T', 'F']
+    assert text(model, 1, 'Free X') == 'T'
+    assert text(model, 2, 'Free Z') == '—'
+    tooltip = model.headerData(model.headers.index('Free X'), Qt.Orientation.Horizontal, Qt.ItemDataRole.ToolTipRole)
+    assert 'F = fixed' in tooltip and 'cartesian' in tooltip
     assert 'Direct X' not in model.headers
 
 
@@ -130,10 +130,10 @@ def test_legacy_selective_dynamics_and_invalid_fixed_arrays(app):
     f.info['vasp_fixed_axes'] = [[True, False, False]] * 3
     model = SelectionTableModel()
     model.set_frame(f, [1])
-    assert model.fixed_basis == 'direct' and text(model, 0, 'Fixed X') == 'T'
+    assert model.fixed_basis == 'direct' and text(model, 0, 'Free X') == 'F'
     f.info['vasp_fixed_axes'] = [[True, False, False]]
     model.set_frame(f, [1])
-    assert 'Fixed X' not in model.headers
+    assert 'Free X' not in model.headers
 
 
 def test_panel_plain_text_tracks_periodic_and_fixed_fields(app):
@@ -147,14 +147,14 @@ def test_panel_plain_text_tracks_periodic_and_fixed_fields(app):
         panel.set_frame(f, [2, 0])
         assert panel.summary_label.text() == 'Atoms 1, 3'
         assert 'Direct X' in panel.text.toPlainText()
-        assert 'Fixed X' in panel.text.toPlainText()
+        assert 'Free X' in panel.text.toPlainText()
         panel.set_frame(frame(3), [0])
         assert 'Direct X' not in panel.model.headers
         assert 'Direct X' not in panel.text.toPlainText()
-        assert 'Fixed X' not in panel.text.toPlainText()
+        assert 'Free X' not in panel.text.toPlainText()
         panel.set_frame(f, [2])
         assert 'Direct X' in panel.text.toPlainText()
-        assert 'Fixed X' in panel.text.toPlainText()
+        assert 'Free X' in panel.text.toPlainText()
         panel.set_frame(None, [])
         assert panel.model.rowCount() == 0 and panel.summary_label.text() == 'No atoms selected'
         assert panel.text.toPlainText() == ''
@@ -168,7 +168,7 @@ def test_panel_nonaxis_constraints_are_notes_not_fake_fixed_flags(app):
     panel = SelectionPanel()
     try:
         panel.set_frame(f, [0])
-        assert 'Fixed X' not in panel.model.headers
+        assert 'Free X' not in panel.model.headers
         assert 'Bond 1–2' in panel.note_label.text()
     finally:
         panel.close()
@@ -220,7 +220,7 @@ def test_empty_selection_does_not_scan_all_fixed_atom_flags(app):
     model = SelectionTableModel()
     model.set_frame(f, [])
     assert model.rowCount() == 0
-    assert 'Fixed X' in model.headers
+    assert 'Free X' in model.headers
 
 
 def test_refreshing_coordinates_keeps_plain_text_horizontal_scroll(app):

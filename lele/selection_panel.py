@@ -12,6 +12,8 @@ from PySide6.QtWidgets import (
 
 from .saved_fragments import fragments, index_summary, selected_indices
 
+AXIS_LEGEND = 'T = free, F = fixed, — = unknown.'
+
 
 def _fixed_axes(frame):
     if frame is None:
@@ -80,7 +82,7 @@ class SelectionTableModel(QAbstractTableModel):
             headers.extend(['Direct X', 'Direct Y', 'Direct Z'])
             kinds.extend(('direct', i) for i in range(3))
         if fixed_axes is not None:
-            headers.extend(['Fixed X', 'Fixed Y', 'Fixed Z'])
+            headers.extend(['Free X', 'Free Y', 'Free Z'])
             kinds.extend(('fixed', i) for i in range(3))
         reset = len(rows) != len(self.rows) or headers != self.headers
         if reset:
@@ -113,7 +115,7 @@ class SelectionTableModel(QAbstractTableModel):
                 if kind == 'direct':
                     return 'Fractional coordinates along the cell vectors; values are not wrapped into 0…1.'
                 if kind == 'fixed':
-                    return f'T = fixed; F = free; — = unknown. Axis basis: {self.fixed_basis}.'
+                    return f'{AXIS_LEGEND} Axis basis: {self.fixed_basis}.'
                 if kind == 'occupancy':
                     return 'Occupancy of this element at the selected site, in percent.'
         return None
@@ -153,7 +155,7 @@ class SelectionTableModel(QAbstractTableModel):
                 value = values[axis] if len(values) == 3 else None
             except (IndexError, TypeError):
                 value = None
-            return '—' if value is None else ('T' if bool(value) else 'F')
+            return '—' if value is None else ('F' if value else 'T')
         return None
 
 
@@ -230,7 +232,7 @@ class SelectionPanel(QWidget):
         self.text.setPlaceholderText('No atoms selected')
         self.text.setToolTip('Select text and press Ctrl+C to copy. Cartesian coordinates are in Å.\n'
                              'Direct coordinates are fractional and are not wrapped into 0…1.\n'
-                             'Occ. % is site occupancy. Fixed: T = fixed, F = free, — = unknown.')
+                             f'Occ. % is site occupancy. {AXIS_LEGEND}')
         layout.addWidget(self.text, 1)
         self.note_label = QLabel()
         self.note_label.setWordWrap(True)
@@ -260,7 +262,7 @@ class SelectionPanel(QWidget):
         notes = []
         if self.model.fixed_axes is not None:
             basis = 'Direct' if self.model.fixed_basis == 'direct' else 'Cartesian'
-            notes.append(f'Fixed: T = fixed, F = free ({basis} axes).')
+            notes.append(f'{basis} axes. {AXIS_LEGEND}')
         if frame is not None and any(frame.pbc) and self.model.direct is None:
             notes.append('Direct coordinates unavailable: the cell is singular.')
         if frame is not None:

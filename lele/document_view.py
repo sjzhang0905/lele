@@ -15,6 +15,7 @@ class DocumentView:
     preset: str
     camera: object = None
     frame_index: int = 0
+    field_orbital: tuple | None = None
 
 
 class DocumentViewActions:

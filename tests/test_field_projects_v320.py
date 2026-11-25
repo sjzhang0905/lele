@@ -44,7 +44,8 @@ def test_pre_v320_project_gets_compatible_field_defaults(tmp_path):
     doc = field_document()
     path = tmp_path/'new.lele'
     save_project(path, state_for(doc))
-    with zipfile.ZipFile(path) as source:
+    from project_archive_v1 import legacy_archive
+    with legacy_archive(path) as source:
         payload = {name: source.read(name) for name in source.namelist()}
     manifest = json.loads(payload['manifest.json'])
     for node in manifest['nodes']:

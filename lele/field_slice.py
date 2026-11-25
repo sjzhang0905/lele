@@ -7,6 +7,25 @@ from dataclasses import dataclass
 import numpy as np
 
 
+def contour_levels(values, count, limits=None):
+    low, high = float(np.min(values)), float(np.max(values))
+    if limits is not None:
+        low, high = max(low, limits[0]), min(high, limits[1])
+    if low >= high:
+        return np.empty(0)
+    fractions = np.arange(1, count + 1) / (count + 1)
+    levels = np.unique((1 - fractions) * low + fractions * high)
+    return levels[(levels > low) & (levels < high)]
+
+
+def contour_labels(levels):
+    for precision in range(4, 18):
+        labels = [format(value, f'.{precision}g') for value in levels]
+        if len(set(labels)) == len(labels):
+            break
+    return dict(zip(levels, labels))
+
+
 @dataclass
 class FieldSlice:
     values: np.ndarray

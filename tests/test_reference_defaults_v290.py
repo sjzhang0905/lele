@@ -143,7 +143,8 @@ def test_reference_choices_roundtrip_and_old_project_keeps_legacy_bonds(tmp_path
     assert restored['options'].space_filling_radii == 'Ionic'
     assert restored['options'].space_filling_scale == 1.2
     assert visible_bonds(restored['document'].frames[0]) == [(0, 1)]
-    with zipfile.ZipFile(path) as source:
+    from project_archive_v1 import legacy_archive
+    with legacy_archive(path) as source:
         files = {name: source.read(name) for name in source.namelist()}
     manifest = json.loads(files['manifest.json'])
     for node in manifest['nodes']:

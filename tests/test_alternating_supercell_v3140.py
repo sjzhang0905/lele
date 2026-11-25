@@ -250,7 +250,8 @@ def test_older_project_without_origin_policy_retains_wrapped_boundary_display(tm
                  current_document=0, selection=[])
     path = tmp_path/'new.lele'
     save_project(path, state)
-    with zipfile.ZipFile(path) as archive:
+    from project_archive_v1 import legacy_archive
+    with legacy_archive(path) as archive:
         payload = {name: archive.read(name) for name in archive.namelist()}
     manifest = json.loads(payload['manifest.json'])
     changed = 0

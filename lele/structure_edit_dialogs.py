@@ -5,6 +5,31 @@ from .site_occupancy import description
 from .vacuum import slab_vacuum
 
 
+def choose_poscar_grouping(parent):
+    message = QMessageBox(QMessageBox.Icon.Question, 'POSCAR element grouping',
+        'How should the original atoms be grouped?\n\n'
+        'Merge all combines every occurrence of an element in order of first appearance.\n'
+        'Merge adjacent combines only consecutive atoms of the same element.\n\n'
+        'Added atoms follow in both modes. Only consecutive added atoms of the same element share a block.',
+        parent=parent)
+    merge_all = message.addButton('Merge all', QMessageBox.ButtonRole.AcceptRole)
+    adjacent = message.addButton('Merge adjacent', QMessageBox.ButtonRole.ActionRole)
+    cancel = message.addButton(QMessageBox.StandardButton.Cancel)
+    message.setDefaultButton(adjacent)
+    message.setEscapeButton(cancel)
+    try:
+        message.exec()
+        if getattr(message, '_lele_context_rejection', '') or getattr(message, '_lele_wait_aborted', False):
+            return None
+        if message.clickedButton() is merge_all:
+            return True
+        if message.clickedButton() is adjacent:
+            return False
+        return None
+    finally:
+        message.deleteLater()
+
+
 def confirm_maximum_occupancy_export(parent):
     message=QMessageBox(QMessageBox.Icon.Question,'Mixed / partial occupancy export',
         'This format cannot preserve mixed element occupancies or vacancy fractions.\n'

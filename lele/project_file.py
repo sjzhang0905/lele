@@ -1,4 +1,4 @@
-"""Portable .lele snapshots: JSON object graph and numeric NPY arrays in ZIP.
+"""Portable UTF-8 JSON snapshots with support for older ZIP/NPY projects.
 
 Only explicitly registered LELE data classes can be reconstructed. No Python
 pickle, executable objects, arbitrary module imports or file extraction is used.
@@ -13,10 +13,11 @@ import tempfile
 import zipfile
 import numpy as np
 from . import __version__
-from .output_text import load_progress,check_load_cancelled,progress_items
+from .output_text import load_progress,check_load_cancelled
+from .project_text import read_project_text, write_project_text
 
 FORMAT = 'LELE_PROJECT'
-SCHEMA = 1
+SCHEMA = 2
 MODULES = ('core', 'render_options', 'atom_appearance', 'calculation_results',
     'vasp_results', 'orca_scan', 'orca_neb', 'orca_goat', 'orca_soc', 'gaussian_properties',
     'trajectory_analysis', 'selection_geometry', 'periodic_geometry','cp2k_results','qe_results','qe_phonons',
@@ -42,7 +43,7 @@ class Encoder:
         self.nodes = [];self.arrays = {};self.memo = {};self.types = data_types()
         self.progress=load_progress('Project: encoding data')
 
-    def encode(self, value):
+    def encode(self, value, field_name=None):
         if len(self.nodes)%512==0:self.progress(len(self.nodes));check_load_cancelled()
         if isinstance(value, np.generic):value = value.item()
         if value is None or isinstance(value, (bool, str, int)):return value
@@ -55,16 +56,17 @@ class Encoder:
         index = len(self.nodes);self.memo[identity] = index;self.nodes.append({})
         if isinstance(value, np.ndarray):
             if value.dtype.hasobject:raise ValueError('Project arrays must not contain Python objects.')
-            name = f'arrays/{len(self.arrays):06d}.npy';self.arrays[name] = value
-            node = dict(kind='array', path=name)
-        elif isinstance(value, dict):node = dict(kind='dict', items=[[self.encode(k), self.encode(v)] for k, v in value.items()])
+            self.arrays[index] = value
+            node = dict(kind='array')
+            if isinstance(field_name, str):node['name'] = field_name
+        elif isinstance(value, dict):node = dict(kind='dict', items=[[self.encode(k), self.encode(v, k)] for k, v in value.items()])
         elif isinstance(value, (list, tuple, set, frozenset)):
             node = dict(kind=type(value).__name__, items=[self.encode(v) for v in value])
         elif is_dataclass(value):
             name = type(value).__module__+':'+type(value).__name__
             if self.types.get(name) is not type(value):raise ValueError('Unsupported project data class: '+name)
             allowed = {f.name for f in fields(value)} | extra_fields(type(value))
-            attributes = {key:self.encode(v) for key, v in vars(value).items() if key in allowed}
+            attributes = {key:self.encode(v, key) for key, v in vars(value).items() if key in allowed}
             unknown = set(vars(value))-allowed
             if unknown:raise ValueError(f'Unsupported fields for {name}: '+', '.join(sorted(unknown)))
             node = dict(kind='object', type=name, attributes=attributes)
@@ -74,8 +76,8 @@ class Encoder:
 
 
 class Decoder:
-    def __init__(self, nodes, archive):
-        self.nodes = nodes;self.archive = archive;self.memo = {};self.pending = set();self.objects = []
+    def __init__(self, nodes, read_array):
+        self.nodes = nodes;self.read_array = read_array;self.memo = {};self.pending = set();self.objects = []
         self.types = data_types()
         self.progress=load_progress('Project: decoding data',len(nodes))
 
@@ -96,10 +98,7 @@ class Decoder:
         self.pending.add(index)
         node = self.nodes[index];kind = node['kind']
         if kind == 'array':
-            name = node['path']
-            if not name.startswith('arrays/') or not name.endswith('.npy'):raise ValueError('Invalid project array path.')
-            with self.archive.open(name) as stream:result = np.load(stream, allow_pickle=False)
-            if not isinstance(result, np.ndarray) or result.dtype.hasobject:raise ValueError('Invalid project array.')
+            result = self.read_array(index)
         elif kind == 'object':
             cls = self.types.get(node['type'])
             if cls is None:raise ValueError('Unknown project data class: '+str(node['type']))
@@ -151,28 +150,51 @@ class Decoder:
 
 def save_project(path, state):
     path = Path(path);encoder = Encoder();root = encoder.encode(state)
-    manifest = dict(format=FORMAT, schema=SCHEMA, application_version=__version__, root=root, nodes=encoder.nodes)
+    header = dict(format=FORMAT, schema=SCHEMA, application_version=__version__, root=root)
     path.parent.mkdir(parents=True, exist_ok=True)
     descriptor, temporary = tempfile.mkstemp(dir=path.parent, prefix='.'+path.name+'.', suffix='.tmp')
-    os.close(descriptor)
     try:
-        with zipfile.ZipFile(temporary, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=6, allowZip64=True) as archive:
-            archive.writestr('manifest.json', json.dumps(manifest, ensure_ascii=False, allow_nan=False))
-            for name, array in progress_items(encoder.arrays.items(),'Project: writing numeric arrays'):
-                with archive.open(name, 'w', force_zip64=True) as stream:np.save(stream, array, allow_pickle=False)
+        with os.fdopen(descriptor, 'w', encoding='utf-8', newline='\n') as stream:
+            write_project_text(stream, header, encoder.nodes, encoder.arrays)
         check_load_cancelled();os.replace(temporary, path)
     finally:Path(temporary).unlink(missing_ok=True)
     return path
 
 
+def _load_archive(path):
+    with zipfile.ZipFile(path) as archive:
+        manifest = json.loads(archive.read('manifest.json'))
+        if manifest.get('format') != FORMAT or manifest.get('schema') != 1:
+            raise ValueError('Unsupported LELE project format/version.')
+        nodes = manifest['nodes']
+
+        def read_array(index):
+            name = nodes[index]['path']
+            if not name.startswith('arrays/') or not name.endswith('.npy'):
+                raise ValueError('Invalid project array path.')
+            with archive.open(name) as stream:
+                result = np.load(stream, allow_pickle=False)
+            if not isinstance(result, np.ndarray) or result.dtype.hasobject:
+                raise ValueError('Invalid project array.')
+            return result
+
+        decoder = Decoder(nodes, read_array)
+        return decoder.decode(manifest['root']), decoder
+
+
 def load_project(path):
+    path = Path(path)
     try:
-        with zipfile.ZipFile(path) as archive:
-            manifest = json.loads(archive.read('manifest.json'))
-            if manifest.get('format') != FORMAT or manifest.get('schema') != SCHEMA:
-                raise ValueError('Unsupported LELE project format/version.')
-            decoder = Decoder(manifest['nodes'], archive);state = decoder.decode(manifest['root'])
-            decoder.validate_objects()
+        with path.open('rb') as source:
+            legacy = source.read(2) == b'PK'
+        if legacy:
+            state, decoder = _load_archive(path)
+        else:
+            with path.open(encoding='utf-8-sig') as stream:
+                root, nodes, arrays = read_project_text(stream, path.stat().st_size, FORMAT, SCHEMA)
+            decoder = Decoder(nodes, arrays.__getitem__)
+            state = decoder.decode(root)
+        decoder.validate_objects()
         from .vasp_results import normalize_document_e0
         from .orca_scan import refresh_scan_display_labels
         for entry in state.get('documents', []):
@@ -184,7 +206,7 @@ def load_project(path):
             for frame in frames:frame.info.setdefault('bond_model', entry['options'].bond_model)
         validate_state(state)
         return state
-    except (KeyError, TypeError, IndexError, AttributeError, zipfile.BadZipFile, json.JSONDecodeError) as exc:
+    except (KeyError, TypeError, IndexError, AttributeError, OverflowError, zipfile.BadZipFile, json.JSONDecodeError) as exc:
         raise ValueError('Invalid or incomplete LELE project: '+str(exc)) from exc
 
 

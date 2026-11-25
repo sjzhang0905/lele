@@ -101,7 +101,7 @@ def test_edit_buttons_and_analysis_entry_points(gui):
     assert all(files.isAncestorOf(button) for button in curve_buttons)
     analysis = w.analysis_menu.actions()
     assert all(action in analysis for action in
-               (w.vibration_analysis_action, w.orbital_action, w.neb_action, w.goat_action, w.soc_action))
+               (w.vibration_analysis_action, w.orbital_action, w.goat_action, w.soc_action))
     assert all('Energy /' not in action.text() for action in analysis)
     assert all(not any(term in b.text() for term in ('Find vibrations', 'HOMO', 'NEB', 'GOAT', 'SOC'))
                for b in files.findChildren(QAbstractButton))

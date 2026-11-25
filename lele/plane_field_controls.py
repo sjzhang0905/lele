@@ -4,6 +4,16 @@ from PySide6.QtWidgets import (QWidget,QFormLayout,QHBoxLayout,QCheckBox,
                               QComboBox,QDoubleSpinBox,QSpinBox,QLabel)
 from .panel_controls import PanelComboBox
 from .numeric_controls import IsovalueSpinBox
+from .crystal_settings import DEFAULT_CONTOUR_COUNT, MAX_CONTOUR_COUNT
+
+
+def contour_count_spin():
+    spin = QSpinBox()
+    spin.setRange(1, MAX_CONTOUR_COUNT)
+    spin.setValue(DEFAULT_CONTOUR_COUNT)
+    spin.setKeyboardTracking(False)
+    spin.setToolTip('Number of equally spaced field values inside the visible slice range.')
+    return spin
 
 
 class SliceRangeSpinBox(IsovalueSpinBox):
@@ -32,7 +42,12 @@ class PlaneFieldControls(QWidget):
         self.minimum.setValue(-.1);self.maximum.setValue(.1)
         form.addRow('Slice min',self.minimum);form.addRow('Slice max',self.maximum)
         self.contours=QCheckBox('Slice contour lines');self.legend=QCheckBox('Slice color scale');self.legend.setChecked(True)
-        form.addRow(self.contours);form.addRow(self.legend)
+        form.addRow(self.contours)
+        self.contour_count = contour_count_spin()
+        self.contour_labels = QCheckBox('Show contour values')
+        form.addRow('Contour levels', self.contour_count)
+        form.addRow(self.contour_labels)
+        form.addRow(self.legend)
         self.resolution=QSpinBox();self.resolution.setRange(16,1024);self.resolution.setValue(256);self.resolution.setKeyboardTracking(False)
         self.resolution.setFixedWidth(90)
         self.resolution.setToolTip('Maximum samples per in-plane axis. Original field values are retained.')
@@ -44,7 +59,8 @@ class PlaneFieldControls(QWidget):
             self.opacity.setFixedWidth(90)
             self.opacity.setToolTip('0 = invisible, 1 = opaque. Applies to the plane and its scalar-field slice.')
             form.addRow('Plane opacity',self.opacity);self.opacity.valueChanged.connect(self._edited)
-        for check in (self.field,self.fixed,self.contours,self.legend):check.toggled.connect(self._edited)
+        for check in (self.field,self.fixed,self.contours,self.contour_labels,self.legend):check.toggled.connect(self._edited)
+        self.contour_count.valueChanged.connect(self._edited)
         self.palette.currentTextChanged.connect(self._edited)
         self.minimum.valueChanged.connect(self._edited);self.maximum.valueChanged.connect(self._edited)
         self.resolution.valueChanged.connect(self._edited)
@@ -54,6 +70,7 @@ class PlaneFieldControls(QWidget):
         values=dict(self._values,field=self.field.isChecked(),field_palette=self.palette.currentText(),
             field_range=([self.minimum.value(),self.maximum.value()] if self.fixed.isChecked() else None),
             field_contours=self.contours.isChecked(),field_legend=self.legend.isChecked(),
+            field_contour_count=self.contour_count.value(), field_contour_labels=self.contour_labels.isChecked(),
             field_resolution=self.resolution.value())
         if self.opacity is not None:values['opacity']=self.opacity.value()
         return values
@@ -65,12 +82,16 @@ class PlaneFieldControls(QWidget):
         limits=values.get('field_range');self.fixed.setChecked(limits is not None)
         if limits is not None:self.minimum.setValue(limits[0]);self.maximum.setValue(limits[1])
         self.contours.setChecked(values.get('field_contours',False));self.legend.setChecked(values.get('field_legend',True))
+        self.contour_count.setValue(values.get('field_contour_count', DEFAULT_CONTOUR_COUNT))
+        self.contour_labels.setChecked(values.get('field_contour_labels', False))
         self.resolution.setValue(values.get('field_resolution',256))
         if self.opacity is not None:self.opacity.setValue(values.get('opacity',.22))
         self._loading=False;self._update_enabled()
 
     def _update_enabled(self):
         for widget in (self.palette,self.fixed,self.contours,self.legend,self.resolution):widget.setEnabled(self.field.isChecked())
+        for widget in (self.contour_count, self.contour_labels):
+            widget.setEnabled(self.field.isChecked() and self.contours.isChecked())
         self.minimum.setEnabled(self.field.isChecked() and self.fixed.isChecked())
         self.maximum.setEnabled(self.field.isChecked() and self.fixed.isChecked())
 

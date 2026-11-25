@@ -132,7 +132,7 @@ def test_energy_only_tree_exposes_every_step_and_selection_never_creates_geometr
         assert f'Selected energy step: {k+1}' in w.results_only_info.toPlainText()
         assert f'{doc.calculation_results.steps[k].energy_ev/Hartree:.12f} Eh' in w.results_only_info.toPlainText()
         assert 'kcal/mol' in item.text(0)
-    assert not w.geometry_curve_action.isEnabled() and not w.trajectory_align_check.isEnabled()
+    assert not w.geometry_curve_button.isEnabled() and not w.trajectory_align_check.isEnabled()
 
 
 def test_unmatched_energy_in_file_with_final_geometry_does_not_display_that_geometry(gui):

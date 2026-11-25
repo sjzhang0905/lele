@@ -113,7 +113,8 @@ def test_restore_pre411_lights_only_upgrades_the_complete_old_default(tmp_path, 
     # A current project may deliberately store the exact previous light values.
     assert light_settings(load_project(path)['documents'][0]['options']) == light_settings(old)
     legacy = tmp_path/'old.lele'
-    with ZipFile(path) as saved, ZipFile(legacy, 'w') as output:
+    from project_archive_v1 import legacy_archive
+    with legacy_archive(path) as saved, ZipFile(legacy, 'w') as output:
         for name in saved.namelist():
             data = saved.read(name)
             if name == 'manifest.json':

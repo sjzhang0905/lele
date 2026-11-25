@@ -28,10 +28,19 @@ def test_plane_polygons_cover_actual_shifted_or_legacy_box(preserve):
     with patch.object(draw,'_render_display_plane',return_value=None) as capture:
         draw.set_scene(frame)
     assert len(capture.call_args_list)==2
-    for call in capture.call_args_list:
-        polygon=np.asarray(call.args[0])@np.linalg.inv(frame.cell)
-        np.testing.assert_allclose(polygon.min(axis=0),[-1/3 if preserve else 0.,0.,.4],atol=1.e-10)
-        np.testing.assert_allclose(polygon.max(axis=0),[2/3 if preserve else 1.,1.,.4],atol=1.e-10)
+    planes={call.args[3]:np.asarray(call.args[0]) for call in capture.call_args_list}
+    section=planes['HKL (0 0 1)']
+    fractional=section@np.linalg.inv(frame.cell)
+    np.testing.assert_allclose(fractional.min(axis=0),[-1/3 if preserve else 0.,0.,.4],atol=1.e-10)
+    np.testing.assert_allclose(fractional.max(axis=0),[2/3 if preserve else 1.,1.,.4],atol=1.e-10)
+    rectangle=planes['Fitted plane']
+    from test_plane_fields_v370 import assert_covers_projection
+    assert_covers_projection(rectangle,draw.fitted_plane,section)
+    # The margin is symmetric about the shifted display box in its plane.
+    box_center=np.array([1/6 if preserve else .5,.5,.5])@frame.cell
+    normal=draw.fitted_plane.normal
+    delta=rectangle.mean(axis=0)-box_center
+    np.testing.assert_allclose(delta-(delta@normal)*normal,0.,atol=1.e-10)
 
 
 @pytest.mark.parametrize('preserve', [True,False])

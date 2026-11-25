@@ -42,12 +42,11 @@ def test_gui_export_asks_and_writes_expected_group_order(gui, tmp_path, mode, me
     destination = tmp_path / 'sample'
     with patch('lele.app.QInputDialog.getItem', return_value=(f'POSCAR {mode} (POSCAR)', True)), \
          patch('lele.app.QFileDialog.getSaveFileName', return_value=(str(destination), '')) as picker, \
-         patch('lele.app.QMessageBox.question', return_value=(QMessageBox.StandardButton.Yes if merge else QMessageBox.StandardButton.No)) as question, \
+         patch('lele.structure_edit_dialogs.choose_poscar_grouping', return_value=merge) as question, \
          patch('lele.app.QMessageBox.warning') as warning:
         w.export_dialog()
     warning.assert_not_called()
-    question.assert_called_once()
-    assert question.call_args.args[1] == 'Merge same elements?'
+    question.assert_called_once_with(w)
     assert Path(picker.call_args.args[2]).name.startswith('POSCAR')
     path = tmp_path / 'POSCARsample'
     restored = load_document(path).frames[0]
@@ -66,10 +65,12 @@ def test_cancel_after_normalized_overwrite_confirmation_preserves_file(gui, tmp_
     output.write_text('existing contents')
     with patch('lele.app.QInputDialog.getItem', return_value=('POSCAR Direct (POSCAR)', True)), \
          patch('lele.app.QFileDialog.getSaveFileName', return_value=(str(tmp_path / 'sample'), '')), \
-         patch('lele.app.QMessageBox.question', side_effect=[QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.Cancel]) as question, \
+         patch('lele.app.QMessageBox.question', return_value=QMessageBox.StandardButton.Yes) as question, \
+         patch('lele.structure_edit_dialogs.choose_poscar_grouping', return_value=None) as grouping, \
          patch('lele.formats.export_frame') as export:
         gui.window.export_dialog()
-    assert [call.args[1] for call in question.call_args_list] == ['Replace file?', 'Merge same elements?']
+    assert [call.args[1] for call in question.call_args_list] == ['Replace file?']
+    grouping.assert_called_once_with(gui.window)
     export.assert_not_called()
     assert output.read_text() == 'existing contents'
 
@@ -84,3 +85,16 @@ def test_declining_normalized_overwrite_does_not_open_merge_prompt(gui, tmp_path
         gui.window.export_dialog()
     question.assert_called_once()
     assert output.read_text() == 'existing contents'
+
+
+@pytest.mark.parametrize('caption,expected', [('Merge all', True), ('Merge adjacent', False), ('Cancel', None)])
+def test_named_grouping_buttons(gui, caption, expected):
+    from PySide6.QtCore import QTimer
+    from lele.structure_edit_dialogs import choose_poscar_grouping
+
+    def click_button():
+        message = next(box for box in gui.window.findChildren(QMessageBox) if box.isVisible())
+        next(button for button in message.buttons() if button.text().replace('&', '') == caption).click()
+
+    QTimer.singleShot(0, click_button)
+    assert choose_poscar_grouping(gui.window) is expected

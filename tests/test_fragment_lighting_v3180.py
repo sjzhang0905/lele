@@ -14,7 +14,7 @@ from lele.style_presets import snapshot, validate_preset
 from test_periodic_fragment_ui_v171 import gui
 
 
-def test_mirror_menu_flips_handedness_in_place_and_undoes(gui):
+def test_mirror_button_flips_handedness_in_place_and_undoes(gui):
     w = gui.window
     frame = Frame(['C', 'H', 'F', 'Cl', 'Ni'],
                   [[3, 1, 0], [4, 1, 0], [3, 2, 0], [3, 1, 1], [8, 1, 0]],
@@ -22,9 +22,9 @@ def test_mirror_menu_flips_handedness_in_place_and_undoes(gui):
     gui.attach(frame)
     gui.select([0, 1, 2, 3])
     before = frame.positions.copy()
-    assert w.mirror_action.isEnabled()
+    assert w.mirror_btn.isEnabled()
     with patch('lele.app.QDialog.exec', return_value=QDialog.DialogCode.Accepted):
-        w.mirror_action.trigger()
+        w.mirror_btn.click()
     after = frame.positions
     np.testing.assert_array_equal(after[:4, 0], 2 * before[:4, 0].mean() - before[:4, 0])
     np.testing.assert_array_equal(after[:, 1:], before[:, 1:])

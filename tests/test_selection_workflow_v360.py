@@ -49,8 +49,8 @@ def test_selection_reacts_to_coordinates_occupancy_fixed_flags_and_undo(gui):
     model=w.selection_panel.model
     assert w.selection_panel.summary_label.text()=='Atoms 1, 2, 4'
     assert [cell(model,row,'Index') for row in range(3)]==['1','2','4']
-    assert [cell(model,0,'Fixed '+axis) for axis in 'XYZ']==['T','F','F']
-    assert model.headerData(model.headers.index('Fixed X'),Qt.Orientation.Horizontal,
+    assert [cell(model,0,'Free '+axis) for axis in 'XYZ']==['F','T','T']
+    assert model.headerData(model.headers.index('Free X'),Qt.Orientation.Horizontal,
                             Qt.ItemDataRole.ToolTipRole).endswith('cartesian.')
     w.atom_table.item(1,1).setText('6.25')
     assert cell(model,1,'Cartesian X')=='6.25000000'
@@ -65,7 +65,7 @@ def test_selection_reacts_to_coordinates_occupancy_fixed_flags_and_undo(gui):
     w.undo_edit()
     assert cell(model,1,'Cartesian X')=='1.00000000'
     gui.select([2])
-    assert [cell(model,0,'Fixed '+axis) for axis in 'XYZ']==['—']*3
+    assert [cell(model,0,'Free '+axis) for axis in 'XYZ']==['—']*3
     w.clear_selection();assert model.rowCount()==0
     assert w.selection_panel.summary_label.text()=='No atoms selected'
 
@@ -136,7 +136,7 @@ def test_fragment_and_selection_are_isolated_when_switching_documents_and_frames
     assert w.current_doc==1 and w.selection==[]
     assert w.fragment_panel.list_widget.count()==0 and w.selection_panel.model.rowCount()==0
     assert 'Direct X' not in w.selection_panel.model.headers
-    assert 'Fixed X' not in w.selection_panel.model.headers
+    assert 'Free X' not in w.selection_panel.model.headers
     w.change_frame(0,switch_doc=0)
     assert fragments(w.frame)==[{'name':'fragment1','indices':[1,3]}]
     assert w.fragment_panel.list_widget.count()==1 and w.selection==[]
@@ -158,7 +158,7 @@ def test_fragment_project_roundtrip_restores_order_selection_and_fixed_state(gui
     assert w.selection==[0,1,2]
     assert w.selection_panel.summary_label.text()=='Atoms 1-3'
     assert w.fragment_panel.list_widget.count()==1
-    assert [cell(w.selection_panel.model,0,'Fixed '+axis) for axis in 'XYZ']==['F']*3
+    assert [cell(w.selection_panel.model,0,'Free '+axis) for axis in 'XYZ']==['T']*3
     assert_coordinates(w)
 
 

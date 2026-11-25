@@ -84,13 +84,14 @@ Cartesian
 
 
 @pytest.mark.parametrize('swap', [False,True])
-def test_unedited_blocks_survive_swapping_two_other_atoms(tmp_path,swap):
+def test_adjacent_export_merges_original_blocks_after_swapping_two_other_atoms(tmp_path,swap):
     path=tmp_path/'POSCAR';path.write_text(POSCAR)
     f=load_document(path).frames[0]
     if swap:reorder_atoms(f,index_order(4,2,3,swap=3))
     out=tmp_path/'edited.POSCAR';export_frame(f,out,'poscar-direct')
     lines=out.read_text().splitlines()
-    assert (lines[5].split(),lines[6].split()) == (['C','C','O'],['1','1','2'])
+    assert f.info['poscar_groups'] == [('C',1),('C',1),('O',2)]
+    assert (lines[5].split(),lines[6].split()) == (['C','O'],['2','2'])
 
 
 @pytest.mark.parametrize('replace_last_atom',[False,True])

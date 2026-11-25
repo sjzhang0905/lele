@@ -20,8 +20,6 @@ class CrystalActions:
         self.crystal_panel.polyhedra.applyRequested.connect(self._apply_polyhedra)
         self.crystal_panel.rules.applyRequested.connect(self._apply_element_pair_rules)
         self.crystal_panel.polyhedra.analyze.clicked.connect(self.show_polyhedron_analysis)
-        self.polyhedron_analysis_action = self._action(self.analysis_menu, 'Coordination / polyhedron analysis…', self.show_polyhedron_analysis)
-        self.polyhedron_analysis_action.setEnabled(False)
         # Keep internal action handles for capability checks; a single menu
         # entry opens all crystal tabs rather than three duplicate entrances.
         self.lattice_planes_action = QAction('Lattice planes / cuts…', self)
@@ -72,7 +70,6 @@ class CrystalActions:
         self.crystal_panel.polyhedra.setEnabled(has_atoms)
         self.crystal_panel.rules.setEnabled(has_atoms)
         self.crystal_action.setEnabled(has_atoms)
-        self.polyhedron_analysis_action.setEnabled(has_atoms)
         self.crystal_panel.rules.info.setText(f'{len(self.render_options.element_pair_rules)} applied rules · B ordinary bonds · P polyhedron coordination')
         self.lattice_planes_action.setEnabled(periodic);self.polyhedra_action.setEnabled(has_atoms)
         self._update_lattice_plane_info()

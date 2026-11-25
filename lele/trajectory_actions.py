@@ -12,10 +12,6 @@ class TrajectoryAnalysisActions:
         self._energy_only_context = None
         self.vibration_analysis_action = self._action(self.analysis_menu,
             'Find vibrations by selected atoms…', self.show_vibration_analysis)
-        self.geometry_curve_action = self._action(self.analysis_menu,
-            'Geometry parameter curves…', self.show_geometry_curves)
-        self.alignment_action = self._action(self.analysis_menu,
-            'Trajectory display alignment…', self.configure_trajectory_alignment)
         row = QHBoxLayout()
         self.trajectory_align_check = QCheckBox('Align trajectory for display')
         self.trajectory_align_check.setToolTip('Align to a reference frame without changing source coordinates. Disable before geometry editing.')
@@ -43,10 +39,10 @@ class TrajectoryAnalysisActions:
     def _refresh_trajectory_controls(self):
         structure = self.frame is not None
         vibr = self.doc is not None and bool(self.doc.vibrations)
-        for widget in (self.geometry_curve_button, self.geometry_curve_action): widget.setEnabled(structure)
+        self.geometry_curve_button.setEnabled(structure)
         self.vibration_analysis_action.setEnabled(vibr)
         enabled = structure and self._active_vibration is None
-        for widget in (self.trajectory_align_check, self.trajectory_align_button, self.alignment_action): widget.setEnabled(enabled)
+        for widget in (self.trajectory_align_check, self.trajectory_align_button): widget.setEnabled(enabled)
         with QSignalBlocker(self.trajectory_align_check): self.trajectory_align_check.setChecked(self._alignment_enabled())
 
     def _prepare_analysis_scene(self):

@@ -134,7 +134,8 @@ def test_size_project_roundtrip_and_old_project_default(tmp_path):
     saved=tmp_path/'size.lele';save_project(saved,state)
     restored=load_project(saved)['documents'][0]['document'].frames[0]
     assert appearance(restored,1).size_scale==1.45
-    with zipfile.ZipFile(saved) as archive:members={name:archive.read(name) for name in archive.namelist()}
+    from project_archive_v1 import legacy_archive
+    with legacy_archive(saved) as archive:members={name:archive.read(name) for name in archive.namelist()}
     manifest=json.loads(members['manifest.json'])
     for node in manifest['nodes']:
         if node.get('type')=='lele.atom_appearance:AtomAppearance':

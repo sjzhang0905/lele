@@ -79,7 +79,8 @@ class ProjectActions:
         if not self.documents:return False
         from .project_file import save_project
         state=self._project_state()
-        try:run_data_task(self,'Saving project',lambda:save_project(path,state))
+        try:run_data_task(self,'Saving project',lambda:save_project(path,state),cancellable=True)
+        except LoadCancelled:return False
         except (ValueError, TypeError, OSError) as exc:
             QMessageBox.warning(self, 'Could not save project', str(exc));return False
         self._project_path = Path(path)
