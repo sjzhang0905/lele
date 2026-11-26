@@ -22,6 +22,7 @@ def has_curve_data(document):
         if any(finite(f.info.get('cartesian_'+key+'_ev_ang')) for f in document.frames for key in ('max_force','rms_force')):return True
     if results is None:return False
     if any(finite(s.energy_ev) for s in results.steps):return True
+    if any(s.kind == 'vtst_dimer' for s in results.stages) and results.steps:return True
     if results.program=='xTB' and document.trajectory_link:
         return any(finite(s.optimizer_gradient_norm) or
                    (s.geometry is not None and finite(s.geometry.info.get('xtb_trajectory_gnorm')))
@@ -42,7 +43,12 @@ def results_text(document):
     results=document.calculation_results
     if results is not None:
         count=sum(finite(s.energy_ev) for s in results.steps)
-        lines.append(f'Energy records: {count}')
+        if document.format_name == 'VTST dimer DIMCAR':
+            rotations = sum(len(s.info['vtst_rotations']) for s in results.steps)
+            summaries = sum('vtst_final_centre' in s.info for s in results.steps)
+            lines.append(f'Translation steps: {len(results.steps)} · Rotation records: {rotations} · Final centre records: {summaries}')
+        else:
+            lines.append(f'Energy records: {count}')
         for job in results.jobs:
             lines.extend(['',f'Job {job.index+1}'+(' · '+job.method if job.method else '')])
             if finite(job.energy_ev):

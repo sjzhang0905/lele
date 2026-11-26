@@ -200,6 +200,10 @@ def _frame(symbols, positions, cell, info):
 
 def _read_outcar_segment(lines, offset, results, *, selected_geometry=None):
     counts, species, symbols, masses, printed_masses, tags = _metadata(lines.metadata)
+    if lines.vtst_dimer:
+        from .vtst_dimer import read_dimer_segment
+        read_dimer_segment(lines, results, counts, species, symbols, tags, last_only=selected_geometry is not None)
+        return
     natoms = sum(counts) or int(tags.get('NIONS') or 0)
     ibrion = tags.get('IBRION')
     frequency = ibrion in (5, 6, 7, 8)

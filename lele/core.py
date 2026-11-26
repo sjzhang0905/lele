@@ -235,6 +235,7 @@ class Document:
     nmr_results: list = field(default_factory=list)
     annotations: list = field(default_factory=list)
     trajectory_link: dict = field(default_factory=dict)
+    cell_reference: dict = field(default_factory=dict)
 
     def __post_init__(self):
         if self.volume is not None and not self.volumes:

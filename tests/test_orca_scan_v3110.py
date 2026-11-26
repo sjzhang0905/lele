@@ -97,12 +97,13 @@ def test_project_roundtrip_preserves_scans(parsed,tmp_path):
 
 
 def test_tree_separates_path_endpoints_and_per_step_histories(parsed):
-    from PySide6.QtWidgets import QApplication,QTreeWidgetItem
+    from PySide6.QtWidgets import QApplication
+    from lele.files_tree import FileItem
     from lele.workflow_ui import populate_tree,sequence_for
     app=QApplication.instance() or QApplication([])
     result,frames,path=parsed;doc=Document(path,'ORCA output',frames,calculation_results=result)
     window=SimpleNamespace(_frame_tree_items={},_series_tree_items={},_vibration_tree_items={},doc=doc)
-    root=QTreeWidgetItem(['scan.out'])
+    root=FileItem(['scan.out'])
     assert populate_tree(window,0,doc,root)
     scan=root.child(0)
     assert 'simultaneous scan path' in scan.text(0)

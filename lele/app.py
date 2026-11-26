@@ -17,7 +17,7 @@ from .settings import read_style_presets, update_style_preset
 from PySide6.QtCore import Qt, QTimer, QSignalBlocker, QStandardPaths, QEvent, QElapsedTimer
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QSplitter, QTreeWidget, QTreeWidgetItem, QLabel,
+    QSplitter, QLabel,
     QSlider, QCheckBox, QDoubleSpinBox, QPushButton, QSpinBox,
     QGroupBox, QFormLayout, QTabWidget, QTableWidget, QTableWidgetItem,
     QScrollArea, QPlainTextEdit, QAbstractItemView, QToolButton, QStyle,
@@ -457,7 +457,8 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         left = QVBoxLayout(files_page)
         left.setContentsMargins(8, 8, 8, 8)
         left.addWidget(QLabel('<b>Files and calculation steps</b>'))
-        self.files_tree = QTreeWidget()
+        from .files_tree import FilesTree
+        self.files_tree = FilesTree()
         self.files_tree.setHeaderHidden(True)
         self.files_tree.setUniformRowHeights(True)
         self.files_tree.currentItemChanged.connect(self._tree_current_changed)
@@ -1101,7 +1102,7 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
 
     def open_dialog(self):
         filenames, _ = QFileDialog.getOpenFileNames(self, 'Open calculation or structure files', '',
-            'All files (*);;XCrySDen structures and scalar grids (*.xsf *.XSF);;CP2K input / restart (*.inp *.restart *.restart.bak-*);;CP2K output (*.out *.log *.xyz *.mol)')
+            'All files (*);;VTST dimer (OUTCAR* DIMCAR* CENTCAR* MODECAR* NEWMODECAR* *.dimcar);;XCrySDen structures and scalar grids (*.xsf *.XSF);;CP2K input / restart (*.inp *.restart *.restart.bak-*);;CP2K output (*.out *.log *.xyz *.mol)')
         self.open_paths(filenames)
 
     def open_paths(self, filenames):
@@ -1172,27 +1173,27 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
     @gui_operation('Preparing file tree')
     def _add_document_tree(self, index, new_doc):
         from .energy_units import display_energy
-        head = QTreeWidgetItem([self._document_heading(new_doc)])
+        from .files_tree import FileItem
+        head = FileItem([self._document_heading(new_doc)])
         head.setToolTip(0, str(new_doc.path))
         head.setData(0, Qt.ItemDataRole.UserRole, (index, max(0, len(new_doc.frames) - 1)))
         self.files_tree.addTopLevelItem(head)
-        if not getattr(self,'_lazy_tree_connected',False):
-            from .workflow_ui import expand_tree_item
-            self.files_tree.itemExpanded.connect(expand_tree_item)
-            self.files_tree.setUniformRowHeights(True)
-            self._lazy_tree_connected=True
         from .workflow_ui import populate_tree, populate_energy_steps
         populate_energy_steps(self, index, new_doc, head)
+        if any(stage.kind == 'vtst_dimer' for stage in getattr(new_doc.calculation_results, 'stages', ())):
+            analysis = FileItem(['VTST dimer convergence…'])
+            analysis.setData(0, Qt.ItemDataRole.UserRole, (index, 'analysis', 'vtst_dimer'))
+            head.addChild(analysis)
         if new_doc.frames and populate_tree(self,index,new_doc,head):return
         if not new_doc.frames and new_doc.neb_runs:
-            group = QTreeWidgetItem(['NEB / NEB-TS paths'])
+            group = FileItem(['NEB / NEB-TS paths'])
             group.setData(0, Qt.ItemDataRole.UserRole, (index, 'analysis', 'neb'))
             head.addChild(group)
         geometry_parent = head
         if new_doc.vibrations and new_doc.frames:
             label = ('Frequency calculation structures' if new_doc.calculation_results is not None
                      and new_doc.calculation_results.program == 'VASP' else 'Geometry / optimization')
-            geometry_parent = QTreeWidgetItem([f'{label} ({len(new_doc.frames)} frames)'])
+            geometry_parent = FileItem([f'{label} ({len(new_doc.frames)} frames)'])
             geometry_parent.setData(0, Qt.ItemDataRole.UserRole, (index, len(new_doc.frames) - 1))
             head.addChild(geometry_parent)
         if len(new_doc.frames) > 1 or (new_doc.frames and new_doc.vibrations):
@@ -1203,14 +1204,14 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         for analysis_index, analysis in enumerate(new_doc.vibrations):
             imaginary = sum(mode.imaginary for mode in analysis.modes)
             title = analysis.purpose or ('Frequencies' if len(new_doc.vibrations) == 1 else f'Frequencies {analysis_index + 1}')
-            group = QTreeWidgetItem([f'{title} ({len(analysis.modes)} modes · {imaginary} imaginary)'])
+            group = FileItem([f'{title} ({len(analysis.modes)} modes · {imaginary} imaginary)'])
             group.setData(0, Qt.ItemDataRole.UserRole, (index, 'frequencies', analysis_index))
             head.addChild(group)
             for mode_index, mode in enumerate(analysis.modes):
                 suffix = ' · imaginary' if mode.imaginary else ''
                 if not mode.can_animate:
                     suffix += ' · no displacement data'
-                item = QTreeWidgetItem([f'{mode.number}   {mode.frequency_cm1:.4f} cm⁻¹{suffix}'])
+                item = FileItem([f'{mode.number}   {mode.frequency_cm1:.4f} cm⁻¹{suffix}'])
                 strength=[]
                 if mode.ir_intensity is not None:strength.append(f'IR {mode.ir_intensity:.3f}')
                 if mode.raman_activity is not None:strength.append(f'Raman {mode.raman_activity:.3f}')
@@ -1252,7 +1253,7 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
             if len(data)>1 and data[1]=='analysis':
                 doc_index,_,kind=data
                 if doc_index!=self.current_doc:self.change_frame(0,switch_doc=doc_index)
-                {'neb':self.show_neb_results,'goat':self.show_goat_results,'soc':self.show_soc_results,'hessian':self.show_hessian_results}[kind]()
+                {'vtst_dimer':self.show_dimer_results, 'neb':self.show_neb_results,'goat':self.show_goat_results,'soc':self.show_soc_results,'hessian':self.show_hessian_results}[kind]()
                 return
             if len(data) >= 3:
                 doc_index, kind, analysis_index, *rest = data
@@ -1614,6 +1615,8 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
             self.short_contacts_button.setText('Short contacts -')
             from .result_availability import results_text
             text=results_text(doc)
+            if doc.cell_reference:
+                text += f'\nUnit cell reference: {Path(doc.cell_reference["path"]).name}'
             if self._energy_only_context is not None:
                 from ase.units import Hartree
                 from .energy_units import program_energy_unit
@@ -1641,6 +1644,8 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
                  ('View: frequency reference geometry' if self._active_vibration is not None
                   else f'Frame: {self.frame_index + 1} of {len(doc.frames)}'),
                  f'Atoms: {len(frame.symbols)}', f'Periodic flags: {frame.pbc}']
+        if doc.cell_reference:
+            lines.append(f'Unit cell reference: {Path(doc.cell_reference["path"]).name}')
         if doc.nmr_results:
             lines.append(f'NMR: {len(doc.nmr_results)} dataset(s) · Analysis → NMR spectrum / shielding table')
         if is_disordered(frame):
@@ -1652,9 +1657,13 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
             data=frame.info['vacuum_adjustment'];lines.append(f'Last vacuum spacing: {data["gap"]:.6f} → {data["new_gap"]:.6f} Å (atomic-plane convention; Cartesian coordinates unchanged)')
         if doc.trajectory_link:
             if 'linked_step' in frame.info:
-                lines.append(f'Calculation step: {frame.info["linked_step"]}')
+                step = frame.info.get('cp2k_reevaluation_output_step', frame.info['linked_step'])
+                lines.append(f'Calculation step: {step}')
             if 'trajectory_frame' in frame.info:
-                lines.append(f'Position trajectory: {Path(doc.trajectory_link["path"]).name}, frame {frame.info["trajectory_frame"]}')
+                number = frame.info['trajectory_frame']
+                step = frame.info.get('trajectory_step')
+                counter = f' · i = {step}' if doc.format_name == 'CP2K output' and step is not None and step != number else ''
+                lines.append(f'Position trajectory: {Path(doc.trajectory_link["path"]).name}, frame {number}{counter}')
             for key, label in (('time_fs', 'Time (fs)'), ('cp2k_md_temperature_K', 'Temperature (K)'),
                                ('cp2k_md_kinetic_hartree', 'Kinetic energy (Eh)'),
                                ('cp2k_md_conserved_hartree', 'Conserved quantity (Eh)'),
@@ -1760,7 +1769,7 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
             f'electrons {parity.split()[0].lower()}  |')
         self.summary_label.setToolTip(
             f'Electron parity: {parity}\nComposition and counts refer to the active source geometry.')
-        count, _ = short_contacts(frame)
+        count, _ = short_contacts(frame, getattr(self, '_short_contact_threshold', .6))
         self.short_contacts_button.setText(f'Short contacts {count}')
         self.short_contacts_button.setEnabled(True)
         self._align_summary_footer()
@@ -1794,7 +1803,20 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         context = f'{self.doc.path.name} · Frame {self.frame_index+1}'
         if self._active_vibration is not None:
             context = f'{self.doc.path.name} · Frequency reference {self._active_vibration[1]+1}'
-        return self._show_analysis_window(ShortContactsDialog(self.frame, context, self))
+        dialog = ShortContactsDialog(self.frame, context, self, getattr(self, '_short_contact_threshold', .6))
+        def update_threshold(value):
+            import numpy as np
+            self._short_contact_threshold = value
+            if self.frame is not None:
+                from .periodic_geometry import short_contacts
+                count = (len(dialog.contacts) if self.frame is source and
+                         np.array_equal(source.positions, dialog.frame.positions) and
+                         source.pbc == dialog.frame.pbc and np.array_equal(source.cell, dialog.frame.cell)
+                         else short_contacts(self.frame, value)[0])
+                self.short_contacts_button.setText(f'Short contacts {count}')
+        source = self.frame
+        dialog.thresholdChanged.connect(update_threshold)
+        return self._show_analysis_window(dialog)
 
     @gui_operation('Updating structure view')
     def refresh_scene(self, reset_camera=False):
@@ -2647,6 +2669,13 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
 
     def _refresh_frame_tree_label(self):
         item = self._frame_tree_items.get((self.current_doc, self.frame_index))
+        if item is None and self.frame is not None:
+            from .files_tree import FileRow
+            row = self.files_tree.currentItem()
+            if isinstance(row, FileRow):
+                index = row.index()
+                self.files_tree.model().dataChanged.emit(index, index, [Qt.ItemDataRole.DisplayRole])
+            return
         if item is not None and item.parent() is not None and self.frame is not None:
             from .workflow_ui import FRAME_LABEL_ROLE, frame_tree_label
             data = item.data(0, Qt.ItemDataRole.UserRole)
@@ -3153,10 +3182,18 @@ class LELEWindow(LoadedDocumentActions, BatchExportActions, AnnotationActions, S
         from .result_availability import has_curve_data
         if not has_curve_data(self.doc):
             return
+        stages = getattr(self.doc.calculation_results, 'stages', ())
+        if stages and all(stage.kind == 'vtst_dimer' for stage in stages):
+            return self.show_dimer_results()
         from .convergence_dialog import ConvergenceDialog
         doc = self.doc
         return self._show_analysis_window(ConvergenceDialog(doc,
             lambda index: self._jump_to_result_frame(doc, index), self))
+
+    def show_dimer_results(self):
+        from .dimer_dialog import DimerDialog
+        doc = self.doc
+        return self._show_analysis_window(DimerDialog(doc, lambda i: self._jump_to_result_frame(doc,i), self))
 
     def save_png(self,suffix=None):
         if self.frame is None or self._png_exporting:

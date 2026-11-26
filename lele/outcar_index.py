@@ -9,6 +9,8 @@ import tempfile
 from .output_text import check_load_cancelled, load_progress, open_output_text, output_encoding
 
 _MARKER = re.compile(rb'Iteration\s+\d+\(|free energie of the ion-electron system|direct lattice vectors|position of ions in cartesian coordinates|^\s*POSITION\s+TOTAL-FORCE|^\s*free\s+energy\s+TOTEN|energy\s+without\s+entropy|energy\s*\(sigma\s*->\s*0\)|reached required accuracy|General timing and accounting|Eigenvectors and eigenvalues of the dynamical matrix|Eigenvectors after division by SQRT\(mass\)|cm-1|CSA tensor|IF\s+SPAN', re.I)
+_DIMER_PREFIX = re.compile(rb'^\s*(?:Dimer:|CHAIN:.*(?:Dimer|ICHAIN)|ICHAIN\s*=)', re.I)
+_DIMER_START = re.compile(r'^\s*(?:Dimer:\s*(?:Itr\s+\d+\s+Rot|Central Point|Input Parameters)|CHAIN:\s*(?:Running the Dimer|Read ICHAIN\s+2\b)|ICHAIN\s*=\s*2\b)', re.I)
 _TAG = re.compile(rb'ions per type|^\s*(?:TITEL|POTCAR|VRHFIN|POMASS)\b|\b(?:NIONS|IBRION|ISIF|ENCUT|EDIFFG?|ISPIN|NELECT)\s*=')
 # All structural and metadata markers contain a letter other than a decimal exponent.
 _WORD = re.compile(rb'[A-CF-Za-cf-z]')
@@ -29,6 +31,7 @@ class Run:
         self.records = {}
         self.metadata = []
         self.nmr = []
+        self.vtst_dimer = False
 
     def __len__(self):
         return self.length
@@ -125,13 +128,18 @@ def _index(stream, size):
                     runs.append(Run(stream, line))
                 version_seen = True
             run = runs[-1]
-            if (b'=' in raw or b':' in raw) and _TAG.search(raw):
-                run.metadata.append(raw.decode('utf-8', errors='replace').rstrip('\r\n'))
-            if _MARKER.search(raw):
+            dimer_line = None
+            if b'=' in raw or b':' in raw:
+                if _TAG.search(raw):
+                    run.metadata.append(raw.decode('utf-8', errors='replace').rstrip('\r\n'))
+                dimer_line = _DIMER_PREFIX.match(raw)
+            if dimer_line or _MARKER.search(raw):
                 local = line-run.start
                 run.numbers.append(local)
                 decoded = raw.decode('utf-8', errors='replace').rstrip('\r\n')
                 run.records[local] = (offset+begin, decoded)
+                if dimer_line and not run.vtst_dimer and _DIMER_START.match(decoded):
+                    run.vtst_dimer = True
                 if 'CSA tensor' in decoded or re.search(r'IF\s+SPAN', decoded, re.I):
                     run.nmr.append(local)
         count += block.count(b'\n', cursor)

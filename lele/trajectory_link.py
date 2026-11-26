@@ -67,7 +67,7 @@ def _energy(step, program):
     return step.energy_ev
 
 
-def _match_frames(results, frames, eligible):
+def _match_frames(results, frames, eligible, cell_reference=None):
     program = results.program
     cp2k = program == 'CP2K'
     # Native CP2K XYZ prints ten decimal places in Eh. Standard xTB stdout
@@ -189,10 +189,20 @@ def _match_frames(results, frames, eligible):
         if s.geometry is None or getattr(s, 'info', {}).get('cp2k_reftraj_input_geometry'):
             continue
         delta = f.positions - s.geometry.positions
-        if any(s.geometry.pbc) and abs(np.linalg.det(s.geometry.cell)) > 1e-10:
-            fractional = np.linalg.solve(s.geometry.cell.T, delta.T).T
-            lattice_shift = np.rint(fractional) * np.asarray(s.geometry.pbc)
-            delta -= lattice_shift @ s.geometry.cell
+        cell, pbc = s.geometry.cell, s.geometry.pbc
+        if not cell.any() and f.cell.any():
+            cell, pbc = f.cell, f.pbc
+        if cell_reference:
+            if not cell.any():
+                cell = np.asarray(cell_reference['cell'])
+            if not any(pbc) and 'trajectory_pbc' not in f.info:
+                pbc = cell_reference['pbc']
+        pbc = getattr(s, 'info', {}).get('cp2k_periodicity', pbc)
+        if any(pbc):
+            from .periodic_geometry import lattice_coordinates, valid_periodic_cell
+            if valid_periodic_cell(cell, pbc):
+                lattice_shift = np.rint(lattice_coordinates(delta, cell, pbc)) * pbc
+                delta -= lattice_shift @ cell
         if not np.allclose(delta, 0, atol=2e-5, rtol=0):
             raise ValueError(f'Trajectory frame {n+1} disagrees with the coordinates printed for this output step.')
     order_only = by_order and any(f.energy_ev is None and 'trajectory_step' not in f.info for f in frames)
@@ -240,7 +250,7 @@ def _attach_frame(step, frame, number, job, program):
     step.geometry = frame
 
 
-def link_trajectory(output_path, trajectory_path):
+def link_trajectory(output_path, trajectory_path, *, cell_reference=None):
     """Return a new self-contained document. The source files are read only."""
     output_path = Path(output_path).expanduser().resolve()
     trajectory_path = Path(trajectory_path).expanduser().resolve()
@@ -268,7 +278,7 @@ def link_trajectory(output_path, trajectory_path):
     else:
         frames, truncated = _read_positions(trajectory_path, program)
     eligible = [i for i, s in enumerate(results.steps) if s.stage_index in stages]
-    matches, jobs, order_only = _match_frames(results, frames, eligible)
+    matches, jobs, order_only = _match_frames(results, frames, eligible, cell_reference)
     if len(matches) < len(frames):
         # Extra XYZ-only records require explicit monotone steps from a single run.
         cycles = [f.info.get('trajectory_step') for f in frames]
@@ -340,4 +350,7 @@ def link_trajectory(output_path, trajectory_path):
                         dipoles=getattr(results, 'dipoles', []))
     from .atom_constraints import attach_document_constraints
     attach_document_constraints(document, kind)
+    if cell_reference:
+        from .cell_reference import apply_cell_reference
+        apply_cell_reference(document, cell_reference)
     return document

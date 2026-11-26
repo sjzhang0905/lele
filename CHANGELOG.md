@@ -1,5 +1,24 @@
 # 更新记录 / Changelog
 
+## 4.6.0 · 2026-11-26
+
+- 支持 VTST dimer 输出。打开 **DIMCAR** 可逐条查看平移步和旋转记录，绘制中心能量、力、旋转力、曲率及转角并导出 CSV。打开 **OUTCAR** 可查看中心结构及其 E0，在曲线或表格上选择记录可跳到相应中心。**CENTCAR** 可独立打开。打开 **NEWMODECAR** 时从同目录的 CENTCAR 读取结构并绘出方向箭头，初始 MODECAR 对应 POSCAR。
+- **Short contacts** 弹窗支持修改距离阈值（Å），初始值 0.600 Å。列表按打开弹窗时的结构重新计算；底部计数和后续帧沿用当前会话的阈值。
+- **Files** 同一计算阶段的帧和无结构能量记录连续显示，只为需要显示的行生成标签。大型 OUTCAR 继续分块索引，大型 XYZ 将成块的坐标文本直接交给数值读取器，支持变原子数和 UTF-16 文本。
+- WAVECAR 选带窗口区分 **Occupation (e)** 和 **Raw weight**。经验证的非自旋极化标量布局显示 **Spin-degenerate**，电子占据数为原始权重的两倍；双通道分别按各自权重显示。单通道布局无法确认时保留原始权重。
+- Inspect VTST dimer outputs and mode directions, adjust the short-contact distance in its dialog, browse continuous frame and energy lists, and inspect spin degeneracy and occupation weights in WAVECAR.
+
+## 4.5.2 · 2026-11-25
+
+- 在已加载文件上右键选择 **Associate unit cell…**，可为 XYZ 轨迹或 CP2K 优化、MD 输出关联同一次计算的 CIF 或 CP2K 输入 / restart。程序读取晶胞并在周期方向将结构显示到主晶胞。原坐标、原子编号和能量仍可逐帧查看。晶胞来源随 `.lele` 项目保存。
+- Associate a CIF or CP2K input / restart cell with a position trajectory before or after linking a CP2K output. Periodic images are displayed in the primary cell. Variable-cell runs require the cells for individual frames.
+
+## 4.5.1 · 2026-11-25
+
+- CP2K 能量曲线默认显示优化步的摘要能量和末次能量复算。可展开文件树中的 **other force evaluations** 或勾选 **Show all energy evaluations** 查看试算记录。优化曲线各点都有坐标时，横轴使用轨迹帧号，末次复算帧单独标注。
+- 识别 CP2K 的 L-BFGS 专用收敛标记。在优化状态中注明所用判据，继续显示日志打印的梯度及常规阈值。
+- Plot CP2K optimization summaries and the final energy reevaluation by default. Open all force evaluations from the file tree or curve controls. Use trajectory frame numbers when the curve points all have coordinates. Report the L-BFGS-specific convergence criterion in the stage status.
+
 ## 4.5.0 · 2026-11-25
 
 - 新保存的 `.lele` 项目为 UTF-8 JSON 文本。坐标、晶胞矢量、场网格及轨道系数以数值写入，复数按实部和虚部成对保存。用文本编辑器搜索 `"name": "positions"`，后面的 `values` 按原子列出 Cartesian 坐标（Å）。修改后可以重新打开。打开旧版二进制项目后，使用 **File → Save project as…** 可另存为文本。

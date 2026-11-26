@@ -19,10 +19,11 @@ class OrbitalChoice(NamedTuple):
     kpoint: int | None  # WAVECAR array index
     number: int         # source MO or band, one-based
 
-    def label(self):
+    def label(self, wave=None):
         if self.kpoint is None:
             return f'{spin_label(self.spin)} · MO {self.number}'
-        return f'{spin_label(self.spin)} · k {self.kpoint + 1} · band {self.number}'
+        channel = wave.channel_label(self.spin) if wave is not None else spin_label(self.spin)
+        return f'{channel} · k {self.kpoint + 1} · band {self.number}'
 
 
 def initial_choice(wavefunction, wavecar):
@@ -39,13 +40,13 @@ class OrbitalTable(QAbstractTableModel):
     """Format only visible bands of the active spin and k-point."""
     def __init__(self, is_wavecar, parent):
         super().__init__(parent)
-        self.headers = ('Band' if is_wavecar else 'MO',
-                        'Raw occupation weight' if is_wavecar else 'Occupation', 'Energy (eV)')
-        self.columns = ((), (), ())
+        self.headers = (('Band', 'Occupation (e)', 'Energy (eV)', 'Raw weight') if is_wavecar
+                        else ('MO', 'Occupation', 'Energy (eV)'))
+        self.columns = ((),) * len(self.headers)
 
-    def set_columns(self, numbers, occupations, energies):
+    def set_columns(self, *columns):
         self.beginResetModel()
-        self.columns = (numbers, occupations, energies)
+        self.columns = columns
         self.endResetModel()
 
     def rowCount(self, parent=QModelIndex()):
@@ -61,7 +62,8 @@ class OrbitalTable(QAbstractTableModel):
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         if role == Qt.ItemDataRole.DisplayRole and index.isValid():
-            value = self.columns[index.column()][index.row()]
+            column = self.columns[index.column()]
+            value = None if column is None else column[index.row()]
             if value is None:
                 return '—'
             return str(value) if index.column() == 0 else f'{value:.9g}'
@@ -85,7 +87,7 @@ class OrbitalPicker(QDialog):
         layout = QVBoxLayout(self)
         self.spins = QTabBar()
         for spin in spins:
-            tab = self.spins.addTab(spin_label(spin))
+            tab = self.spins.addTab(self.wave.channel_label(spin) if self.wave is not None else spin_label(spin))
             self.spins.setTabData(tab, spin)
         self.spins.setCurrentIndex(spins.index(current.spin))
         layout.addWidget(self.spins)
@@ -143,9 +145,14 @@ class OrbitalPicker(QDialog):
         else:
             kpoint = self.kpoints.currentData()
             numbers = range(1, self.wave.nbands + 1)
-            occupations = self.wave.occupations[spin, kpoint]
+            raw = self.wave.occupations[spin, kpoint]
+            factor = self.wave.occupation_factor
+            occupations = None if factor is None else raw * factor
             energies = self.wave.energies[spin, kpoint]
-        self.model.set_columns(numbers, occupations, energies)
+        if self.wave is None:
+            self.model.set_columns(numbers, occupations, energies)
+        else:
+            self.model.set_columns(numbers, occupations, energies, raw)
         with QSignalBlocker(self.number):
             self.number.setRange(numbers[0], numbers[-1])
         self._select_number(number if number in numbers else numbers[-1])

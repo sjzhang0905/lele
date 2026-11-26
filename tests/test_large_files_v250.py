@@ -187,8 +187,8 @@ def test_multistage_lazy_tree_uses_each_stage_sequence_without_crossing(gui,tmp_
     doc=Document(tmp_path/'staged.out','CP2K output',frames,calculation_results=results)
     w=attach(gui,doc);head=w.files_tree.topLevelItem(0)
     second=head.child(1);second.setExpanded(True)
-    last_page=second.child(second.childCount()-1);last_page.setExpanded(True)
-    w.files_tree.setCurrentItem(last_page.child(last_page.childCount()-1))
+    assert second.childCount() == 1000
+    w.files_tree.setCurrentItem(second.child(999))
     assert w.frame_index==1999 and w.frame_spin.maximum()==1000
     w._step_next();assert w.frame_index==1000
     w._step_previous();assert w.frame_index==1000
@@ -202,8 +202,9 @@ def test_energy_only_lazy_pages_keep_final_record_and_all_curve_points(gui,tmp_p
     path=write(tmp_path,'cp2k.out','CP2K| version string: CP2K\n'+''.join(
         f'ENERGY| Total FORCE_EVAL ( QS ) energy [hartree] {-10-i*.001:.8f}\n' for i in range(2003)))
     doc=load_document(path);w=attach(gui,doc)
-    group=w.files_tree.topLevelItem(0).child(0);page=group.child(group.childCount()-1)
-    page.setExpanded(True);w.files_tree.setCurrentItem(page.child(page.childCount()-1))
+    group=w.files_tree.topLevelItem(0).child(0)
+    assert group.childCount() == 2003
+    w.files_tree.setCurrentItem(group.child(2002))
     assert w._energy_only_context==(0,2002) and w.frame is None
     assert len(w.show_energy_curve().points())==2003
 

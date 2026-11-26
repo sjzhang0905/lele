@@ -30,7 +30,7 @@ def test_context_menu_rename_is_display_only_and_project_retains_name(gui, tmp_p
     original = doc.path.read_bytes()
     menu = w._loaded_file_menu(doc)
     assert [a.text() for a in menu.actions() if not a.isSeparator()] == [
-        'Associate file…', 'Rename…', 'Remove from loaded files', 'Open containing folder']
+        'Associate file…', 'Associate unit cell…', 'Rename…', 'Remove from loaded files', 'Open containing folder']
     assert w._rename_loaded_document(doc, 'Density surface')
     assert w.files_tree.topLevelItem(1).text(0).startswith('Density surface  (')
     assert doc.path.name == 'source_0.xyz' and doc.path.read_bytes() == original

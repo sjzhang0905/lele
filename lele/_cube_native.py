@@ -58,18 +58,22 @@ def preload_readers():
     _coordinate_reader()
 
 
-def coordinate_array(rows, *, labeled=False):
+def coordinate_array(rows, *, labeled=False, count=None):
     """Return float64 coordinates and optional two-byte species codes."""
     parse = _coordinate_reader()
     if parse is None:
         return None
     import numpy as np
-    text = ''.join(rows)
+    if count is None:
+        count = len(rows)
+        text = ''.join(rows)
+    else:
+        text = rows
     if len(text) > 2**31-1 or not text.isascii():
         return None
-    data = np.empty((len(rows), 3), dtype=np.float64)
-    symbols = np.empty(len(rows), dtype=np.uint16) if labeled else None
-    if parse(text.encode('ascii'), len(text), data.ctypes.data, len(rows),
+    data = np.empty((count, 3), dtype=np.float64)
+    symbols = np.empty(count, dtype=np.uint16) if labeled else None
+    if parse(text.encode('ascii'), len(text), data.ctypes.data, count,
              symbols.ctypes.data if labeled else None, _POWERS):
         return data, symbols
     return None

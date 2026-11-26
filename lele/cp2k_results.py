@@ -20,6 +20,7 @@ OPT_STEP=re.compile(r'OPTIMIZATION STEP:\s*(\d+)')
 MD_STEP=re.compile(r'MD\|\s*Step number\s+(\d+)')
 MD_STEP_BANNER=re.compile(r'MD STEP:\s*(\d+)\s*/\s*(\d+)')
 SCF_CONVERGED=re.compile(r'SCF run converged in\s+(\d+)\s+steps')
+LBFGS_CONVERGED=re.compile(r'\s*\*+\s*SATISFIED\s+\.+\s*RUN CONVERGED!\s*\**\s*')
 OPT_RECORD=re.compile(r'\s*(?:OPT\|\s*Step number\s+|(?:-+\s*)?Informations? at step\s*=\s*)(\d+)', re.I)
 TD_ROW=re.compile(r'\s*TDDFPT\|\s*(\d+)\s+('+NUMBER+r')\s+('+NUMBER+r')\s+('+NUMBER+r')\s+('+NUMBER+r')\s+('+NUMBER+r')\s*$')
 TD_KPOINT=re.compile(r'\s*TDDFPT_KPOINT\|\s*(\d+)\s+(.*)')
@@ -29,7 +30,7 @@ RECORD_PREFIXES=('GLOBAL|','DFT|','FUNCTIONAL|','CELL|','MO|','ENERGY|','OPT|','
     'EPS_SCF','MAX_SCF','OUTER LOOP SCF','OUTER SCF LOOP CONVERGED','ORBITAL BASIS SET','AUXILIARY BASIS SET',
     'GTH POTENTIAL INFORMATION','POTENTIAL INFORMATION','U(EFF)','ANGULAR QUANTUM MOMENTUM',
     'SPIN ','INTEGRATED SPIN DENSITY:','IDEAL AND SINGLE DETERMINANT S**2','MODULE QUICKSTEP:','OPTIMIZATION STEP:','MD STEP:',
-    'SCF WAVEFUNCTION','SCF RUN','***','PROGRAM ENDED AT','GEOMETRY OPTIMIZATION COMPLETED',
+    'SCF WAVEFUNCTION','SCF RUN','***','* SATISFIED','PROGRAM ENDED AT','GEOMETRY OPTIMIZATION COMPLETED',
     'INFORMATION AT STEP','INFORMATIONS AT STEP','MAX. GRADIENT','MAXIMUM GRADIENT','RMS GRADIENT',
     'INITIAL POTENTIAL ENERGY','INITIAL KINETIC ENERGY','INITIAL TEMPERATURE','STEP NUMBER','TIME [FS]',
     'TEMPERATURE [K]','TEMPERATURE[K]','POTENTIAL ENERGY','KINETIC ENERGY','CONSERVED QUANTITY',
@@ -129,6 +130,18 @@ def _md_force_table(lines, start, natoms):
         try:squares.append(sum((real(x)*factor)**2 for x in xyz))
         except ValueError:break
     return None, start+1
+
+
+def optimization_trial_indices(steps):
+    """Find extra evaluations superseded by a printed optimizer summary."""
+    summarized = {(s.job_index, s.stage_index, s.cycle) for s in steps
+                  if s.info.get('cp2k_opt_summary') and s.energy_ev is not None}
+    if not summarized:
+        return set()
+    return {i for i, s in enumerate(steps)
+            if s.frame_index is None and s.energy_ev is not None
+            and (s.job_index, s.stage_index, s.cycle) in summarized
+            and not s.info.get('cp2k_opt_summary') and not s.info.get('cp2k_final_reevaluation')}
 
 
 def summary_lines(results, job_index):
@@ -427,6 +440,8 @@ def _segment(lines,offset,results):
                 data['cp2k_reftraj_input_geometry']=True
             if reevaluation:
                 data['cp2k_final_reevaluation']=True
+                if opt_numbered:
+                    data['cp2k_reevaluation_output_step']=cycle
                 reevaluation=False
             if pending_md is not None:
                 last=pending_md;pending_md=None
@@ -485,10 +500,13 @@ def _segment(lines,offset,results):
                 results.steps.append(last);current_used=current is not None
             name=metric[2].lower();key=('rms_' if name.startswith('rms') else 'max_')+('force' if 'gradient' in name else 'displacement')
             pair=list(last.convergence.get(key,(None,None)));pair[1 if metric[1] else 0]=real(metric[3]);last.convergence[key]=tuple(pair)
+        if stage.kind=='optimization' and 'RUN CONVERGED!' in upper and LBFGS_CONVERGED.fullmatch(upper):
+            stage.status='Converged (L-BFGS criteria)'
         if 'GEOMETRY OPTIMIZATION COMPLETED' in upper:
-            stage.status='Completed (printed)'
             if last is not None and len(last.convergence)==4 and all(v is not None and t is not None and v<=t for v,t in last.convergence.values()):
                 stage.status='Converged (printed criteria)';last.converged=True
+            elif stage.status=='Not confirmed':
+                stage.status='Completed (printed)'
         if 'PROGRAM ENDED AT' in upper:job.termination='Normal completion (printed)'
         # A final TD table is distinct from Davidson iterations and initial guesses.
         if 'Transition dipoles calculated using' in line:

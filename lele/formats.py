@@ -187,6 +187,14 @@ def _load_document(filename: str | Path, max_frames: int | None = MAX_FRAMES) ->
         return Document(path,detection.label,frames,note=results.note,calculation_results=results,
                         electronic_spectra=results.spectra,dipoles=results.dipoles)
 
+    if kind == 'vtst_dimcar':
+        from .vtst_dimer import read_dimcar
+        results = read_dimcar(path)
+        return Document(path, detection.label, [], note=results.note, calculation_results=results)
+    if kind == 'vtst_mode':
+        from .vtst_dimer import read_mode
+        return read_mode(path)
+
     if kind in ('vasp_out', 'vasp_xdatcar', 'vasp_oszicar'):
         from .vasp_results import read_vasp_results, read_xdatcar, read_oszicar
         nmr_records = []
@@ -203,7 +211,9 @@ def _load_document(filename: str | Path, max_frames: int | None = MAX_FRAMES) ->
         note = results.note
         if not frames:
             note += ' Results loaded independently; no complete, identified structure was printed in this file.'
-        doc = Document(path, detection.label, frames, note=note,
+        label = ('VASP VTST dimer OUTCAR' if any(stage.kind == 'vtst_dimer' for stage in results.stages)
+                 else detection.label)
+        doc = Document(path, label, frames, note=note,
                        calculation_results=results, vibrations=results.vibrations)
         if nmr_records:
             from .nmr_input import link_nmr_results

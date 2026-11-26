@@ -113,8 +113,9 @@ def repeat_factors(section, name):
     return values
 
 
-def inline_frame(subsys):
-    cell_node=subsys.child('CELL');cell=np.zeros((3,3))
+def input_cell(cell_node):
+    """Return the coordinate basis, repeated simulation cell and requested PBC."""
+    cell=np.zeros((3,3))
     if all(cell_node.get(key) for key in 'ABC'):
         cell=np.asarray([length_values(cell_node.get(key)) for key in 'ABC']).reshape(3,3)
     elif cell_node.get('ABC'):
@@ -125,10 +126,21 @@ def inline_frame(subsys):
         except (AssertionError,ValueError):raise ValueError('Invalid CP2K cell lengths or angles') from None
         if abs(np.linalg.det(cell))<1.e-12:raise ValueError('Degenerate CP2K cell angles')
     cell_repeats=repeat_factors(cell_node,'CELL')
-    coord_repeats=repeat_factors(subsys.child('TOPOLOGY'),'TOPOLOGY')
     periodic=''.join(cell_node.get('PERIODIC',('XYZ',))).upper()
     if periodic not in ('NONE','X','Y','Z','XY','XZ','YZ','XYZ'):raise ValueError('Invalid CP2K periodicity')
     requested_pbc = tuple(axis in periodic for axis in 'XYZ')
+    try:
+        simulation_cell = cell * np.asarray(cell_repeats, dtype=float)[:, None]
+    except OverflowError:
+        raise ValueError('Excessive CP2K CELL/MULTIPLE_UNIT_CELL') from None
+    if not np.all(np.isfinite(simulation_cell)):
+        raise ValueError('Non-finite repeated CP2K cell')
+    return cell, simulation_cell, requested_pbc, cell_repeats
+
+
+def inline_frame(subsys):
+    cell, simulation_cell, requested_pbc, cell_repeats = input_cell(subsys.child('CELL'))
+    coord_repeats=repeat_factors(subsys.child('TOPOLOGY'),'TOPOLOGY')
     pbc = requested_pbc if valid_periodic_cell(cell, requested_pbc) else (False,) * 3
     kinds={k.argument:(k.get('ELEMENT',(k.argument,))[0]) for k in subsys.all('KIND')}
     coord=subsys.child('COORD');symbols=[];positions=[]
@@ -154,11 +166,7 @@ def inline_frame(subsys):
         shifts=np.asarray([(x,y,z) for z,y,x in product(*(range(n) for n in coord_repeats[::-1]))])@cell
         positions=(np.asarray(positions)[None,:,:]+shifts[:,None,:]).reshape(-1,3)
         symbols=symbols*copies
-    # CELL changes only the displayed cell, never the coordinate count/scale.
-    try:cell=cell*np.asarray(cell_repeats,dtype=float)[:,None]
-    except OverflowError:raise ValueError('Excessive CP2K CELL/MULTIPLE_UNIT_CELL') from None
-    if not np.all(np.isfinite(cell)):raise ValueError('Non-finite repeated CP2K cell')
-    return Frame(symbols,positions,cell,pbc,info={'source_line':coord.line,'source_kind':'cp2k_in',
+    return Frame(symbols,positions,simulation_cell,pbc,info={'source_line':coord.line,'source_kind':'cp2k_in',
                  'cp2k_cell_repeats':cell_repeats,'cp2k_topology_repeats':coord_repeats})
 
 

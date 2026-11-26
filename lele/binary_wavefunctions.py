@@ -73,6 +73,18 @@ class Wavecar:
     reconstruction_supported: bool = False
     reconstruction_reason: str = "Layout has not been validated for reconstruction."
 
+    @property
+    def occupation_factor(self):
+        """Spin multiplicity of one band, independent of its k-point weight."""
+        if self.spins == 2:
+            return 1
+        return 2 if self.reconstruction_supported else None
+
+    def channel_label(self, spin):
+        if self.spins == 2:
+            return f'Spin {spin + 1}'
+        return 'Spin-degenerate' if self.occupation_factor == 2 else 'Stored channel 1'
+
     def coefficients(self, spin=0, kpoint=0, band=0):
         """Return one raw coefficient record; all indices are zero based."""
         if not (0 <= spin < self.spins and 0 <= kpoint < self.nkpoints and 0 <= band < self.nbands):
@@ -161,7 +173,7 @@ class Wavecar:
             np.square(values, out=values)
         else:raise ValueError('Wavefunction field must be density, real, or imag')
         check_load_cancelled()
-        label=f'WAVECAR spin {spin+1}, k {kpoint+1}, band {band+1}: '+({'density':'|psi|² (single pseudo state)','real':'Re psi (stored phase)','imag':'Im psi (stored phase)'}[kind])
+        label=f'WAVECAR {self.channel_label(spin)}, k {kpoint+1}, band {band+1}: '+({'density':'|psi|² (single pseudo state)','real':'Re psi (stored phase)','imag':'Im psi (stored phase)'}[kind])
         return Volume(values,np.zeros(3),self.cell/shape[:,None],label=label,
                       unit='Å⁻³ (unweighted pseudo state)' if kind=='density' else 'Å⁻³ᐟ²',
                       periodic=bool(kind=='density' or np.allclose(k,np.round(k),atol=1e-12)))
@@ -221,6 +233,7 @@ def read_wavecar(path):
         results.orbitals.append(snapshot)
     note=(f'WAVECAR: {wave.nkpoints} k-points, {wave.nbands} bands, {wave.spins} spin channel(s); ENCUT {wave.encut_ev:g} eV. '
           'Atomic positions and species are not stored in WAVECAR. Energies and raw occupation weights are read directly; raw weights are not spin-degeneracy-scaled OUTCAR occupations. Geometry is not invented. '
+          'For verified scalar one-channel files, band occupation is twice the raw weight. '
           'Saved projects retain metadata; lazy coefficients still require the original WAVECAR at its original path. '
           'Pseudo-wavefunction reconstruction excludes PAW augmentation. Gamma-only and spinor/SOC reconstruction are not supported.')
     frames=[]

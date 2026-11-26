@@ -2,6 +2,27 @@
 import numpy as np
 import pytest
 from lele.trajectory_io import xyz_blocks, IncompleteXYZ, NotPlainXYZ
+
+
+@pytest.mark.parametrize('encoding', ['utf-8','utf-16'])
+@pytest.mark.parametrize('native', [True,False])
+def test_long_xyz_chunk_boundaries_and_incomplete_tail(tmp_path, monkeypatch, encoding, native):
+    from lele import _cube_native, trajectory_io, trajectory_storage
+    monkeypatch.setattr(trajectory_storage,'MIN_SOURCE_BYTES',1)
+    monkeypatch.setattr(trajectory_io,'_TEXT_CHUNK',37)
+    if not native:
+        monkeypatch.setattr(_cube_native,'_coordinate_reader',lambda: None)
+    path = tmp_path/'pos.xyz'
+    text = ('25\r\n长注释 ' + 'x'*55 + '\r\n' + 'Si 1.25D+0 2 3\r\n'*25
+            + '\r\n2\r\nframe 2\r\nH 1 2 3\r\nO 3 2 1')
+    path.write_bytes(text.encode(encoding))
+    first, second = xyz_blocks(path)
+    assert first[0]==1 and first[2]==['Si']*25
+    assert first[3][-1,0]==1.25 and second[0]==29
+    assert second[2]==['H','O'] and second[3][-1,0]==3
+    path.write_bytes((text+'\n100000000000\ncut off\nH 0 0 0').encode(encoding))
+    with pytest.raises(trajectory_io.TruncatedXYZ):
+        list(xyz_blocks(path))
 from lele.vasp_results import read_xdatcar, read_vasp_results
 from lele.output_text import output_read_session, LoadCancelled
 
