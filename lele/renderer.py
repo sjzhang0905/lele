@@ -310,7 +310,9 @@ class MoleculeRenderer(CrystalRendering):
         if self.fitted_plane is not None:
             self._selection_plane()
         if self.mode_vectors is not None:
-            self._mode_arrows()
+            self._mode_arrows(self.mode_vectors, self.mode_vector_indices)
+        elif 'vtst_dimer_mode' in source_frame.info:
+            self._mode_arrows(source_frame.info['vtst_dimer_mode'], None)
         self._render_lattice_planes()
         report(6)
         if reset_camera:
@@ -837,8 +839,8 @@ class MoleculeRenderer(CrystalRendering):
             label.GetTextProperty().SetColor(rgb(color));label.GetTextProperty().SetFontSize(self.options.label_font_size)
             label.PickableOff();self._add_actor(label)
 
-    def _mode_arrows(self):
-        data = np.asarray(self.mode_vectors, dtype=float)
+    def _mode_arrows(self, vectors, selected):
+        data = np.asarray(vectors, dtype=float)
         if data.shape != self.frame.positions.shape or not np.isfinite(data).all(): return
         frame=self.frame
         if self.boundary_display is not None:
@@ -851,8 +853,8 @@ class MoleculeRenderer(CrystalRendering):
                 _,floors=normalized_positions(reference)
                 phase=2*np.pi*((display.shifts-floors[ids])@phonon['q_fractional'])+phonon['arrow_phase']
                 data=phonon['real'][ids]*np.cos(phase)[:,None]-phonon['imaginary'][ids]*np.sin(phase)[:,None]
-            indices=range(len(data)) if self.mode_vector_indices is None else [i for i,source in enumerate(ids) if source in self.mode_vector_indices]
-        else:indices=range(len(data)) if self.mode_vector_indices is None else self.mode_vector_indices
+            indices=range(len(data)) if selected is None else [i for i,source in enumerate(ids) if source in selected]
+        else:indices=range(len(data)) if selected is None else selected
         peak = float(np.linalg.norm(data, axis=1).max())
         if peak < 1.e-15: return
         for i in indices:

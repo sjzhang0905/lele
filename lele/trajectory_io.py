@@ -1,5 +1,7 @@
 """Streaming XYZ blocks shared by native long-trajectory readers."""
 from itertools import islice
+from functools import lru_cache
+import re
 import numpy as np
 from ase.data import atomic_numbers
 from .output_text import open_output_text, check_load_cancelled, load_progress
@@ -35,6 +37,49 @@ def numeric_array(rows):
 # symbol token, so malformed labels cannot be truncated to valid elements.
 _SYMBOL_CODES = {ord(s[0])*256 + (ord(s[1]) if len(s) > 1 else 0): s for s in atomic_numbers}
 _XYZ_DTYPE = np.dtype([('symbol', object), ('position', float, (3,))])
+_TEXT_CHUNK = 256 * 1024
+
+
+@lru_cache(maxsize=32)
+def _line_block(count):
+    return re.compile(r'(?:[^\n]*\n){' + str(count) + '}')
+
+
+class _XYZTextBlocks:
+    """Pass contiguous decoded XYZ coordinates to the native reader."""
+    def __init__(self, stream):
+        self.stream = stream
+        self.text = ''
+        self.start = 0
+        self.at_eof = False
+
+    def read_lines(self, count):
+        pieces = []
+        while count > 0:
+            check_load_cancelled()
+            if self.start == len(self.text):
+                self.text = self.stream.read(_TEXT_CHUNK)
+                self.start = 0
+                if not self.text:
+                    self.at_eof = True
+                    break
+            batch = min(count, 1024)
+            if batch == 1:
+                end = self.text.find('\n', self.start) + 1
+            else:
+                match = _line_block(batch).match(self.text, self.start)
+                end = match.end() if match else 0
+            if end:
+                pieces.append(self.text[self.start:end])
+                self.start = end
+                count -= batch
+            else:
+                # A line may continue in the next chunk, including a long comment.
+                tail = self.text[self.start:]
+                pieces.append(tail)
+                count -= tail.count('\n')
+                self.start = len(self.text)
+        return ''.join(pieces)
 
 
 def coordinate_lines(stream, count):
@@ -50,13 +95,14 @@ def coordinate_lines(stream, count):
 
 
 def _xyz_coordinates(rows, count, source, plain, previous=None):
-    if len(rows) != count:
+    block = isinstance(rows, str)
+    if not block and len(rows) != count:
         raise TruncatedXYZ(f'Incomplete XYZ coordinates at line {source}')
     # Tiny frames are cheaper through the straightforward reader. The slow
     # path also retains precise legacy errors and Fortran-D support.
     if count >= 24:
         from ._cube_native import coordinate_array
-        native = coordinate_array(rows, labeled=True)
+        native = coordinate_array(rows, labeled=True, count=count) if block else coordinate_array(rows, labeled=True)
         if native is not None:
             positions, codes = native
             key = codes.tobytes()
@@ -70,6 +116,14 @@ def _xyz_coordinates(rows, count, source, plain, previous=None):
                 if previous is not None:
                     previous[:] = [key, tuple(labels)]
                 return labels, positions
+    if block:
+        # Keep the line-based validation and diagnostics for nonstandard data.
+        rows = rows.split('\n') if rows else []
+        if rows and rows[-1] == '':
+            rows.pop()
+        if len(rows) != count:
+            raise TruncatedXYZ(f'Incomplete XYZ coordinates at line {source}')
+    if count >= 24:
         try:
             values = np.loadtxt(rows, dtype=_XYZ_DTYPE, comments=None, ndmin=1, encoding=None,
                                 usecols=None if plain else (0, 1, 2, 3))
@@ -105,10 +159,13 @@ def xyz_blocks(path, *, plain=False):
     progress = load_progress('XYZ: reading coordinate frames', size)
     previous = []
     with open_output_text(path) as stream:
+        from .trajectory_storage import MIN_SOURCE_BYTES
+        blocks = _XYZTextBlocks(stream) if size >= MIN_SOURCE_BYTES else None
+        readline = (lambda: blocks.read_lines(1)) if blocks else stream.readline
         line_number = 0
         while True:
             check_load_cancelled()
-            raw = stream.readline()
+            raw = readline()
             if not raw:
                 progress(size)
                 return
@@ -122,16 +179,18 @@ def xyz_blocks(path, *, plain=False):
                 raise ValueError(f'Invalid XYZ atom count at line {source}') from None
             if count <= 0:
                 raise IncompleteXYZ(f'Incomplete XYZ frame at line {source}')
-            raw = stream.readline()
+            raw = readline()
             if not raw:
                 raise TruncatedXYZ(f'Incomplete XYZ comment at line {source+1}')
             line_number += 1
             comment = raw.rstrip('\r\n')
             if plain and '=' in comment:
                 raise NotPlainXYZ('Extended XYZ metadata requires ASE')
-            rows = coordinate_lines(stream, count)
-            line_number += len(rows)
+            rows = blocks.read_lines(count) if blocks else coordinate_lines(stream, count)
+            if blocks and blocks.at_eof and rows.count('\n') + int(bool(rows) and not rows.endswith('\n')) != count:
+                raise TruncatedXYZ(f'Incomplete XYZ coordinates at line {source}')
             symbols, positions = _xyz_coordinates(rows, count, source, plain, previous)
+            line_number += count
             progress(min(max(0, size-1), stream.buffer.tell()))
             yield source, comment, symbols, positions
 

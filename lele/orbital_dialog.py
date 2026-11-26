@@ -24,6 +24,9 @@ class OrbitalDialog(QDialog):
         self.summary.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers);layout.addWidget(self.summary)
         self.note=QLabel();self.note.setWordWrap(True);layout.addWidget(self.note)
         self.table=QTableWidget(0,4);self.table.setHorizontalHeaderLabels(['Channel','MO (as printed)','Occupation','Energy'])
+        if document.wavecar is not None:
+            self.table.setColumnCount(5)
+            self.table.setHorizontalHeaderLabels(['Channel', 'Band', 'Occupation (e)', 'Energy', 'Raw weight'])
         self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers);layout.addWidget(self.table,1)
         self.calculation.currentIndexChanged.connect(self.redraw);self.unit.currentIndexChanged.connect(self.redraw)
         self.calculation.setCurrentIndex(len(self.snapshots)-1);self.redraw()
@@ -37,12 +40,19 @@ class OrbitalDialog(QDialog):
         self.summary.setRowCount(len(snapshot.channels));rows=[]
         for i,(channel,orbitals) in enumerate(snapshot.channels.items()):
             homo,lumo,gap=snapshot.frontier(channel)
-            values=[channel,None if homo is None else homo.number,None if homo is None else homo.energy_ev*factor,
+            wave = self.document.wavecar
+            label = wave.channel_label(i) if wave is not None else channel
+            values=[label,None if homo is None else homo.number,None if homo is None else homo.energy_ev*factor,
                     None if lumo is None else lumo.number,None if lumo is None else lumo.energy_ev*factor,
                     None if gap is None else gap*factor]
             for j,value in enumerate(values):
                 self.summary.setItem(i,j,QTableWidgetItem('Not printed' if value is None else f'{value:.6f}' if j in (2,4,5) else str(value)))
-            rows += [(channel,row.number,row.occupation,row.energy_ev*factor) for row in orbitals]
+            if wave is None:
+                rows.extend((channel, row.number, row.occupation, row.energy_ev*factor) for row in orbitals)
+            else:
+                for row in orbitals:
+                    electrons = '—' if wave.occupation_factor is None else row.occupation * wave.occupation_factor
+                    rows.append((label, row.number, electrons, row.energy_ev*factor, row.occupation))
         self.table.setRowCount(len(rows))
         for i,row in enumerate(progress_items(rows,'Building orbital table')):
             for j,value in enumerate(row):self.table.setItem(i,j,QTableWidgetItem(f'{value:.6f}' if j==3 else str(value)))

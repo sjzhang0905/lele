@@ -376,7 +376,7 @@ class FieldActions:
         choice = self._orbital_choice
         self.mo_select.setText('Select band…' if wave is not None else 'Select orbital…')
         self.mo_select.setEnabled(choice is not None)
-        self.mo_selected.setText(choice.label() if choice is not None else '')
+        self.mo_selected.setText(choice.label(wave) if choice is not None else '')
         enabled = wf is not None and getattr(wf, "can_evaluate", True) and choice is not None and not doc.modified
         self.mo_generate.setEnabled(enabled)
         self.mo_spacing.setEnabled(enabled)
@@ -403,7 +403,7 @@ class FieldActions:
             view = getattr(self, '_document_views', {}).get(id(document))
             if view is not None:
                 view.field_orbital = self._orbital_choice
-            self.mo_selected.setText(self._orbital_choice.label())
+            self.mo_selected.setText(self._orbital_choice.label(document.wavecar))
             self._wavecar_state_changed()
         finally:
             dialog.deleteLater()
@@ -484,9 +484,13 @@ class FieldActions:
         if wave is None or choice is None or choice.kpoint is None:
             self.wavecar_state.setText(''); return
         spin, kpoint, band = choice.spin, choice.kpoint, choice.number - 1
+        raw = wave.occupations[spin,kpoint,band]
+        factor = wave.occupation_factor
+        occupation = ('band occupation unavailable for unverified layout' if factor is None
+                      else f'occupation {raw*factor:.6g} e')
         self.wavecar_state.setText(
             f'Energy {wave.energies[spin,kpoint,band]:.8g} eV · '
-            f'raw occupation weight {wave.occupations[spin,kpoint,band]:.6g}\n'
+            f'{occupation} · raw weight {raw:.6g}\n'
             f'{wave.ncoeff[spin,kpoint]:,} stored coefficients; '
             f'ENCUT {wave.encut_ev:g} eV.' +
             ('\nReconstruction unavailable: '+getattr(wave, 'reconstruction_reason', 'layout not validated')
@@ -510,7 +514,7 @@ class FieldActions:
         except Exception as exc:
             QMessageBox.warning(self, 'WAVECAR field unavailable', str(exc)); return
         if not volume.label:
-            volume.label = f'Spin {spin+1} · k {kpoint+1} · band {band+1} · {kind}'
+            volume.label = f'{wave.channel_label(spin)} · k {kpoint+1} · band {band+1} · {kind}'
         if not volume.unit:
             volume.unit = 'Å⁻³ (single-band pseudo-density)' if kind == 'density' else 'Å⁻³ᐟ² (pseudo-wavefunction amplitude)'
         doc.volumes.append(volume); doc.volume = volume

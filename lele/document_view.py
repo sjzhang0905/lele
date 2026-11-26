@@ -53,7 +53,7 @@ class DocumentViewActions:
         defaults = RenderOptions()
         options.boundary_enabled = defaults.boundary_enabled
         options.boundary_bounds = defaults.boundary_bounds
-        options.boundary_preserve_origin = defaults.boundary_preserve_origin
+        options.boundary_preserve_origin = False if document.cell_reference else defaults.boundary_preserve_origin
         options.volume_hidden_regions = []
         # Dataset references belong to one document. Retain them when
         # switching back, but never bind them to unrelated newly opened grids.

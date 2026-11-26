@@ -1,9 +1,8 @@
 from pathlib import Path
 
 import pytest
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QModelIndex, Qt
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QTreeWidgetItemIterator
 
 from lele.formats import load_document
 from test_periodic_fragment_ui_v171 import gui
@@ -44,15 +43,16 @@ def test_neb_dialog_from_files_with_and_without_coordinates(gui, with_frames):
         document.frames = []
     window = gui.window
     window._attach_loaded_document(document)
-    items = QTreeWidgetItemIterator(window.files_tree)
-    while items.value():
-        item = items.value()
-        data = item.data(0, Qt.ItemDataRole.UserRole)
-        if data and data[1:] == ('analysis','neb'):
-            break
-        items += 1
-    assert items.value() is not None
-    window.files_tree.setCurrentItem(items.value())
+    tree = window.files_tree
+    model = tree.model()
+    def children(parent):
+        for row in range(model.rowCount(parent)):
+            child = model.index(row,0,parent)
+            yield child
+            yield from children(child)
+    target = next(index for index in children(QModelIndex())
+                  if (index.data(Qt.ItemDataRole.UserRole) or ())[1:] == ('analysis','neb'))
+    tree.setCurrentIndex(target)
     dialog = window._analysis_windows[-1]
     assert 'NEB' in dialog.windowTitle() and dialog.isVisible()
     dialog.close()

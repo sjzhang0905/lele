@@ -1,46 +1,55 @@
 """Files-tree groups and frame sequences for multistage scientific results."""
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
-from PySide6.QtWidgets import QTreeWidgetItem
+from .files_tree import FileItem
 
 
 def populate_energy_steps(window, index, doc, head):
-    """Energy records without coordinates are selectable results, not frames."""
+    """Add selectable energy records that have no associated coordinates."""
     from math import isfinite
     from ase.units import Hartree
     from .energy_units import EV_TO_KCAL_MOL, program_energy_unit
     results=doc.calculation_results
     if results is None:return
+    trials = set()
+    if results.program == 'CP2K' and any(s.kind == 'optimization' for s in results.stages):
+        from .cp2k_results import optimization_trial_indices
+        trials = optimization_trial_indices(results.steps)
     groups={};stages={s.index:s for s in results.stages}
     for i,step in enumerate(results.steps):
         if step.energy_ev is None or not isfinite(step.energy_ev):continue
         if doc.frames and step.frame_index is not None:continue
-        groups.setdefault((step.job_index,step.stage_index),[]).append(i)
-    def fill(parent,indices):
-        children=[]
-        for i in indices:
-            step=results.steps[i];cycle=step.cycle if step.cycle is not None else i+1
-            unit=program_energy_unit(results.program)
-            value=step.energy_ev if unit=='eV' else step.energy_ev*EV_TO_KCAL_MOL
-            energy_label='E0 ' if results.program=='VASP' else ''
-            child=QTreeWidgetItem([f'Step {cycle} · {energy_label}{value:.8f} {unit}'])
-            child.setData(0,Qt.ItemDataRole.UserRole,(index,'energy',i))
-            child.setToolTip(0,f'{"E0 (σ→0)" if results.program=="VASP" else "Energy"}: {step.energy_ev/Hartree:.12f} Eh\n'
-                f'{step.energy_ev:.9f} eV\n{step.energy_ev*EV_TO_KCAL_MOL:.8f} kcal/mol\n'
-                f'Source line: {step.source_line}\nNo structure for this record.')
-            children.append(child)
-        parent.addChildren(children)
-    for (job,stage),indices in groups.items():
+        groups.setdefault((i in trials,step.job_index,step.stage_index),[]).append(i)
+    def record_data(i, role):
+        step = results.steps[i]
+        if role == Qt.ItemDataRole.UserRole:
+            return (index, 'energy', i)
+        if role == Qt.ItemDataRole.ToolTipRole:
+            label = 'E0 (σ→0)' if results.program == 'VASP' else 'Energy'
+            return (f'{label}: {step.energy_ev/Hartree:.12f} Eh\n{step.energy_ev:.9f} eV\n'
+                    f'{step.energy_ev*EV_TO_KCAL_MOL:.8f} kcal/mol\nSource line: {step.source_line}\nNo structure for this record.')
+        if role == Qt.ItemDataRole.DisplayRole:
+            cycle = step.cycle if step.cycle is not None else i+1
+            unit = program_energy_unit(results.program)
+            value = step.energy_ev if unit == 'eV' else step.energy_ev*EV_TO_KCAL_MOL
+            prefix = 'E0 ' if results.program == 'VASP' else ''
+            final = results.program == 'CP2K' and step.info.get('cp2k_final_reevaluation')
+            title = 'Final energy reevaluation' if final else f'Step {cycle}'
+            return f'{title} · {prefix}{value:.8f} {unit}'
+        return None
+    for (trial,job,stage),indices in sorted(groups.items(), key=lambda pair: pair[0][0]):
         stage=stages.get(stage);label=stage.name if stage is not None else f'Job {job+1}'
-        parent=QTreeWidgetItem([label+' · energies without coordinates'])
-        parent.setData(0,Qt.ItemDataRole.UserRole,(index,0));head.addChild(parent);parent.setExpanded(True)
-        if len(indices)<=PAGE_SIZE:fill(parent,indices)
+        title = f'{label} · other force evaluations ({len(indices)})' if trial else label+' · energies without coordinates'
+        parent=FileItem([title])
+        parent.setData(0,Qt.ItemDataRole.UserRole,(index,0));head.addChild(parent);parent.setExpanded(not trial)
+        if len(indices) > EAGER_ROWS:
+            parent.add_virtual_rows(len(indices), lambda k, role, ids=indices: record_data(ids[k], role))
         else:
-            for start in range(0,len(indices),PAGE_SIZE):
-                stop=min(start+PAGE_SIZE,len(indices));chunk=indices[start:stop]
-                page=QTreeWidgetItem([f'Records {start+1}–{stop}'])
-                page.setData(0,Qt.ItemDataRole.UserRole,(index,'energy',chunk[0]));parent.addChild(page)
-                _defer(page,lambda p=page,ids=chunk:fill(p,ids))
+            for i in indices:
+                child = FileItem([record_data(i, Qt.ItemDataRole.DisplayRole)])
+                child.setData(0, Qt.ItemDataRole.UserRole, record_data(i, Qt.ItemDataRole.UserRole))
+                child.setToolTip(0, record_data(i, Qt.ItemDataRole.ToolTipRole))
+                parent.addChild(child)
 
 
 class FrameSequence:
@@ -81,7 +90,10 @@ def _sequence_state(window,doc):
 
 def shared_sequence(window,doc,values):
     if isinstance(values,FrameSequence):return values
-    state=_sequence_state(window,doc);values=tuple(values)
+    state=_sequence_state(window,doc)
+    if isinstance(values, range) and values == state['all'].values:
+        return state['all']
+    values=tuple(values)
     if not values:return FrameSequence(())
     info=doc.frames[values[0]].info
     candidates=[state['all'],state['stages'].get(info.get('stage_index')),state['series'].get(info.get('series_key')),state['other']]
@@ -109,8 +121,7 @@ def sequence_for(window, index=None):
     return state['other'] if doc.neb_runs or doc.conformer_ensembles else state['all']
 
 
-PAGE_SIZE=256
-LAZY_ROLE=int(Qt.ItemDataRole.UserRole)+17
+EAGER_ROWS=256
 FRAME_LABEL_ROLE=int(Qt.ItemDataRole.UserRole)+18
 
 
@@ -118,6 +129,13 @@ def frame_tree_label(frame, frame_index, format_name, *, title=None, series_step
     """Use the same scientific step names before and after tree selection."""
     from .energy_units import display_energy
     info = frame.info
+    if title is None and format_name == 'CP2K output' and 'trajectory_frame' in info and 'cp2k_md_step' not in info:
+        title = f'Frame {frame_index + 1}'
+        step = info.get('linked_step')
+        if info.get('cp2k_final_reevaluation'):
+            title += ' · Final energy reevaluation'
+        elif step is not None and step != frame_index + 1:
+            title += f' · Step {step}'
     if title is None:
         title = ('Final optimized geometry' if info.get('scan_endpoint') and info.get('scan_converged') else
                  f'Latest evaluated geometry · cycle {info.get("optimization_cycle", "?")}' if info.get('scan_endpoint') else
@@ -138,61 +156,52 @@ def frame_tree_label(frame, frame_index, format_name, *, title=None, series_step
     return title
 
 
-def expand_tree_item(item):
-    maker=item.data(0,LAZY_ROLE)
-    if maker is not None:
-        item.setData(0,LAZY_ROLE,None)
-        maker()
-        item.setChildIndicatorPolicy(QTreeWidgetItem.ChildIndicatorPolicy.DontShowIndicatorWhenChildless)
-
-
-def _defer(item,maker):
-    item.setData(0,LAZY_ROLE,maker)
-    item.setChildIndicatorPolicy(QTreeWidgetItem.ChildIndicatorPolicy.ShowIndicator)
-
-
 def add_frame_items(window,index,doc,parent,indices,*,label='',item_labels=None,series=False):
-    """Retain every frame while creating only expanded pages of tree widgets."""
-    sequence=shared_sequence(window,doc,indices)
-    if not hasattr(window,'_tree_sequences'):window._tree_sequences={}
-    if not hasattr(window,'_sequence_pages'):window._sequence_pages={}
-    window._tree_sequences[sequence.key]=sequence
-    def data(k):
-        return (index,'series',sequence.key,k,label) if series else (index,sequence[k])
-    def fill(target,start,stop):
-        children=[]
-        for k in range(start,stop):
-            fi=sequence[k];f=doc.frames[fi]
-            custom_title = item_labels[k] if item_labels is not None else None
-            title = frame_tree_label(f, fi, doc.format_name, title=custom_title,
-                                     series_step=k+1 if series else None)
-            child=QTreeWidgetItem([title]);child.setData(0,Qt.ItemDataRole.UserRole,data(k));children.append(child)
-            if custom_title is not None:child.setData(0,FRAME_LABEL_ROLE,custom_title)
-            window._series_tree_items[index,sequence.key,fi]=child
-            window._frame_tree_items.setdefault((index,fi),child)
-        target.addChildren(children)
-    if len(sequence)<=PAGE_SIZE:
-        fill(parent,0,len(sequence))
+    """Long sequences occupy one flat Qt row range with on-demand labels."""
+    sequence = shared_sequence(window,doc,indices)
+    if not hasattr(window, '_tree_sequences'):
+        window._tree_sequences = {}
+    window._tree_sequences[sequence.key] = sequence
+
+    def data(k, role):
+        fi = sequence[k]
+        if role == Qt.ItemDataRole.UserRole:
+            return (index, 'series', sequence.key, k, label) if series else (index, fi)
+        title = item_labels[k] if item_labels is not None else None
+        if role == FRAME_LABEL_ROLE:
+            return title
+        if role == Qt.ItemDataRole.DisplayRole:
+            return frame_tree_label(doc.frames[fi], fi, doc.format_name, title=title,
+                                    series_step=k+1 if series else None)
+        return None
+
+    if len(sequence) > EAGER_ROWS:
+        start = parent.add_virtual_rows(len(sequence), data)
+        if not hasattr(window, '_sequence_ranges'):
+            window._sequence_ranges = {}
+        window._sequence_ranges[index, sequence.key] = (parent, start)
     else:
-        step_items = series or all(doc.frames[fi].info.get('optimization_cycle') is not None for fi in sequence)
-        pages=[]
-        for start in range(0,len(sequence),PAGE_SIZE):
-            stop=min(start+PAGE_SIZE,len(sequence))
-            page=QTreeWidgetItem([f'{"Steps" if step_items else "Frames"} {start+1}–{stop}'])
-            page.setData(0,Qt.ItemDataRole.UserRole,data(start));parent.addChild(page);pages.append(page)
-            _defer(page,lambda p=page,a=start,b=stop:fill(p,a,b))
-        window._sequence_pages[index,sequence.key]=pages
+        children = []
+        for k, fi in enumerate(sequence):
+            child = FileItem([data(k, Qt.ItemDataRole.DisplayRole)])
+            child.setData(0, Qt.ItemDataRole.UserRole, data(k, Qt.ItemDataRole.UserRole))
+            if item_labels is not None:
+                child.setData(0, FRAME_LABEL_ROLE, item_labels[k])
+            children.append(child)
+            window._series_tree_items[index,sequence.key,fi] = child
+            window._frame_tree_items.setdefault((index,fi),child)
+        parent.addChildren(children)
     return sequence
 
 
 def frame_tree_item(window,index,sequence,frame_index,head):
-    item=getattr(window,'_series_tree_items',{}).get((index,getattr(sequence,'key',None),frame_index))
-    if item is None:
-        pages=getattr(window,'_sequence_pages',{}).get((index,getattr(sequence,'key',None)))
-        if pages is not None:
-            page=pages[sequence.index(frame_index)//PAGE_SIZE];expand_tree_item(page);page.setExpanded(True)
-            item=window._series_tree_items.get((index,sequence.key,frame_index))
-    return item if item is not None else window._frame_tree_items.get((index,frame_index),head)
+    key = (index, getattr(sequence, 'key', None))
+    span = getattr(window, '_sequence_ranges', {}).get(key)
+    if span is not None:
+        parent, start = span
+        return parent.child(start + sequence.index(frame_index))
+    return getattr(window, '_series_tree_items', {}).get((*key, frame_index),
+               window._frame_tree_items.get((index,frame_index),head))
 
 
 def populate_tree(window,index,doc,head):
@@ -209,7 +218,7 @@ def populate_tree(window,index,doc,head):
     def series(parent,label,indices,item_labels=None,*,last=False):
         indices=[i for i in indices if i is not None]
         if not indices:return None
-        group=QTreeWidgetItem([label+f' ({len(indices)} structures)']);parent.addChild(group)
+        group=FileItem([label+f' ({len(indices)} structures)']);parent.addChild(group)
         sequence=add_frame_items(window,index,doc,group,indices,label=label,item_labels=item_labels,series=True)
         group.setData(0,Qt.ItemDataRole.UserRole,(index,'series',sequence.key,len(sequence)-1 if last else 0,label))
         covered.update(indices)
@@ -221,7 +230,7 @@ def populate_tree(window,index,doc,head):
         completed = sum(p.converged for p in run.points)
         planned = f' / {run.expected_points} planned' if run.expected_points is not None else ''
         kind = 'simultaneous scan path' if run.simultaneous and len(run.coordinates)>1 else 'relaxed scan'
-        root = QTreeWidgetItem([f'ORCA {kind} · {completed} converged{planned}'])
+        root = FileItem([f'ORCA {kind} · {completed} converged{planned}'])
         head.addChild(root)
         root.setToolTip(0, '\n'.join(c.label + f' ({c.unit})' for c in run.coordinates))
         endpoints = [p for p in run.points if p.converged and p.frame_index is not None]
@@ -233,7 +242,7 @@ def populate_tree(window,index,doc,head):
         pending = [p for p in run.points if not p.converged and p.frame_index is not None]
         series(root, 'Incomplete scan points · latest evaluated structures', [p.frame_index for p in pending],
                [point_label(p) + ' · incomplete' for p in pending])
-        history = QTreeWidgetItem(['Optimization history by scan step']);root.addChild(history)
+        history = FileItem(['Optimization history by scan step']);root.addChild(history)
         for point in run.points:scan_parents[point.stage_index] = history
         root.setExpanded(True)
     for s in stages:
@@ -245,17 +254,17 @@ def populate_tree(window,index,doc,head):
         is_scan = s.index in scan_parents or any('scan_step' in doc.frames[i].info for i in ids)
         parent=series(stage_parent,s.name+' · '+s.status,ids,last=is_scan)
         if parent is None:
-            parent=QTreeWidgetItem([s.name+' · '+s.status]);stage_parent.addChild(parent)
+            parent=FileItem([s.name+' · '+s.status]);stage_parent.addChild(parent)
         parents[s.index]=parent
     for run in doc.neb_runs:
-        root=QTreeWidgetItem([f'NEB / NEB-TS · {run.nimages or "?"} images']);root.setData(0,Qt.ItemDataRole.UserRole,(index,'analysis','neb'));head.addChild(root)
-        paths=QTreeWidgetItem(['Paths by snapshot']);root.addChild(paths)
+        root=FileItem([f'NEB / NEB-TS · {run.nimages or "?"} images']);root.setData(0,Qt.ItemDataRole.UserRole,(index,'analysis','neb'));head.addChild(root)
+        paths=FileItem(['Paths by snapshot']);root.addChild(paths)
         for p in run.profiles:
             if p.frame_indices and any(i is not None for i in p.frame_indices):
                 series(paths,p.label,p.frame_indices,[f'Image {i}' for i,v in enumerate(p.frame_indices) if v is not None])
             else:
-                child=QTreeWidgetItem([p.label+' · energy only']);child.setData(0,Qt.ItemDataRole.UserRole,(index,'analysis','neb'));paths.addChild(child)
-        history=QTreeWidgetItem(['History by image']);root.addChild(history)
+                child=FileItem([p.label+' · energy only']);child.setData(0,Qt.ItemDataRole.UserRole,(index,'analysis','neb'));paths.addChild(child)
+        history=FileItem(['History by image']);root.addChild(history)
         snapshots=sorted([p for p in run.profiles if '.NEB.log' in p.source and p.iteration is not None and p.frame_indices],key=lambda p:p.iteration)
         for image in range(run.nimages or 0):
             items=[(p.iteration,p.frame_indices[image]) for p in snapshots if image<len(p.frame_indices) and p.frame_indices[image] is not None]
@@ -265,20 +274,20 @@ def populate_tree(window,index,doc,head):
         ids=[c.frame_index for c in e.conformers if c.frame_index is not None]
         group=series(head,f'GOAT ensemble {ei+1}',ids,[f'Conformer {c.number}' for c in e.conformers if c.frame_index is not None])
         if group is None:
-            group=QTreeWidgetItem([f'GOAT ensemble {ei+1} · energy only']);head.addChild(group)
+            group=FileItem([f'GOAT ensemble {ei+1} · energy only']);head.addChild(group)
             group.setData(0,Qt.ItemDataRole.UserRole,(index,'analysis','goat'))
     unused=[i for i in range(len(doc.frames)) if i not in covered]
     series(head,'Other printed reference geometries',unused)
     for ai,a in enumerate(doc.vibrations):
         title=a.purpose or f'Frequencies {ai+1}'
-        group=QTreeWidgetItem([f'{title} ({len(a.modes)} modes · {sum(m.imaginary for m in a.modes)} imaginary)'])
+        group=FileItem([f'{title} ({len(a.modes)} modes · {sum(m.imaginary for m in a.modes)} imaginary)'])
         group.setData(0,Qt.ItemDataRole.UserRole,(index,'frequencies',ai));parents.get(a.stage_index,head).addChild(group)
         for mi,m in enumerate(a.modes):
-            child=QTreeWidgetItem([f'{m.number}  {m.frequency_cm1:.4f} cm⁻¹'+(' · imaginary' if m.imaginary else '')])
+            child=FileItem([f'{m.number}  {m.frequency_cm1:.4f} cm⁻¹'+(' · imaginary' if m.imaginary else '')])
             child.setData(0,Qt.ItemDataRole.UserRole,(index,'mode',ai,mi));group.addChild(child)
             if m.imaginary:child.setForeground(0,QColor('#c43b35'))
             child.setToolTip(0,a.note);window._vibration_tree_items[index,ai,mi]=child
     if results is not None and results.hessians:
-        group=QTreeWidgetItem([f'Hessian history ({len(results.hessians)} events)']);head.addChild(group);group.setData(0,Qt.ItemDataRole.UserRole,(index,'analysis','hessian'))
+        group=FileItem([f'Hessian history ({len(results.hessians)} events)']);head.addChild(group);group.setData(0,Qt.ItemDataRole.UserRole,(index,'analysis','hessian'))
     head.setExpanded(True)
     return True

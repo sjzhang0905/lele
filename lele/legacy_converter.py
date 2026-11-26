@@ -182,6 +182,12 @@ def detect_format(path: Path, *, check_volume: bool = True) -> Detection:
                 return Detection('molden_vib','Molden vibrations (CP2K compatible)')
             return Detection('molden','Molden')
 
+    if re.match(r'^DIMCAR(?:$|[._ ()-])', upper_name) or suffix == '.dimcar':
+        return Detection('vtst_dimcar', 'VTST dimer DIMCAR')
+    if re.match(r'^(?:NEW)?MODECAR(?:$|[._ ()-])', upper_name):
+        return Detection('vtst_mode', 'VTST dimer direction')
+    if re.match(r'^CENTCAR(?:$|[._ ()-])', upper_name):
+        return Detection('vasp_in', 'VTST dimer centre (CENTCAR)')
     if re.match(r'^OUTCAR(?:$|[._ -])', upper_name) or suffix == '.outcar':
         return Detection("vasp_out", "VASP OUTCAR")
     if re.match(r'^OSZICAR(?:$|[._ -])', upper_name) or suffix == '.oszicar':
@@ -219,6 +225,8 @@ def detect_format(path: Path, *, check_volume: bool = True) -> Detection:
 
     text = read_probe(path)
     upper = text.upper()
+    if re.search(r'^\s*Step\s+Force\s+Torque\s+Energy\s+Curvature\s+Angle\s*$', text, re.I|re.M):
+        return Detection('vtst_dimcar', 'VTST dimer DIMCAR')
     if re.match(r'^\s*\[Molden\s+Format\]',text,re.I):
         if re.search(r'(?im)^\s*\[FREQ\]', text):
             return Detection('molden_vib','Molden vibrations (CP2K compatible)')

@@ -3,7 +3,7 @@ import numpy as np
 
 from lele.core import Document, Frame
 from lele.formats import load_document
-from lele.workflow_ui import PAGE_SIZE
+from lele.workflow_ui import EAGER_ROWS
 from test_periodic_fragment_ui_v171 import gui
 from test_vasp_v210 import HEADER, GEOMETRY, ENERGY
 
@@ -67,15 +67,16 @@ def test_opening_chooses_last_structure_and_file_headers_recall_last_viewed_step
     assert window.frame_index == 2
 
 
-def test_long_outcar_opens_last_lazy_page_without_materializing_the_whole_tree(gui, tmp_path):
-    count = PAGE_SIZE * 2 + 9
+def test_long_outcar_opens_last_flat_row_without_materializing_the_whole_tree(gui, tmp_path):
+    count = EAGER_ROWS * 2 + 9
     document = outcar(tmp_path, count)
     window = attach_new(gui, document)
     head = window.files_tree.topLevelItem(0)
-    pages = [head.child(i) for i in range(head.childCount())]
-    assert len(pages) == 3
-    assert all(page.text(0).startswith('Steps ') for page in pages)
-    assert [page.childCount() for page in pages] == [0, 0, 9]
+    assert head.childCount() == count
+    assert head.child(0).text(0).startswith('Step 1 · ')
+    assert head.child(count-1).text(0).startswith(f'Step {count} · ')
+    assert head.child(count-1).childCount() == 0
+    assert len(window._frame_tree_items) < count
     assert window.frame_index == count - 1 and window.frame_spin.value() == count
     assert window.files_tree.currentItem().text(0).startswith(f'Step {count} · ')
     np.testing.assert_array_equal(window.frame.positions, document.frames[-1].positions)

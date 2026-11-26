@@ -97,7 +97,7 @@ def periodic_neighbors(frame, cutoff, positions=None):
     return i, j, vectors, shifts @ operation
 
 
-def minimum_image(delta, frame: Frame):
+def _minimum_images(delta, frame: Frame):
     """Return shortest Cartesian delta + shift @ cell and its lattice shift.
 
     Reduce the periodic lattice before the nearest-image search; return the
@@ -106,7 +106,7 @@ def minimum_image(delta, frame: Frame):
     delta = np.asarray(delta, dtype=float)
     lattice = periodic_basis(frame)
     if lattice is None:
-        return delta.copy(), (0, 0, 0)
+        return delta.copy(), np.zeros(delta.shape, dtype=int)
     from ase.geometry import find_mic
     reduced, operation = _reduced_cell(tuple(lattice.ravel()), frame.pbc)
     search_delta = delta
@@ -116,10 +116,15 @@ def minimum_image(delta, frame: Frame):
         periodic = reduced[np.asarray(frame.pbc, dtype=bool)]
         search_delta = (delta @ np.linalg.pinv(periodic)) @ periodic
     vector, _ = find_mic(search_delta, reduced, pbc=frame.pbc)
-    reduced_shift = np.rint(np.linalg.solve(reduced.T, vector - search_delta)).astype(int)
-    reduced_shift[~np.asarray(frame.pbc, dtype=bool)] = 0
+    reduced_shift = np.rint(np.linalg.solve(reduced.T, (vector - search_delta).T).T).astype(int)
+    reduced_shift[..., ~np.asarray(frame.pbc, dtype=bool)] = 0
     shift = reduced_shift @ operation
-    return delta + shift @ lattice, tuple(int(x) for x in shift)
+    return delta + shift @ lattice, shift
+
+
+def minimum_image(delta, frame: Frame):
+    vector, shift = _minimum_images(delta, frame)
+    return vector, tuple(int(x) for x in shift)
 
 
 @dataclass(frozen=True)
@@ -139,7 +144,7 @@ def short_contact_details(frame: Frame, threshold=0.6):
     copies do not multiply contacts.
     """
     n = len(frame.symbols)
-    if n < 2:
+    if n < 2 or threshold <= 0:
         return []
     cell = periodic_basis(frame)
     if cell is None:
@@ -149,6 +154,19 @@ def short_contact_details(frame: Frame, threshold=0.6):
         d = np.linalg.norm(frame.positions[pairs[:, 0]] - frame.positions[pairs[:, 1]], axis=1)
         rows = [ShortContact(int(i), int(j), float(distance))
                 for (i, j), distance in zip(pairs, d) if distance < threshold]
+        return sorted(rows, key=lambda r: (r.distance, r.first, r.second))
+    # For large radii, enumerating translated copies can dwarf the number of
+    # distinct atom pairs, especially in very small periodic cells.
+    active = cell[np.asarray(frame.pbc, dtype=bool)]
+    if threshold * np.linalg.norm(np.linalg.pinv(active), axis=0).max() > 1.5:
+        rows = []
+        for i in range(n - 1):
+            for start in range(i + 1, n, 2048):
+                stop = min(start + 2048, n)
+                vectors, shifts = _minimum_images(frame.positions[start:stop]-frame.positions[i], frame)
+                distances = np.linalg.norm(vectors, axis=1)
+                rows.extend(ShortContact(i, start+j, float(distances[j]), tuple(map(int, shifts[j])))
+                            for j in np.flatnonzero(distances < threshold))
         return sorted(rows, key=lambda r: (r.distance, r.first, r.second))
     results = {}
     first, second, vectors, shifts = periodic_neighbors(frame, threshold)

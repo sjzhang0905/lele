@@ -53,6 +53,9 @@ class LoadedDocumentActions:
         from .trajectory_link import association_role
         if association_role(document):
             menu.addAction('Associate file…', lambda: self._associate_loaded_file(document))
+            from .cell_reference import accepts_cell_reference
+            if accepts_cell_reference(document):
+                menu.addAction('Associate unit cell…', lambda: self._associate_unit_cell(document))
             menu.addSeparator()
         if self._can_add_esp_extrema(document):
             menu.addAction('Add ESP extrema…', lambda: self._add_esp_extrema(document))
@@ -79,9 +82,13 @@ class LoadedDocumentActions:
             return False
         other = Path(filename).expanduser().resolve()
         output, positions = (document.path, other) if role == 'output' else (other, document.path)
+        companion = next((d for d in self.documents if d is not document and d.path == other
+                          and not d.modified and not d.annotations), None)
+        reference = document.cell_reference or (companion.cell_reference if companion else None)
         try:
             linked = run_data_task(self, 'Matching trajectory to calculation steps',
-                                   lambda: link_trajectory(output, positions), cancellable=True)
+                                   lambda: link_trajectory(output, positions, cell_reference=reference),
+                                   cancellable=True)
         except LoadCancelled:
             return False
         except (OSError, ValueError, RuntimeError) as error:
@@ -90,8 +97,6 @@ class LoadedDocumentActions:
         if self._closing or self._document_index(document) is None:
             return False
         # Keep independently edited copies, including document annotations.
-        companion = next((d for d in self.documents if d is not document and d.path == other
-                          and not d.modified and not d.annotations), None)
         primary = document if not document.modified and not document.annotations else companion
         if primary is None:
             self._attach_loaded_document(linked)
@@ -101,6 +106,41 @@ class LoadedDocumentActions:
             self._unload_document(companion)
         self.statusBar().showMessage(linked.calculation_results.note.split('. ')[0] +
             f' · {linked.trajectory_link["matched"]} matched steps', 8000)
+        return True
+
+    def _associate_unit_cell(self, document, filename=None):
+        from .cell_reference import accepts_cell_reference, apply_cell_reference, read_cell_reference
+        from .lattice_tiles import ONE_CELL
+        index = self._document_index(document)
+        if index is None or not accepts_cell_reference(document) or ui_busy():
+            return False
+        if filename is None:
+            filename, _ = QFileDialog.getOpenFileName(
+                self, 'Associate unit cell', str(document.path.parent),
+                'Unit cell (CIF or CP2K input) (*.cif *.CIF *.inp *.INP *.restart *.restart-*);;All files (*)')
+        if not filename:
+            return False
+        try:
+            reference = run_data_task(self, 'Reading reference unit cell',
+                                      lambda: read_cell_reference(filename), cancellable=True)
+            if self._closing or self._document_index(document) is None:
+                return False
+            apply_cell_reference(document, reference)
+        except LoadCancelled:
+            return False
+        except (OSError, ValueError, RuntimeError) as error:
+            QMessageBox.warning(self, 'Could not associate unit cell', str(error))
+            return False
+        view = self._document_views.get(id(document))
+        if view is not None:
+            view.options.boundary_enabled = True
+            view.options.boundary_preserve_origin = False
+            view.options.boundary_bounds = ONE_CELL
+            view.camera = None
+        target = self.frame_index if document is self.doc else getattr(view, 'frame_index', 0)
+        self.change_frame(target, switch_doc=index, reset_camera=True)
+        self.boundary_panel.set_values(ONE_CELL, False)
+        self.statusBar().showMessage(f'Unit cell associated with {document.path.name}: {Path(filename).name}', 8000)
         return True
 
     def _loaded_file_context_menu(self, position):
@@ -151,8 +191,7 @@ class LoadedDocumentActions:
         def collect(item, path, paths):
             if item.isExpanded():
                 paths.add(path)
-                for k in range(item.childCount()):
-                    child = item.child(k)
+                for child in item.branches():
                     collect(child, path + (child.text(0),), paths)
         for index, document in enumerate(self.documents):
             head = self.files_tree.topLevelItem(index)
@@ -163,18 +202,15 @@ class LoadedDocumentActions:
         return expanded
 
     def _replace_loaded_document_tree(self, expanded):
-        from .workflow_ui import expand_tree_item
         def restore(item, path, paths):
             item.setExpanded(path in paths)
             if path in paths:
-                expand_tree_item(item)
-                for k in range(item.childCount()):
-                    child = item.child(k)
+                for child in item.branches():
                     restore(child, path + (child.text(0),), paths)
         with QSignalBlocker(self.files_tree):
             self.files_tree.clear()
             self._frame_tree_items = {}; self._vibration_tree_items = {}
-            self._series_tree_items = {}; self._sequence_pages = {}; self._tree_sequences = {}
+            self._series_tree_items = {}; self._sequence_ranges = {}; self._tree_sequences = {}
             for index, document in enumerate(self.documents):
                 self._add_document_tree(index, document)
                 restore(self.files_tree.topLevelItem(index), (), expanded.get(id(document), {()}))
@@ -210,6 +246,13 @@ class LoadedDocumentActions:
             self.undo_stack = [u for u in self.undo_stack if u[1 if isinstance(u[0], str) else 0] != index]
             state = self._document_views.get(id(document))
             if state is not None and document.frames:
+                state.document = replacement
+                if replacement.cell_reference and not document.cell_reference:
+                    from .lattice_tiles import ONE_CELL
+                    state.options.boundary_enabled = True
+                    state.options.boundary_preserve_origin = False
+                    state.options.boundary_bounds = ONE_CELL
+                    state.camera = None
                 self._document_views[id(replacement)] = state
             if id(document) in self._document_labels:
                 self._document_labels[id(replacement)] = self._document_labels[id(document)]

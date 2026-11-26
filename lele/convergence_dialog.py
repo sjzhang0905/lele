@@ -23,6 +23,11 @@ class ConvergenceDialog(QDialog):
         self.is_vasp=self.results is not None and self.results.program=='VASP'
         self.is_cp2k=self.results is not None and self.results.program=='CP2K'
         self.has_orca_scan=bool(getattr(self.results,'scans',[]))
+        self.cp2k_trials = set()
+        self._cp2k_frame_axis = False
+        if self.is_cp2k and any(s.kind == 'optimization' for s in self.results.stages):
+            from .cp2k_results import optimization_trial_indices
+            self.cp2k_trials = optimization_trial_indices(self.results.steps)
         self.line_frames={}
         self.setWindowTitle('Energy / geometry convergence — '+document.path.name);self.resize(950,820)
         from matplotlib.figure import Figure
@@ -35,14 +40,16 @@ class ConvergenceDialog(QDialog):
         if not jobs:self.job.addItem('Loaded geometry frames',None)
         self.stage_combo=QComboBox()
         self._prepare_stages()
+        self.all_cp2k_evaluations = QCheckBox('Show all energy evaluations')
         self.metric_combo=QComboBox();self._prepare_metrics()
         self.unit=QComboBox();self.unit.addItems(['eV','Hartree','kcal/mol'])
         if self.is_xtb:self.unit.setCurrentText('kcal/mol')
         self.scan_only=QCheckBox('Converged scan points only')
-        self.scan_only.setVisible(not self.is_xtb and not self.has_orca_scan)
+        self.scan_only.setVisible(not (self.is_xtb or self.is_cp2k or self.has_orca_scan))
         self.scan_only.setChecked(bool(not self.has_orca_scan and jobs and 'Scan' in jobs[0].tasks
             and any(step.job_index==jobs[0].index and step.converged for step in self.results.steps)))
-        for widget in (self.job,self.stage_combo,self.metric_combo,self.unit,self.scan_only):controls.addWidget(widget)
+        for widget in (self.job,self.stage_combo,self.metric_combo,self.unit,self.scan_only,
+                       self.all_cp2k_evaluations):controls.addWidget(widget)
         self.note=QLabel('Click a plotted point to display its geometry frame.');self.note.setWordWrap(True);layout.addWidget(self.note)
         self.figure=Figure(figsize=(8,6),tight_layout=True)
         self.canvas=FigureCanvasQTAgg(self.figure)
@@ -53,7 +60,9 @@ class ConvergenceDialog(QDialog):
         self.job.currentIndexChanged.connect(self._job_changed)
         self.stage_combo.currentIndexChanged.connect(self._stage_changed)
         for widget in (self.metric_combo,self.unit):widget.currentIndexChanged.connect(self.redraw)
-        self.scan_only.toggled.connect(self.redraw);self.redraw()
+        self.scan_only.toggled.connect(self.redraw)
+        self.all_cp2k_evaluations.toggled.connect(self.redraw)
+        self.redraw()
 
     def _prepare_stages(self):
         from PySide6.QtCore import QSignalBlocker
@@ -76,7 +85,10 @@ class ConvergenceDialog(QDialog):
         with QSignalBlocker(self.metric_combo):
             self.metric_combo.clear()
             stage = self.stage_combo.currentData()
-            self.is_md = self.is_cp2k and any(s.index == stage and s.kind == 'md' for s in self.results.stages)
+            cp2k_stage = next((s for s in self.results.stages if s.index == stage), None) if self.is_cp2k else None
+            self.is_md = cp2k_stage is not None and cp2k_stage.kind == 'md'
+            self.is_cp2k_optimization = cp2k_stage is not None and cp2k_stage.kind == 'optimization'
+            self.all_cp2k_evaluations.setVisible(any(self.results.steps[i].stage_index == stage for i in self.cp2k_trials))
             if self.is_xtb:
                 here = [s for s in self.results.steps if s.stage_index == stage]
                 if self.document.trajectory_link:
@@ -103,12 +115,20 @@ class ConvergenceDialog(QDialog):
             from .vasp_results import ENERGY_KEY
             steps = [(i,s) for i,s in enumerate(self.results.steps)
                      if s.job_index==index and (stage is None or s.stage_index==stage)]
-            summarized = {s.cycle for _,s in steps if s.info.get('cp2k_opt_summary')} if self.document.trajectory_link else set()
-            return [dict(frame=s.frame_index,energy_ev=s.info.get(ENERGY_KEY) if self.is_vasp else s.energy_ev,
-                         metrics=s.convergence,x=s.cycle if s.cycle is not None else i+1,
-                         extra=s.info, source_line=None if s.info.get('trajectory_only') else s.source_line,
-                         trajectory_line=s.geometry.info.get('trajectory_source_line') if s.geometry else None)
-                    for i,s in steps if s.cycle not in summarized or s.info.get('cp2k_opt_summary') or s.frame_index is not None]
+            if self.cp2k_trials and not self.all_cp2k_evaluations.isChecked():
+                steps = [(i,s) for i,s in steps if i not in self.cp2k_trials]
+            self._cp2k_frame_axis = bool(self.is_cp2k_optimization and self.document.trajectory_link
+                                        and steps and all(s.frame_index is not None for _,s in steps))
+            rows = []
+            for i, s in steps:
+                step = s.info.get('cp2k_reevaluation_output_step', s.cycle)
+                if step is None:
+                    step = i + 1
+                rows.append(dict(frame=s.frame_index, energy_ev=s.info.get(ENERGY_KEY) if self.is_vasp else s.energy_ev,
+                                 metrics=s.convergence, x=s.frame_index+1 if self._cp2k_frame_axis else step,
+                                 step=step, extra=s.info, source_line=None if s.info.get('trajectory_only') else s.source_line,
+                                 trajectory_line=s.geometry.info.get('trajectory_source_line') if s.geometry else None))
+            return rows
         if self.is_xtb:
             self.scan_only.setEnabled(False)
             stage=self.stage_combo.currentData()
@@ -205,8 +225,11 @@ class ConvergenceDialog(QDialog):
         self.metric_axes.set_ylabel(('Force / gradient' if metric=='force' else 'Displacement')+' ('+unit+')')
         if any_metric:self.metric_axes.legend(fontsize=8)
         else:self.metric_axes.text(.5,.5,'Maximum/RMS values were not printed for these frames',ha='center',transform=self.metric_axes.transAxes)
+        x_label = ('Trajectory frame' if self._cp2k_frame_axis else 'MD step' if self.is_md else
+                   'Ionic record' if self.is_vasp else 'CP2K record / printed step' if self.is_cp2k else
+                   'Optimization cycle' if self.has_orca_scan else 'Geometry frame')
         for axes in (self.energy_axes,self.metric_axes):
-            axes.set_xlabel('MD step' if self.is_md else 'Ionic record' if self.is_vasp else 'CP2K record / printed step' if self.is_cp2k else 'Optimization cycle' if self.has_orca_scan else 'Geometry frame');axes.grid(True,alpha=.2)
+            axes.set_xlabel(x_label);axes.grid(True,alpha=.2)
         self.note.setText('Click a data point to display its geometry frame. Each calculation segment is plotted separately.\n'
             'Values are from the source output; structural edits do not recalculate convergence or orbital properties.')
         if self.is_vasp:
@@ -243,7 +266,7 @@ class ConvergenceDialog(QDialog):
                     *(['time_fs', *MD_SERIES] if self.is_md else [])])
                 for row in progress_items(self._rows,'Writing convergence CSV'):
                     value=row['energy_ev']
-                    writer.writerow([row['x'],None if row['frame'] is None else row['frame']+1,
+                    writer.writerow([row['step'],None if row['frame'] is None else row['frame']+1,
                         None if value is None else value/Hartree,value,*[row['metrics'].get(k,(None,None))[0] for k in keys],
                         *[row['metrics'].get(k,(None,None))[1] for k in keys],('Eh/bohr (atomic force magnitudes)' if self.is_md else self.results.force_unit),self.results.displacement_unit,row['source_line'],row['trajectory_line'],
                         *([row['extra'].get(k) for k in ('time_fs', *MD_SERIES)] if self.is_md else [])])

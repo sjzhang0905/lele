@@ -282,16 +282,51 @@ def test_legacy_md_atom_kind_alias_and_reftraj_initial_structure(tmp_path):
 
 
 def test_cp2k_curve_uses_accepted_optimization_steps_and_force_pick(gui,tmp_path):
+    from vtkmodules.util.numpy_support import vtk_to_numpy
+
     w=gui.window
-    p=cp2k(tmp_path,body=(' OPTIMIZATION STEP: 1\n'+energy(-6)+energy(-8)+' OPT| Step number 1\n'
-                          ' OPT| Maximum gradient .040\n'+opt(2,-9,.025)))
-    t=xyz(tmp_path/'POS.xyz',[('i = 1, E = -8',1),('i = 2, E = -9',1.1)])
-    w._open_path_now(t); assert w._associate_loaded_file(w.doc,p)
+    first = (' OPTIMIZATION STEP: 1\n'+energy(-6)+energy(-8)
+             +' OPT| Step number 1\n OPT| Maximum gradient .040\n')
+    final = (' OPTIMIZATION STEP: 3\n * Specific L-BFGS convergence criteria\n'
+             ' * WANTED_PROJ_GRADIENT and WANTED_REL_F_ERROR\n * satisfied .... run CONVERGED!\n'
+             ' Reevaluating energy at the minimum\n'+energy(-9.001))
+    p=cp2k(tmp_path,body=first+opt(2,-9,.025)+final)
+    t=xyz(tmp_path/'POS.xyz',[('i = 1, E = -8',1),('i = 2, E = -9',1.1),('i = 4, E = -9.001',1.2)])
+    w._add_document_tree(0,w.doc)
+    w._open_path_now(p)
     curve=w.show_energy_curve()
-    assert [(r['x'],r['frame']) for r in curve.points()]==[(1,0),(2,1)]
-    np.testing.assert_allclose(curve.metric_axes.lines[0].get_ydata(),[.04,.025])
+    assert [(r['x'],r['frame']) for r in curve.points()]==[(1,None),(2,None),(3,None)]
+    curve.all_cp2k_evaluations.setChecked(True)
+    assert [r['x'] for r in curve.points()]==[1,1,2,3]
+    curve.close()
+
+    assert w._associate_loaded_file(w.doc,t)
+    head=w.files_tree.topLevelItem(w.current_doc)
+    trials=head.child(0)
+    assert 'other force evaluations (1)' in trials.text(0) and not trials.isExpanded()
+    assert head.child(3).text(0).startswith('Frame 3 · Final energy reevaluation')
+    curve=w.show_energy_curve()
+    assert [(r['x'],r['frame']) for r in curve.points()]==[(1,0),(2,1),(3,2)]
+    assert curve.energy_axes.get_xlabel()=='Trajectory frame'
+    np.testing.assert_allclose(curve.metric_axes.lines[0].get_ydata(),[.04,.025,np.nan])
+    assert w.doc.calculation_results.stages[0].status=='Converged (L-BFGS criteria)'
+    assert not w.doc.frames[-1].info.get('optimization_converged')
+
     curve.pick_point(SimpleNamespace(artist=curve.metric_axes.lines[0],ind=[0]))
     assert w.frame.info['linked_step']==1
+    w.files_tree.setCurrentItem(head.child(3))
+    assert w.frame_index==2
+    assert 'Calculation step: 3' in w.info_view.toPlainText()
+    assert 'frame 3 · i = 4' in w.info_view.toPlainText()
+    positions=np.empty_like(w.frame.positions)
+    for points,indices in w.renderer.drag_atom_points:
+        positions[indices]=vtk_to_numpy(points.GetData())
+    np.testing.assert_allclose(positions,w.frame.positions)
+    assert float(w.atom_table.item(1,3).text())==pytest.approx(1.2)
+
+    out=tmp_path/'geo.csv';curve._write_csv(out)
+    with out.open(encoding='utf-8-sig') as stream:rows=list(csv.DictReader(stream))
+    assert [(row['step_or_record'],row['geometry_frame']) for row in rows]==[('1','1'),('2','2'),('3','3')]
 
 
 def test_summary_without_force_eval_and_energy_only_without_step_numbers(tmp_path):

@@ -41,7 +41,7 @@ _PROBE_SUFFIXES = frozenset((
     '.com', '.log', '.out', '.inp', '.in', '.pwi', '.pwo', '.nw', '.nwi',
     '.nwo', '.input', '.restart', '.poscar', '.modes', '.txt', '.data',
 ))
-_VASP_NAME = re.compile(r'^(?:POSCAR|CONTCAR|OUTCAR|OSZICAR|XDATCAR|WAVECAR)(?:$|[._ ()-])', re.I)
+_VASP_NAME = re.compile(r'^(?:POSCAR|CONTCAR|CENTCAR|DIMCAR|NEWMODECAR|MODECAR|OUTCAR|OSZICAR|XDATCAR|WAVECAR)(?:$|[._ ()-])', re.I)
 _VASP_FIELD = re.compile(r'(?:^|[._ -])(?:CHGCAR|CHG|ELFCAR|LOCPOT|PARCHG|AECCAR[012])(?=$|[._ ()-])', re.I)
 
 
@@ -111,7 +111,7 @@ def is_folder_import_candidate(path):
     if suffix in _DIRECT_SUFFIXES:
         return True
     if (_VASP_NAME.match(name) or _VASP_FIELD.search(name) or upper.startswith('PARCHG')
-            or upper == 'VASPRUN.XML' or suffix in ('.outcar', '.oszicar', '.xdatcar')):
+            or upper == 'VASPRUN.XML' or suffix in ('.outcar', '.oszicar', '.xdatcar', '.dimcar')):
         return True
     if name.endswith(('.NEB.log', '.interp', '.interp.final')):
         return True
